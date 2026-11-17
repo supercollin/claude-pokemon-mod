@@ -4667,6 +4667,41 @@ test('a Rare Candy with full hearts grows a fetched Pichu into Pikachu', { timeo
   expect(saved.mon).toBe('pikachu')
 })
 
+// A fetched Tyrogue one XP short of Lv. 20, with its meters at food and happiness
+const tyrogueAt = (food: number, happiness: number, more: Record<string, unknown> = {}) => ({
+  mon: 'tyrogue',
+  wander: false,
+  stats: { tyrogue: { xp: 20 ** 3 - 1, food: { value: food, at: 0 }, happiness: { value: happiness, at: 0 } } },
+  'custom:tyrogue': { gen: 2, sprite: SPRITES.diglett, moves: ['Karate Chop', 'Tackle'] },
+  ...more,
+})
+
+for (const [food, happiness, into] of [[100, 40, 'hitmonlee'], [40, 100, 'hitmonchan'], [100, 90, 'hitmontop']] as const) {
+  test(`Tyrogue at Lv. 20 with food ${food}% and happiness ${happiness}% becomes ${into}`, { timeoutMs: 30000 }, async ($, on) => {
+    on('turn.complete', () => ({ text: '' }))
+    serveMons(on, { 2: ['hitmontop'] }, { types: ['fighting'] })
+    const saved: Record<string, any> = tyrogueAt(food, happiness)
+    const { clock } = await startedWith($, on, saved, 0)
+    await $.turn.complete(ANSWERED)
+    await clock.advance(7200)
+    expect(saved.mon).toBe(into)
+  })
+}
+
+test('Tyrogue says how it evolves, and with needs off becomes Hitmontop', { timeoutMs: 30000 }, async ($, on) => {
+  on('turn.complete', () => ({ text: '' }))
+  serveMons(on, { 2: ['hitmontop'] }, { types: ['fighting'] })
+  const saved: Record<string, any> = tyrogueAt(100, 20, { needs: false })
+  const { clock } = await startedWith($, on, saved, 0)
+  const ways = 'Hitmonlee at Lv. 20 with more food than hearts, Hitmonchan at Lv. 20 with more hearts than food, or Hitmontop at Lv. 20 with as much food as hearts'
+  expect(await run($, 'stats')).toContain(' Can become ' + ways + '.')
+  expect(await run($, 'evolve hitmonlee')).toBe('Tyrogue can become Hitmonlee at Lv. 20 with more food than hearts.')
+  await $.turn.complete(ANSWERED)
+  await clock.advance(7200)
+  expect(saved.mon).toBe('hitmontop')
+  expect(saved['custom:hitmontop'].gen).toBe(2)
+})
+
 test('a gen 1 mon with a gen 2 baby or a gen 2 evolution keeps its wild tier and start level', () => {
   for (const mon of ['pikachu', 'clefairy', 'jigglypuff']) {
     expect(tierOf(mon)).toBe('common')
@@ -4677,6 +4712,10 @@ test('a gen 1 mon with a gen 2 baby or a gen 2 evolution keeps its wild tier and
     expect(startLevel(mon)).toBe(startLevel('pidgey'))
   }
   expect(tierOf('scyther')).toBe('rare')
+  for (const mon of ['hitmonlee', 'hitmonchan']) {
+    expect(tierOf(mon)).toBe('rare')
+    expect(startLevel(mon)).toBe(startLevel('pidgey'))
+  }
   expect(tierOf('seadra')).toBe('uncommon')
   expect(startLevel('seadra')).toBe(32)
   expect(startLevel('steelix')).toBe(startLevel('onix'))

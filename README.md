@@ -308,8 +308,11 @@ Gen 2 mons aren't bundled, so a mon evolving into one, like Cyndaquil into Quila
 fetches it first, the way `/pokemon new` does, and every session can show it after. If the
 fetch fails, the mon doesn't evolve yet and says why, and the next level-up, showing it
 again, or `/pokemon evolve` tries again. Smoochum, Elekid, and Magby, fetched with
-`/pokemon new`, grow into Jynx, Electabuzz, and Magmar at 30. Evolutions by stats, like
-Tyrogue's, aren't in yet.
+`/pokemon new`, grow into Jynx, Electabuzz, and Magmar at 30. Tyrogue, which the games
+evolve at 20 by its Attack and Defense, goes by its meters here: a level-up from 20 on
+with more food icons than hearts makes it Hitmonlee, more hearts than food Hitmonchan,
+and as many of each a fetched Hitmontop. With needs off, the meters count as full, so
+it becomes Hitmontop.
 
 Some mons evolve on a level-up with all five hearts full, from a turn or a Rare Candy:
 Golbat into Crobat, Chansey into Blissey, and the fetched Pichu, Cleffa, Igglybuff, and

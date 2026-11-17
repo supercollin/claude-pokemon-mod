@@ -16,11 +16,18 @@ export const orList = (items) => (items.length < 3 ? items.join(' or ') : items.
 // A name after "a" or "an", like "a Fire Stone" or "an Up-Grade"
 export const withArticle = (name) => (/^[aeiou]/i.test(name) ? 'an ' : 'a ') + name
 
+const MORE_TEXTS = {
+  food: ' with more food than hearts',
+  happiness: ' with more hearts than food',
+  neither: ' with as much food as hearts',
+}
+
 // How one entry evolves the mon, like "Jolteon with a Thunder Stone" or "Steelix by trade
 // holding a Metal Coat"
 export function evolutionText(entry) {
   const into = displayName(entry.into)
   if (entry.happy) return into + ' at a level-up with full hearts' + (entry.time ? ' by ' + entry.time : '')
+  if (entry.more) return into + ' at Lv. ' + entry.level + MORE_TEXTS[entry.more]
   if (entry.trade && entry.item) return into + ' by trade holding ' + withArticle(entry.item)
   if (entry.item) return into + ' with ' + withArticle(entry.item)
   return entry.trade ? into + ' by trade' : into + ' at Lv. ' + entry.level

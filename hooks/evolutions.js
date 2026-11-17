@@ -3,7 +3,9 @@
 // { into, item } with an evolution stone, { into, trade: true }, { into, trade: true,
 // item } for a trade holding an item, which takes that item and no Link Cable, or
 // { into, happy: true } on a level-up with full hearts, with time: 'day' or 'night' when
-// only then. A mon that doesn't evolve has no entry.
+// only then. { into, level, more } stands in for Tyrogue's stats: at that level, more food
+// icons than hearts, more hearts than food, or as many of each. A mon that doesn't evolve
+// has no entry.
 
 const FIRST_LEVEL = 5
 
@@ -107,7 +109,6 @@ export const EVOLUTIONS = {
 
   // Gen 2, by Gold and Silver rules. These mons aren't bundled: /pokemon new fetches
   // them, and a mon evolving into one fetches it first.
-  // Evolutions by stats, like Tyrogue's, aren't here yet.
   chikorita: [{ into: 'bayleef', level: 16 }],
   bayleef: [{ into: 'meganium', level: 32 }],
   cyndaquil: [{ into: 'quilava', level: 14 }],
@@ -139,6 +140,11 @@ export const EVOLUTIONS = {
   remoraid: [{ into: 'octillery', level: 25 }],
   houndour: [{ into: 'houndoom', level: 24 }],
   phanpy: [{ into: 'donphan', level: 25 }],
+  tyrogue: [
+    { into: 'hitmonlee', level: 20, more: 'food' },
+    { into: 'hitmonchan', level: 20, more: 'happiness' },
+    { into: 'hitmontop', level: 20, more: 'neither' },
+  ],
   smoochum: [{ into: 'jynx', level: 30 }],
   elekid: [{ into: 'electabuzz', level: 30 }],
   magby: [{ into: 'magmar', level: 30 }],
@@ -151,12 +157,12 @@ export const EVOLUTIONS = {
 export const FETCHED = [
   'ampharos', 'ariados', 'azumarill', 'bayleef', 'bellossom', 'blissey', 'chikorita', 'chinchou', 'cleffa', 'crobat',
   'croconaw', 'cyndaquil', 'donphan', 'elekid', 'espeon', 'feraligatr', 'flaaffy', 'forretress', 'furret', 'granbull',
-  'hoothoot', 'hoppip', 'houndoom', 'houndour', 'igglybuff', 'jumpluff', 'kingdra', 'lanturn', 'larvitar', 'ledian',
-  'ledyba', 'magby', 'magcargo', 'mareep', 'marill', 'meganium', 'natu', 'noctowl', 'octillery', 'phanpy',
-  'pichu', 'piloswine', 'pineco', 'politoed', 'porygon2', 'pupitar', 'quagsire', 'quilava', 'remoraid', 'scizor',
-  'sentret', 'skiploom', 'slowking', 'slugma', 'smoochum', 'snubbull', 'spinarak', 'steelix', 'sunflora', 'sunkern',
-  'swinub', 'teddiursa', 'togepi', 'togetic', 'totodile', 'typhlosion', 'tyranitar', 'umbreon', 'ursaring', 'wooper',
-  'xatu',
+  'hitmontop', 'hoothoot', 'hoppip', 'houndoom', 'houndour', 'igglybuff', 'jumpluff', 'kingdra', 'lanturn', 'larvitar',
+  'ledian', 'ledyba', 'magby', 'magcargo', 'mareep', 'marill', 'meganium', 'natu', 'noctowl', 'octillery',
+  'phanpy', 'pichu', 'piloswine', 'pineco', 'politoed', 'porygon2', 'pupitar', 'quagsire', 'quilava', 'remoraid',
+  'scizor', 'sentret', 'skiploom', 'slowking', 'slugma', 'smoochum', 'snubbull', 'spinarak', 'steelix', 'sunflora',
+  'sunkern', 'swinub', 'teddiursa', 'togepi', 'togetic', 'totodile', 'typhlosion', 'tyranitar', 'tyrogue', 'umbreon',
+  'ursaring', 'wooper', 'xatu',
 ]
 
 // PARENTS maps each evolved mon to the mon it comes from and the entry that takes it there.
@@ -175,7 +181,18 @@ const parentOf = (mon) => PARENTS.get(BASE_FORM[mon] ?? mon)
 
 export const evolutionsOf = (mon) => EVOLUTIONS[mon] ?? []
 
-export const levelEvolutionOf = (mon) => evolutionsOf(mon).find((entry) => entry.level) ?? null
+// The evolution a level alone reaches, leaving out Tyrogue's that also weigh the meters
+export const levelEvolutionOf = (mon) => evolutionsOf(mon).find((entry) => entry.level && !entry.more) ?? null
+
+// An evolution a level-up reaches by the meters or the clock, kept on the record as readyFor
+export const isLevelUpOnly = (entry) => Boolean(entry.happy || entry.more)
+
+// Which meter has more icons, as a Tyrogue entry's more names it
+export function moreOf(food, hearts) {
+  if (food > hearts) return 'food'
+  if (hearts > food) return 'happiness'
+  return 'neither'
+}
 
 // Gold and Silver's day runs from 4:00 to 18:00 on the local clock, and night the rest
 export function timeOfDay(ms) {
@@ -183,8 +200,15 @@ export function timeOfDay(ms) {
   return hour >= 4 && hour < 18 ? 'day' : 'night'
 }
 
-// The friendship evolution a level-up reaches with full hearts at this time of day, or null
-export const happyEvolutionOf = (mon, time) => evolutionsOf(mon).find((entry) => entry.happy && (!entry.time || entry.time === time)) ?? null
+// The evolution a level-up reaches by the meters or the clock, or null: one by friendship
+// with full hearts at this time of day, or Tyrogue's at its level by which meter has more
+export function levelUpEvolutionOf(mon, { level, food, hearts, full, time }) {
+  const reached = (entry) => {
+    if (entry.happy) return hearts === full && (!entry.time || entry.time === time)
+    return Boolean(entry.more) && level >= entry.level && entry.more === moreOf(food, hearts)
+  }
+  return evolutionsOf(mon).find(reached) ?? null
+}
 
 export const preEvolutionOf = (mon) => parentOf(mon)?.from ?? null
 
