@@ -20,6 +20,7 @@ export const withArticle = (name) => (/^[aeiou]/i.test(name) ? 'an ' : 'a ') + n
 // holding a Metal Coat"
 export function evolutionText(entry) {
   const into = displayName(entry.into)
+  if (entry.happy) return into + ' at a level-up with full hearts' + (entry.time ? ' by ' + entry.time : '')
   if (entry.trade && entry.item) return into + ' by trade holding ' + withArticle(entry.item)
   if (entry.item) return into + ' with ' + withArticle(entry.item)
   return entry.trade ? into + ' by trade' : into + ' at Lv. ' + entry.level

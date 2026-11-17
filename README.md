@@ -308,8 +308,16 @@ Gen 2 mons aren't bundled, so a mon evolving into one, like Cyndaquil into Quila
 fetches it first, the way `/pokemon new` does, and every session can show it after. If the
 fetch fails, the mon doesn't evolve yet and says why, and the next level-up, showing it
 again, or `/pokemon evolve` tries again. Smoochum, Elekid, and Magby, fetched with
-`/pokemon new`, grow into Jynx, Electabuzz, and Magmar at 30. Evolutions by friendship,
-time of day, or stats, and the babies that need them, aren't in yet.
+`/pokemon new`, grow into Jynx, Electabuzz, and Magmar at 30. Evolutions by stats, like
+Tyrogue's, aren't in yet.
+
+Some mons evolve on a level-up with all five hearts full, from a turn or a Rare Candy:
+Golbat into Crobat, Chansey into Blissey, and the fetched Pichu, Cleffa, Igglybuff, and
+Togepi into Pikachu, Clefairy, Jigglypuff, and Togetic. Eevee does too, into Espeon by day
+and Umbreon by night, on your computer's clock as in Gold and Silver: day runs from 4:00
+to 18:00. With needs off, every level-up counts as full hearts. A level-up that reaches
+one makes the mon ready the way its level would, and `/pokemon evolve` alone only
+explains the rule.
 
 The mons that evolve with a stone or a trade, like Pikachu, Eevee, and Kadabra, need an
 item from your bag. A stone mon needs its stone, like a Thunder Stone for Pikachu, and

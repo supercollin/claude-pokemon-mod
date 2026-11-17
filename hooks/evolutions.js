@@ -1,8 +1,9 @@
 // The gen 1 evolutions follow the Red and Blue rules and are keyed by sprite key, in
 // Pokédex order, followed by gen 2's. Each entry is one thing the mon can become: { into, level } on level-up,
-// { into, item } with an evolution stone, { into, trade: true }, or { into, trade: true,
-// item } for a trade holding an item, which takes that item and no Link Cable. A mon that
-// doesn't evolve has no entry.
+// { into, item } with an evolution stone, { into, trade: true }, { into, trade: true,
+// item } for a trade holding an item, which takes that item and no Link Cable, or
+// { into, happy: true } on a level-up with full hearts, with time: 'day' or 'night' when
+// only then. A mon that doesn't evolve has no entry.
 
 const FIRST_LEVEL = 5
 
@@ -37,6 +38,7 @@ export const EVOLUTIONS = {
   vulpix: [{ into: 'ninetales', item: 'Fire Stone' }],
   jigglypuff: [{ into: 'wigglytuff', item: 'Moon Stone' }],
   zubat: [{ into: 'golbat', level: 22 }],
+  golbat: [{ into: 'crobat', happy: true }],
   oddish: [{ into: 'gloom', level: 21 }],
   gloom: [
     { into: 'vileplume', item: 'Leaf Stone' },
@@ -80,6 +82,7 @@ export const EVOLUTIONS = {
   krabby: [{ into: 'kingler', level: 28 }],
   voltorb: [{ into: 'electrode', level: 30 }],
   exeggcute: [{ into: 'exeggutor', item: 'Leaf Stone' }],
+  chansey: [{ into: 'blissey', happy: true }],
   cubone: [{ into: 'marowak', level: 28 }],
   koffing: [{ into: 'weezing', level: 35 }],
   rhyhorn: [{ into: 'rhydon', level: 42 }],
@@ -93,6 +96,8 @@ export const EVOLUTIONS = {
     { into: 'vaporeon', item: 'Water Stone' },
     { into: 'jolteon', item: 'Thunder Stone' },
     { into: 'flareon', item: 'Fire Stone' },
+    { into: 'espeon', happy: true, time: 'day' },
+    { into: 'umbreon', happy: true, time: 'night' },
   ],
   porygon: [{ into: 'porygon2', trade: true, item: 'Up-Grade' }],
   omanyte: [{ into: 'omastar', level: 40 }],
@@ -101,8 +106,8 @@ export const EVOLUTIONS = {
   dragonair: [{ into: 'dragonite', level: 55 }],
 
   // Gen 2, by Gold and Silver rules. These mons aren't bundled: /pokemon new fetches
-  // them, and a mon evolving into one fetches it first. Evolutions by friendship, time of
-  // day, or stats, and the babies that need them, aren't here yet.
+  // them, and a mon evolving into one fetches it first.
+  // Evolutions by stats, like Tyrogue's, aren't here yet.
   chikorita: [{ into: 'bayleef', level: 16 }],
   bayleef: [{ into: 'meganium', level: 32 }],
   cyndaquil: [{ into: 'quilava', level: 14 }],
@@ -114,6 +119,10 @@ export const EVOLUTIONS = {
   ledyba: [{ into: 'ledian', level: 18 }],
   spinarak: [{ into: 'ariados', level: 22 }],
   chinchou: [{ into: 'lanturn', level: 27 }],
+  pichu: [{ into: 'pikachu', happy: true }],
+  cleffa: [{ into: 'clefairy', happy: true }],
+  igglybuff: [{ into: 'jigglypuff', happy: true }],
+  togepi: [{ into: 'togetic', happy: true }],
   natu: [{ into: 'xatu', level: 25 }],
   mareep: [{ into: 'flaaffy', level: 15 }],
   flaaffy: [{ into: 'ampharos', level: 30 }],
@@ -140,13 +149,14 @@ export const EVOLUTIONS = {
 // The mons EVOLUTIONS names that aren't bundled, as vscode-pokemon names their folders
 // under media/gen2. scripts/check-data.mjs holds every unbundled name to this list.
 export const FETCHED = [
-  'ampharos', 'ariados', 'azumarill', 'bayleef', 'bellossom', 'chikorita', 'chinchou', 'croconaw', 'cyndaquil', 'donphan',
-  'elekid', 'feraligatr', 'flaaffy', 'forretress', 'furret', 'granbull', 'hoothoot', 'hoppip', 'houndoom', 'houndour',
-  'jumpluff', 'kingdra', 'lanturn', 'larvitar', 'ledian', 'ledyba', 'magby', 'magcargo', 'mareep', 'marill',
-  'meganium', 'natu', 'noctowl', 'octillery', 'phanpy', 'piloswine', 'pineco', 'politoed', 'porygon2', 'pupitar',
-  'quagsire', 'quilava', 'remoraid', 'scizor', 'sentret', 'skiploom', 'slowking', 'slugma', 'smoochum', 'snubbull',
-  'spinarak', 'steelix', 'sunflora', 'sunkern', 'swinub', 'teddiursa', 'totodile', 'typhlosion', 'tyranitar', 'ursaring',
-  'wooper', 'xatu',
+  'ampharos', 'ariados', 'azumarill', 'bayleef', 'bellossom', 'blissey', 'chikorita', 'chinchou', 'cleffa', 'crobat',
+  'croconaw', 'cyndaquil', 'donphan', 'elekid', 'espeon', 'feraligatr', 'flaaffy', 'forretress', 'furret', 'granbull',
+  'hoothoot', 'hoppip', 'houndoom', 'houndour', 'igglybuff', 'jumpluff', 'kingdra', 'lanturn', 'larvitar', 'ledian',
+  'ledyba', 'magby', 'magcargo', 'mareep', 'marill', 'meganium', 'natu', 'noctowl', 'octillery', 'phanpy',
+  'pichu', 'piloswine', 'pineco', 'politoed', 'porygon2', 'pupitar', 'quagsire', 'quilava', 'remoraid', 'scizor',
+  'sentret', 'skiploom', 'slowking', 'slugma', 'smoochum', 'snubbull', 'spinarak', 'steelix', 'sunflora', 'sunkern',
+  'swinub', 'teddiursa', 'togepi', 'togetic', 'totodile', 'typhlosion', 'tyranitar', 'umbreon', 'ursaring', 'wooper',
+  'xatu',
 ]
 
 // PARENTS maps each evolved mon to the mon it comes from and the entry that takes it there.
@@ -166,6 +176,15 @@ const parentOf = (mon) => PARENTS.get(BASE_FORM[mon] ?? mon)
 export const evolutionsOf = (mon) => EVOLUTIONS[mon] ?? []
 
 export const levelEvolutionOf = (mon) => evolutionsOf(mon).find((entry) => entry.level) ?? null
+
+// Gold and Silver's day runs from 4:00 to 18:00 on the local clock, and night the rest
+export function timeOfDay(ms) {
+  const hour = new Date(ms).getHours()
+  return hour >= 4 && hour < 18 ? 'day' : 'night'
+}
+
+// The friendship evolution a level-up reaches with full hearts at this time of day, or null
+export const happyEvolutionOf = (mon, time) => evolutionsOf(mon).find((entry) => entry.happy && (!entry.time || entry.time === time)) ?? null
 
 export const preEvolutionOf = (mon) => parentOf(mon)?.from ?? null
 

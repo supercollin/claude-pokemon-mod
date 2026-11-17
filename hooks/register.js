@@ -11,7 +11,7 @@ import { CREW_SIZE, crewThinking, crewToolEnds, crewToolStarts, isOut, joinCrew 
 import { CUSTOM_PREFIX, fetchMon, monsOfGen } from './custom.js'
 import { dexKey, isCaught, mergedDexEntry, pickWild, tierOf } from './dex.js'
 import { catchCommand, foeMoves, roarCommand, runawayFoe, wildMoves, wildName } from './encounter.js'
-import { evolutionsOf, levelEvolutionOf, startLevel } from './evolutions.js'
+import { evolutionsOf, happyEvolutionOf, levelEvolutionOf, startLevel, timeOfDay } from './evolutions.js'
 import { SPRITES } from './frames.js'
 import {
   addedTo, bagOf, bagText, dropOf, findItem, itemFor, itemName, ITEMS, LONG_TURN_CANDY_ODDS, migratedBag, RARE_CANDY, takenFrom,
@@ -146,8 +146,12 @@ function stepEvolution($) {
 // The evolved mon takes over the record, so its level, XP, and meters carry over. It's taken
 // here first, so the band shows the evolved mon at its own level from its first frame, then
 // again as last saved, so XP earned elsewhere meanwhile comes along. 'evolved' tells another
-// session showing the old mon that it evolved rather than being released.
-const evolvedRecord = (from) => ({ ...S.stats[from], xp: xpOf(from) })
+// session showing the old mon that it evolved rather than being released. A friendship
+// evolution the old mon was ready for stays behind.
+function evolvedRecord(from) {
+  const { readyFor, ...record } = S.stats[from] ?? {}
+  return { ...record, xp: xpOf(from) }
+}
 
 async function moveRecord($, from, into) {
   await freshen($, [from])
@@ -191,7 +195,8 @@ function stopEvolution($) {
   return { text: 'Huh? ' + name + ' stopped evolving!' }
 }
 
-// A stone, a trade, or a level the mon has reached starts its evolution now. A stone or
+// A stone, a trade, a level the mon has reached, or a level-up with full hearts starts its
+// evolution now. One a level-up with full hearts reached goes first when none is named. A stone or
 // a trade needs its item in the bag: the stone, the item the mon trades holding, or a
 // Link Cable. Several ways and none named get a list.
 async function evolveCommand($, wanted) {
@@ -199,12 +204,16 @@ async function evolveCommand($, wanted) {
   const entries = evolutionsOf(S.mon)
   if (entries.length === 0) return { text: name + ' doesn\'t evolve.' }
   if (S.attack || S.food) return { text: name + ' is busy right now.' }
-  const picked = wanted ? entries.filter((entry) => moveKey(entry.into) === moveKey(wanted)) : entries
+  const happy = S.stats[S.mon]?.readyFor
+  let picked = entries
+  if (wanted) picked = entries.filter((entry) => moveKey(entry.into) === moveKey(wanted))
+  else if (entries.some((entry) => entry.happy && entry.into === happy)) picked = entries.filter((entry) => entry.into === happy)
   if (picked.length !== 1) {
     const example = entries[Math.floor(Math.random() * entries.length)].into
     return { text: name + ' can become ' + orList(entries.map(evolutionText)) + '. Try /pokemon evolve ' + example + '.' }
   }
   const [entry] = picked
+  if (entry.happy && entry.into !== happy) return { text: name + ' can become ' + evolutionText(entry) + '.' }
   const level = levelOf(S.mon)
   if (entry.level && level < entry.level) {
     return { text: name + ' evolves into ' + displayName(entry.into) + ' at Lv. ' + entry.level + '. It\'s Lv. ' + level + '.' }
@@ -762,6 +771,8 @@ async function gainXp($, durationMs) {
   await saveStats($, [S.mon])
   const level = levelOf(S.mon)
   if (level === was) return
+  S.stats[S.mon] = markedHappy(S.mon)
+  await saveStats($, [S.mon])
   $.ui.toast(nameOf(S.mon) + ' grew to Lv. ' + level + '!')
   $.ui.invalidate('ui.render')
   const into = readyToEvolve()
@@ -773,12 +784,24 @@ async function gainXp($, durationMs) {
 // A party mon earns this share of what its own subagent's answered turn would earn the lead
 const PARTY_XP_SHARE = 0.5
 
-// A level-up off show can't evolve the mon, so a box mon at its evolution level is marked
-// ready, and it evolves once it's shown
+// A level-up with full hearts, or with needs off, reaches a friendship evolution, by day or
+// night when it asks. The record keeps it, so it stays ready the way a level evolution does.
+function markedHappy(name) {
+  const happy = !S.needsOn || filledIcons('happiness', name) === STAT_ICONS
+  const entry = happy ? happyEvolutionOf(name, timeOfDay(S.nowMs)) : null
+  return entry ? { ...S.stats[name], readyFor: entry.into } : S.stats[name]
+}
+
+// A level-up off show can't evolve the mon, so a box mon at its evolution level, or that
+// leveled up with full hearts into a friendship evolution, is marked ready, and it evolves
+// once it's shown
 function markedReady(name, was) {
-  const evolution = levelEvolutionOf(name)
   const level = levelOf(name)
-  return level > was && evolution && level >= evolution.level ? { ...S.stats[name], evolveReady: true } : S.stats[name]
+  if (level <= was) return S.stats[name]
+  const record = markedHappy(name)
+  const evolution = levelEvolutionOf(name)
+  const ready = (evolution && level >= evolution.level) || record.readyFor
+  return ready ? { ...record, evolveReady: true } : record
 }
 
 // The party mon out for a subagent earns XP for that subagent's answered turn, scaled by
@@ -852,7 +875,7 @@ async function candyCommand($, wanted) {
   await changeBag($, (bag) => takenFrom(bag, RARE_CANDY))
   await freshen($, [name])
   S.stats[name] = { ...S.stats[name], xp: xpAt(was + 1) }
-  if (name !== S.mon) S.stats[name] = markedReady(name, was)
+  S.stats[name] = name === S.mon ? markedHappy(name) : markedReady(name, was)
   await saveRecords($, [name])
   $.ui.invalidate('ui.render')
   const grew = 'You give ' + shown + ' a Rare Candy. It grew to Lv. ' + (was + 1) + '!'

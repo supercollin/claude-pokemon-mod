@@ -1359,8 +1359,8 @@ test('/pokemon evolve uses a stone or a trade, lists Eevee\'s choices, and says 
   expect(toasts).toEqual(['What? Pikachu is evolving!', 'Congratulations! Your Pikachu evolved into Raichu!'])
 
   await run('eevee')
-  const choices = 'Eevee can become Vaporeon with a Water Stone, Jolteon with a Thunder Stone, or Flareon with a Fire Stone.'
-  expect(await run('evolve')).toMatch(new RegExp('^' + choices.replace(/\./g, '\\.') + ' Try /pokemon evolve (vaporeon|jolteon|flareon)\\.$'))
+  const choices = 'Eevee can become Vaporeon with a Water Stone, Jolteon with a Thunder Stone, Flareon with a Fire Stone, Espeon at a level-up with full hearts by day, or Umbreon at a level-up with full hearts by night.'
+  expect(await run('evolve')).toMatch(new RegExp('^' + choices.replace(/\./g, '\\.') + ' Try /pokemon evolve (vaporeon|jolteon|flareon|espeon|umbreon)\\.$'))
   expect(await run('evolve jolteon')).toBe('You use a Thunder Stone on Eevee.')
   await clock.advance(7100)
   expect(saved.mon).toBe('jolteon')
@@ -4572,7 +4572,106 @@ test('a fetched Magby evolves into the bundled Magmar at Lv. 30', { timeoutMs: 3
   expect(saved.mon).toBe('magmar')
 })
 
+// Golbat one XP short of Lv. 30, with its hearts at happiness
+const golbatAt = (happiness: number, more: Record<string, unknown> = {}) => ({
+  mon: 'golbat',
+  wander: false,
+  stats: { golbat: { xp: 30 ** 3 - 1, happiness: { value: happiness, at: 0 }, food: { value: 100, at: 0 } } },
+  ...more,
+})
+
+test('Golbat levels up with full hearts into a fetched Crobat, and not with fewer', { timeoutMs: 30000 }, async ($, on) => {
+  const toasts = toastsOf(on)
+  on('turn.complete', () => ({ text: '' }))
+  serveMons(on, { 2: ['crobat'] }, { types: ['poison', 'flying'] })
+  const saved: Record<string, any> = golbatAt(100)
+  const { clock } = await startedWith($, on, saved, 0)
+  expect(await run($, 'stats')).toMatch(/ Can become Crobat at a level-up with full hearts\./)
+  expect(await run($, 'evolve')).toBe('Golbat can become Crobat at a level-up with full hearts.')
+  await $.turn.complete(ANSWERED)
+  expect(toasts[0]).toBe('Golbat grew to Lv. 30!')
+  await clock.advance(7200)
+  expect(toasts.at(-1)).toBe('Congratulations! Your Golbat evolved into Crobat!')
+  expect(saved.mon).toBe('crobat')
+  expect(saved.stats.crobat.readyFor).toBeUndefined()
+})
+
+test('Golbat with fewer than full hearts levels up and stays Golbat', { timeoutMs: 30000 }, async ($, on) => {
+  on('turn.complete', () => ({ text: '' }))
+  const asked = serveMons(on, { 2: ['crobat'] }, { types: ['poison', 'flying'] })
+  const saved: Record<string, any> = golbatAt(60)
+  const { clock } = await startedWith($, on, saved, 0)
+  await $.turn.complete(ANSWERED)
+  await clock.advance(7200)
+  expect(saved.mon).toBe('golbat')
+  expect(asked).toEqual([])
+  expect(await run($, 'evolve')).toBe('Golbat can become Crobat at a level-up with full hearts.')
+})
+
+test('with needs off, a level-up counts as full hearts', { timeoutMs: 30000 }, async ($, on) => {
+  on('turn.complete', () => ({ text: '' }))
+  serveMons(on, { 2: ['crobat'] }, { types: ['poison', 'flying'] })
+  const saved: Record<string, any> = golbatAt(0, { needs: false })
+  const { clock } = await startedWith($, on, saved, 0)
+  await $.turn.complete(ANSWERED)
+  await clock.advance(7200)
+  expect(saved.mon).toBe('crobat')
+})
+
+test('with autoevolve off, a level-up with full hearts makes Golbat ready, and /pokemon evolve lets it', { timeoutMs: 30000 }, async ($, on) => {
+  const toasts = toastsOf(on)
+  on('turn.complete', () => ({ text: '' }))
+  serveMons(on, { 2: ['crobat'] }, { types: ['poison', 'flying'] })
+  const saved: Record<string, any> = golbatAt(100, { autoEvolve: false })
+  const { clock } = await startedWith($, on, saved, 0)
+  await $.turn.complete(ANSWERED)
+  expect(toasts).toEqual(['Golbat grew to Lv. 30!', 'Golbat is ready to evolve into Crobat! /pokemon evolve lets it.'])
+  expect(saved.stats.golbat.readyFor).toBe('crobat')
+  expect(await run($, 'stats')).toMatch(/ Ready to evolve into Crobat\. \/pokemon evolve lets it\./)
+  expect(await run($, 'evolve')).toBe('You let Golbat evolve.')
+  await clock.advance(7200)
+  expect(saved.mon).toBe('crobat')
+})
+
+for (const [hour, into, other] of [[12, 'espeon', 'umbreon'], [22, 'umbreon', 'espeon']] as const) {
+  test(`Eevee levels up with full hearts at ${hour}:00 into a fetched ${into}`, { timeoutMs: 30000 }, async ($, on) => {
+    on('turn.complete', () => ({ text: '' }))
+    const asked = serveMons(on, { 2: ['espeon', 'umbreon'] }, { types: ['psychic'] })
+    const saved: Record<string, any> = {
+      mon: 'eevee',
+      wander: false,
+      stats: { eevee: { xp: 20 ** 3 - 1, happiness: { value: 100, at: 0 }, food: { value: 100, at: 0 } } },
+    }
+    const noon = new Date(2026, 10, 17, hour).getTime()
+    saved.stats.eevee.happiness.at = noon
+    saved.stats.eevee.food.at = noon
+    const { clock } = await startedWith($, on, saved, noon)
+    await $.turn.complete(ANSWERED)
+    await clock.advance(7200)
+    expect(saved.mon).toBe(into)
+    expect(asked.some((url) => url.includes('/gen2/' + other + '/'))).toBe(false)
+  })
+}
+
+test('a Rare Candy with full hearts grows a fetched Pichu into Pikachu', { timeoutMs: 30000 }, async ($, on) => {
+  const saved: Record<string, any> = {
+    mon: 'pichu',
+    wander: false,
+    bag: { rarecandy: 1 },
+    stats: { pichu: { xp: 10 ** 3, happiness: { value: 100, at: 0 }, food: { value: 100, at: 0 } } },
+    'custom:pichu': { gen: 2, sprite: SPRITES.diglett, moves: ['Thunder Shock', 'Tackle'] },
+  }
+  const { clock } = await startedWith($, on, saved, 0)
+  expect(await run($, 'use rare candy')).toBe('You give Pichu a Rare Candy. It grew to Lv. 11!')
+  await clock.advance(7200)
+  expect(saved.mon).toBe('pikachu')
+})
+
 test('a gen 1 mon with a gen 2 baby or a gen 2 evolution keeps its wild tier and start level', () => {
+  for (const mon of ['pikachu', 'clefairy', 'jigglypuff']) {
+    expect(tierOf(mon)).toBe('common')
+    expect(startLevel(mon)).toBe(startLevel('pidgey'))
+  }
   for (const mon of ['jynx', 'electabuzz', 'magmar', 'onix']) {
     expect(tierOf(mon)).toBe('uncommon')
     expect(startLevel(mon)).toBe(startLevel('pidgey'))

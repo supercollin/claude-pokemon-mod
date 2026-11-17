@@ -50,8 +50,12 @@ for (const [mon, entries] of Object.entries(EVOLUTIONS)) {
   if (!known(mon)) fail(`evolutions for ${mon}, which has no sprites and isn't in FETCHED`)
   for (const entry of entries) {
     if (!known(entry.into)) fail(`${mon} evolves into ${entry.into}, which has no sprites and isn't in FETCHED`)
-    const ways = ['level', 'item', 'trade'].filter((key) => entry[key] !== undefined).join('+')
-    if (!['level', 'item', 'trade', 'item+trade'].includes(ways)) fail(`${mon} into ${entry.into} needs a level, an item, a trade, or a trade and an item`)
+    const ways = ['level', 'item', 'trade', 'happy', 'time'].filter((key) => entry[key] !== undefined).join('+')
+    if (!['level', 'item', 'trade', 'item+trade', 'happy', 'happy+time'].includes(ways)) {
+      fail(`${mon} into ${entry.into} needs a level, an item, a trade, a trade and an item, or full hearts with or without a time of day`)
+    }
+    if (entry.happy !== undefined && entry.happy !== true) fail(`${mon} into ${entry.into} has happy ${entry.happy}`)
+    if (entry.time !== undefined && !['day', 'night'].includes(entry.time)) fail(`${mon} into ${entry.into} has time ${entry.time}`)
     if (entry.item !== undefined && !ITEMS.some((item) => item.key === itemFor(entry) && item.name === entry.item)) fail(`${mon} into ${entry.into} needs ${entry.item}, which isn't an item`)
     if (entry.level !== undefined && !(entry.level > 1 && entry.level <= MAX_LEVEL)) fail(`${mon} evolves at level ${entry.level}`)
   }
