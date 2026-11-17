@@ -12,7 +12,7 @@ import { BUNDLED_DEX, BUNDLED_GENS, GEN_DEX, GENS, LEGENDARY, NATIONAL_DEX, RARE
 import { EVOLUTIONS, FETCHED } from '../hooks/evolutions.js'
 import { EYES, eyesOf } from '../hooks/eyes.js'
 import { ITEM_ART } from '../hooks/art.js'
-import { ITEMS, itemFor } from '../hooks/items.js'
+import { HELD_FAMILIES, ITEMS, STONE_FAMILIES, itemFor } from '../hooks/items.js'
 import { SPRITES } from '../hooks/frames.js'
 import { MAX_LEVEL, levelAt, xpAt } from '../hooks/levels.js'
 import { MOVE_FX, MOVES } from '../hooks/moves.js'
@@ -141,6 +141,18 @@ if (new Set(NATIONAL_DEX).size !== NATIONAL_DEX.length) fail('the Pokédex lists
 for (const mon of mons) if (!BUNDLED_DEX.includes(dexKey(mon))) fail(`${mon} has no Pokédex entry`)
 for (const mon of FETCHED) if (!NATIONAL_DEX.includes(dexKey(mon))) fail(`${mon} is in FETCHED but not in the Pokédex`)
 for (const mon of [...LEGENDARY, ...RARE]) if (!NATIONAL_DEX.includes(mon)) fail(`tier list names ${mon}, which isn't in the Pokédex`)
+// A drop family names Pokédex keys, and a mon favors at most one stone and holds at most one item
+for (const families of [STONE_FAMILIES, HELD_FAMILIES]) {
+  const seen = new Map()
+  for (const [item, family] of Object.entries(families)) {
+    if (!ITEMS.some((known) => known.key === item)) fail(`drop family for ${item}, which isn't an item`)
+    for (const mon of family) {
+      if (!NATIONAL_DEX.includes(mon)) fail(`${item} drop family names ${mon}, which isn't in the Pokédex`)
+      if (seen.has(mon)) fail(`${mon} drops both ${seen.get(mon)} and ${item}`)
+      seen.set(mon, item)
+    }
+  }
+}
 for (const mon of NATIONAL_DEX) if (!TIERS[tierOf(mon)]) fail(`${mon} has unknown tier ${tierOf(mon)}`)
 
 if (problems.length > 0) {

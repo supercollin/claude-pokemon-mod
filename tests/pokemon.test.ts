@@ -4527,6 +4527,23 @@ test('a foe that holds a trade item drops it now and then, and the same foe alwa
   expect(dropOf('magnemite', 42)).toBe(dropOf('magnemite', 42))
 })
 
+test('gen 2 foes drop their own type\'s stone, Sun Stone included, and the items their line holds', () => {
+  const kinds = (key: string) => {
+    const drops = new Set<string>()
+    for (let seed = 0; seed < 3000; seed++) drops.add(dropOf(key, seed))
+    return [...drops].sort()
+  }
+  expect(kinds('cyndaquil')).toEqual(['firestone', 'linkcable', 'rarecandy'])
+  expect(kinds('sunkern')).toEqual(['linkcable', 'rarecandy', 'sunstone'])
+  expect(kinds('togepi')).toEqual(['linkcable', 'moonstone', 'rarecandy'])
+  expect(kinds('steelix')).toContain('metalcoat')
+  expect(kinds('kingdra')).toEqual(['dragonscale', 'linkcable', 'rarecandy', 'waterstone'])
+  expect(stoneOfType('hooh')).toBe('sunstone')
+  expect(heldItemOf('porygon2')).toBe('upgrade')
+  // A gen 2 foe with no stone type drops any stone, as gen 1's do
+  expect(kinds('aipom').filter((item) => item.endsWith('stone')).length).toBe(6)
+})
+
 test('Onix trades into a fetched Steelix holding a Metal Coat, which it spends, and a Link Cable alone won\'t do', { timeoutMs: 30000 }, async ($, on) => {
   serveMons(on, { 2: ['steelix'] }, { types: ['steel', 'ground'] })
   const saved: Record<string, any> = { trainer: false, mon: 'onix', bag: { linkcable: 1 } }

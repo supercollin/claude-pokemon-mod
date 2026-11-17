@@ -416,11 +416,14 @@ Once another hit could knock the foe out, it's weak, and the mon holds off. Only
 `/pokemon attack` lands the last hit. A foe at 0 HP faints and blinks away, and can't be
 caught, but an item pops out of it and goes into your bag. It's usually a stone, most
 often the one for the foe's type, like a Fire Stone from a Vulpix or a Thunder Stone from
-a Voltorb. No gen 1 mon favors the Sun Stone, so only a foe with no stone of its type
-drops one. About 1 knockout in 13 drops a Link Cable instead, and 1 in 15 a Rare Candy.
+a Voltorb. Gen 2's foes favor theirs too, like a Fire Stone from a Cyndaquil, and the Sun
+Stone comes from Sunkern, Sunflora, Bellossom, and Ho-Oh, or any foe with no stone of its
+type. About 1 knockout in 13 drops a Link Cable instead, and 1 in 15 a Rare Candy.
 A foe that holds an item in Gold and Silver drops it about 1 time in 12: a Metal Coat from
 Magnemite and Magneton, a Dragon Scale from Horsea and Seadra, and a King's Rock from the
 Poliwag and Slowpoke lines. Porygon drops the Up-Grade, which no wild mon holds there.
+With gen 2 on, the mons those trades make hold their item too, and Skarmory and
+Forretress a Metal Coat.
 Main turns of two minutes or more turn up a Rare Candy 1 time in 10 too.
 Every 10 to 15 s the foe plays one of its own moves at the mon, which flinches and puts
 its next move off.
@@ -554,7 +557,8 @@ Bringing one in is data, in `hooks/dex.js` and `hooks/evolutions.js`:
 2. Add its legendaries to `LEGENDARY` and its rare mons to `RARE`. The rest takes its tier from its place in its family.
 3. A mon with no folder of its own, only its forms', goes in `WILD_FORMS`, its forms in `BASE_FORM`, and their names in `hooks/names.js`.
 4. Add its evolutions to `EVOLUTIONS`, and every mon they name that isn't bundled to `FETCHED`.
-5. Run `node scripts/check-data.mjs`. `/pokemon gen <N>` turns it on from then on.
+5. Add its mons to the drop tables in `hooks/items.js`: `STONE_FAMILIES` for the stone each favors, and `HELD_FAMILIES` for an item it holds.
+6. Run `node scripts/check-data.mjs`. `/pokemon gen <N>` turns it on from then on.
 
 </details>
 

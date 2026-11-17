@@ -34,32 +34,43 @@ const HELD_ODDS = 1 / 10
 export const LONG_TURN_CANDY_ODDS = 1 / 10
 const DROP_SALT = 0x17e5
 
-// The wild mons, by Pokédex key, whose type favors each stone. Moon Stone stands in for
-// the fairy-like mons that use it. No gen 1 mon favors Sun Stone, so only a foe with no
-// stone type drops one.
-const STONE_FAMILIES = {
-  firestone: ['charmander', 'charmeleon', 'charizard', 'vulpix', 'ninetales', 'growlithe', 'arcanine', 'ponyta', 'rapidash', 'magmar', 'flareon', 'moltres'],
+// The wild mons, by Pokédex key, whose type favors each stone, gen 1's then gen 2's. Moon
+// Stone stands in for the fairy-like mons that use it, and Sun Stone for the sun-loving
+// ones. A generation brought into the wild adds its mons here.
+export const STONE_FAMILIES = {
+  firestone: [
+    'charmander', 'charmeleon', 'charizard', 'vulpix', 'ninetales', 'growlithe', 'arcanine', 'ponyta', 'rapidash', 'magmar', 'flareon', 'moltres',
+    'cyndaquil', 'quilava', 'typhlosion', 'slugma', 'magcargo', 'houndour', 'houndoom', 'magby', 'entei',
+  ],
   waterstone: [
     'squirtle', 'wartortle', 'blastoise', 'psyduck', 'golduck', 'poliwag', 'poliwhirl', 'poliwrath', 'tentacool', 'tentacruel', 'slowpoke', 'slowbro',
     'seel', 'dewgong', 'shellder', 'cloyster', 'krabby', 'kingler', 'horsea', 'seadra', 'goldeen', 'seaking', 'staryu', 'starmie', 'magikarp',
     'gyarados', 'lapras', 'vaporeon', 'omanyte', 'omastar', 'kabuto', 'kabutops',
+    'totodile', 'croconaw', 'feraligatr', 'chinchou', 'lanturn', 'marill', 'azumarill', 'wooper', 'quagsire', 'qwilfish', 'corsola', 'remoraid',
+    'octillery', 'mantine', 'suicune', 'politoed', 'slowking', 'kingdra',
   ],
-  thunderstone: ['pikachu', 'raichu', 'magnemite', 'magneton', 'voltorb', 'electrode', 'electabuzz', 'jolteon', 'zapdos'],
-  leafstone: ['bulbasaur', 'ivysaur', 'venusaur', 'oddish', 'gloom', 'vileplume', 'paras', 'parasect', 'bellsprout', 'weepinbell', 'victreebel', 'exeggcute', 'exeggutor', 'tangela'],
-  moonstone: ['clefairy', 'clefable', 'jigglypuff', 'wigglytuff', 'nidoran_female', 'nidorina', 'nidoqueen', 'nidoran_male', 'nidorino', 'nidoking'],
-  sunstone: [],
+  thunderstone: ['pikachu', 'raichu', 'magnemite', 'magneton', 'voltorb', 'electrode', 'electabuzz', 'jolteon', 'zapdos', 'pichu', 'mareep', 'flaaffy', 'ampharos', 'elekid', 'raikou'],
+  leafstone: [
+    'bulbasaur', 'ivysaur', 'venusaur', 'oddish', 'gloom', 'vileplume', 'paras', 'parasect', 'bellsprout', 'weepinbell', 'victreebel', 'exeggcute', 'exeggutor', 'tangela',
+    'chikorita', 'bayleef', 'meganium', 'hoppip', 'skiploom', 'jumpluff',
+  ],
+  moonstone: [
+    'clefairy', 'clefable', 'jigglypuff', 'wigglytuff', 'nidoran_female', 'nidorina', 'nidoqueen', 'nidoran_male', 'nidorino', 'nidoking',
+    'cleffa', 'igglybuff', 'togepi', 'togetic', 'snubbull', 'granbull', 'umbreon',
+  ],
+  sunstone: ['sunkern', 'sunflora', 'bellossom', 'hooh'],
 }
 
 export const stoneOfType = (key) => STONES.find((stone) => STONE_FAMILIES[stone].includes(key)) ?? null
 
 // The wild mons, by Pokédex key, that hold each item a trade evolution needs, as wild
-// Magnemite hold a Metal Coat and Horsea a Dragon Scale in Gold and Silver. No wild mon
-// holds an Up-Grade there, so Porygon stands in.
-const HELD_FAMILIES = {
-  kingsrock: ['poliwag', 'poliwhirl', 'slowpoke', 'slowbro'],
-  metalcoat: ['magnemite', 'magneton'],
-  dragonscale: ['horsea', 'seadra'],
-  upgrade: ['porygon'],
+// Magnemite hold a Metal Coat and Horsea a Dragon Scale in Gold and Silver, and the mons
+// those trades make. No wild mon holds an Up-Grade there, so Porygon stands in.
+export const HELD_FAMILIES = {
+  kingsrock: ['poliwag', 'poliwhirl', 'slowpoke', 'slowbro', 'politoed', 'slowking'],
+  metalcoat: ['magnemite', 'magneton', 'steelix', 'scizor', 'skarmory', 'forretress'],
+  dragonscale: ['horsea', 'seadra', 'kingdra'],
+  upgrade: ['porygon', 'porygon2'],
 }
 
 export const heldItemOf = (key) => Object.keys(HELD_FAMILIES).find((item) => HELD_FAMILIES[item].includes(key)) ?? null
