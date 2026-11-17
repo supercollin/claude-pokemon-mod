@@ -12,10 +12,11 @@ export const ITEMS = [
   { key: 'thunderstone', name: 'Thunder Stone' },
   { key: 'leafstone', name: 'Leaf Stone' },
   { key: 'moonstone', name: 'Moon Stone' },
+  { key: 'sunstone', name: 'Sun Stone' },
   { key: 'linkcable', name: 'Link Cable' },
   { key: 'rarecandy', name: 'Rare Candy' },
 ]
-export const STONES = ['firestone', 'waterstone', 'thunderstone', 'leafstone', 'moonstone']
+export const STONES = ['firestone', 'waterstone', 'thunderstone', 'leafstone', 'moonstone', 'sunstone']
 export const RARE_CANDY = 'rarecandy'
 export const LINK_CABLE = 'linkcable'
 
@@ -29,7 +30,8 @@ export const LONG_TURN_CANDY_ODDS = 1 / 10
 const DROP_SALT = 0x17e5
 
 // The wild mons, by Pokédex key, whose type favors each stone. Moon Stone stands in for
-// the fairy-like mons that use it.
+// the fairy-like mons that use it. No gen 1 mon favors Sun Stone, so only a foe with no
+// stone type drops one.
 const STONE_FAMILIES = {
   firestone: ['charmander', 'charmeleon', 'charizard', 'vulpix', 'ninetales', 'growlithe', 'arcanine', 'ponyta', 'rapidash', 'magmar', 'flareon', 'moltres'],
   waterstone: [
@@ -40,6 +42,7 @@ const STONE_FAMILIES = {
   thunderstone: ['pikachu', 'raichu', 'magnemite', 'magneton', 'voltorb', 'electrode', 'electabuzz', 'jolteon', 'zapdos'],
   leafstone: ['bulbasaur', 'ivysaur', 'venusaur', 'oddish', 'gloom', 'vileplume', 'paras', 'parasect', 'bellsprout', 'weepinbell', 'victreebel', 'exeggcute', 'exeggutor', 'tangela'],
   moonstone: ['clefairy', 'clefable', 'jigglypuff', 'wigglytuff', 'nidoran_female', 'nidorina', 'nidoqueen', 'nidoran_male', 'nidorino', 'nidoking'],
+  sunstone: [],
 }
 
 export const stoneOfType = (key) => STONES.find((stone) => STONE_FAMILIES[stone].includes(key)) ?? null

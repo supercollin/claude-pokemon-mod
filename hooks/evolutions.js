@@ -1,5 +1,5 @@
 // The gen 1 evolutions follow the Red and Blue rules and are keyed by sprite key, in
-// Pokédex order. Each entry is one thing the mon can become: { into, level } on level-up,
+// Pokédex order, followed by gen 2's. Each entry is one thing the mon can become: { into, level } on level-up,
 // { into, item } with an evolution stone, or { into, trade: true }. A mon that doesn't
 // evolve has no entry.
 
@@ -37,7 +37,10 @@ export const EVOLUTIONS = {
   jigglypuff: [{ into: 'wigglytuff', item: 'Moon Stone' }],
   zubat: [{ into: 'golbat', level: 22 }],
   oddish: [{ into: 'gloom', level: 21 }],
-  gloom: [{ into: 'vileplume', item: 'Leaf Stone' }],
+  gloom: [
+    { into: 'vileplume', item: 'Leaf Stone' },
+    { into: 'bellossom', item: 'Sun Stone' },
+  ],
   paras: [{ into: 'parasect', level: 24 }],
   venonat: [{ into: 'venomoth', level: 31 }],
   diglett: [{ into: 'dugtrio', level: 26 }],
@@ -85,7 +88,51 @@ export const EVOLUTIONS = {
   kabuto: [{ into: 'kabutops', level: 40 }],
   dratini: [{ into: 'dragonair', level: 30 }],
   dragonair: [{ into: 'dragonite', level: 55 }],
+
+  // Gen 2, by Gold and Silver rules. These mons aren't bundled: /pokemon new fetches
+  // them, and a mon evolving into one fetches it first. Evolutions by friendship, time of
+  // day, a held item, or stats, and the baby mons, aren't here yet.
+  chikorita: [{ into: 'bayleef', level: 16 }],
+  bayleef: [{ into: 'meganium', level: 32 }],
+  cyndaquil: [{ into: 'quilava', level: 14 }],
+  quilava: [{ into: 'typhlosion', level: 36 }],
+  totodile: [{ into: 'croconaw', level: 18 }],
+  croconaw: [{ into: 'feraligatr', level: 30 }],
+  sentret: [{ into: 'furret', level: 15 }],
+  hoothoot: [{ into: 'noctowl', level: 20 }],
+  ledyba: [{ into: 'ledian', level: 18 }],
+  spinarak: [{ into: 'ariados', level: 22 }],
+  chinchou: [{ into: 'lanturn', level: 27 }],
+  natu: [{ into: 'xatu', level: 25 }],
+  mareep: [{ into: 'flaaffy', level: 15 }],
+  flaaffy: [{ into: 'ampharos', level: 30 }],
+  marill: [{ into: 'azumarill', level: 18 }],
+  hoppip: [{ into: 'skiploom', level: 18 }],
+  skiploom: [{ into: 'jumpluff', level: 27 }],
+  sunkern: [{ into: 'sunflora', item: 'Sun Stone' }],
+  wooper: [{ into: 'quagsire', level: 20 }],
+  pineco: [{ into: 'forretress', level: 31 }],
+  snubbull: [{ into: 'granbull', level: 23 }],
+  teddiursa: [{ into: 'ursaring', level: 30 }],
+  slugma: [{ into: 'magcargo', level: 38 }],
+  swinub: [{ into: 'piloswine', level: 33 }],
+  remoraid: [{ into: 'octillery', level: 25 }],
+  houndour: [{ into: 'houndoom', level: 24 }],
+  phanpy: [{ into: 'donphan', level: 25 }],
+  larvitar: [{ into: 'pupitar', level: 30 }],
+  pupitar: [{ into: 'tyranitar', level: 55 }],
 }
+
+// The mons EVOLUTIONS names that aren't bundled, as vscode-pokemon names their folders
+// under media/gen2. scripts/check-data.mjs holds every unbundled name to this list.
+export const FETCHED = [
+  'ampharos', 'ariados', 'azumarill', 'bayleef', 'bellossom', 'chikorita', 'chinchou', 'croconaw', 'cyndaquil', 'donphan',
+  'feraligatr', 'flaaffy', 'forretress', 'furret', 'granbull', 'hoothoot', 'hoppip', 'houndoom', 'houndour', 'jumpluff',
+  'lanturn', 'larvitar', 'ledian', 'ledyba', 'magcargo', 'mareep', 'marill', 'meganium', 'natu', 'noctowl',
+  'octillery', 'phanpy', 'piloswine', 'pineco', 'pupitar', 'quagsire', 'quilava', 'remoraid', 'sentret', 'skiploom',
+  'slugma', 'snubbull', 'spinarak', 'sunflora', 'sunkern', 'swinub', 'teddiursa', 'totodile', 'typhlosion', 'tyranitar',
+  'ursaring', 'wooper', 'xatu',
+]
 
 // PARENTS maps each evolved mon to the mon it comes from and the entry that takes it there
 const PARENTS = new Map()

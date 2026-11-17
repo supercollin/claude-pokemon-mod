@@ -42,7 +42,7 @@ Then pick your starter, like `/pokemon charmander`. Bulbasaur, Charmander, Squir
 - 🎒 **You start with one starter.** Bulbasaur, Charmander, Squirtle, or Pikachu. Every other mon has to be caught.
 - 🌿 **Wild Pokémon show up, and they fight back.** Your work wears them down while they strike your mon with their own moves, and each strike costs it some happiness, more while you leave the foe alone. Once one is weak, `/pokemon catch` fills your Pokédex. Knock it out instead, and it drops an item for your bag.
 - ⚡ **It fights.** 135 moves from gen 1, each with its own pixel animation.
-- 🎨 **All 151 gen 1 Pokémon**, each in default and shiny, and gen 2 to 5 with `/pokemon new`.
+- 🎨 **All 151 gen 1 Pokémon**, each in default and shiny, and gen 2 to 5 with `/pokemon new`. Gen 2 mons evolve too, fetching the mon they become.
 
 ## See it
 
@@ -297,17 +297,26 @@ minutes or more and scaled by the meters. Levels follow the games' medium fast c
 level L takes L³ XP. A new mon starts at 5, or at the level it evolves at, so Charmeleon
 starts at 16. With 30 s turns and full meters, 5 to 16 takes about 75 turns.
 
-When the mon reaches its evolution level from Red and Blue, it evolves once idle. It glows,
+When the mon reaches its evolution level from Red and Blue, or Gold and Silver for gen 2,
+it evolves once idle. It glows,
 flickers between its two shapes, and flashes into its new form. `/pokemon stop` cancels,
 and the next level-up tries again. Level, XP, and meters carry over. With
 `/pokemon autoevolve` off, reaching the level only makes the mon ready, and it evolves when
 you run `/pokemon evolve`.
 
-The 19 mons that evolve with a stone or a trade, like Pikachu, Eevee, and Kadabra, need an
+Gen 2 mons aren't bundled, so a mon evolving into one, like Cyndaquil into Quilava,
+fetches it first, the way `/pokemon new` does, and every session can show it after. If the
+fetch fails, the mon doesn't evolve yet and says why, and the next level-up, showing it
+again, or `/pokemon evolve` tries again. Evolutions by friendship, time of day, or a held
+item, and the baby mons, aren't in yet.
+
+The 19 gen 1 mons that evolve with a stone or a trade, like Pikachu, Eevee, and Kadabra, need an
 item from your bag. A stone mon needs its stone, like a Thunder Stone for Pikachu, and
 Kadabra, Machoke, Graveler, and Haunter need a Link Cable. `/pokemon evolve`, or
 `/pokemon use thunder stone`, starts the evolution, and the item leaves the bag once it's
 done. Eevee needs a pick, like `/pokemon evolve jolteon`, which takes a Thunder Stone.
+Gloom needs one too: a Leaf Stone makes it Vileplume, and a Sun Stone a fetched
+Bellossom. Sunkern, from gen 2, also takes a Sun Stone.
 Without the item, it says which one is missing.
 
 Items come from wild mons you knock out, and `/pokemon bag` lists them. The first time
@@ -377,7 +386,8 @@ Once another hit could knock the foe out, it's weak, and the mon holds off. Only
 `/pokemon attack` lands the last hit. A foe at 0 HP faints and blinks away, and can't be
 caught, but an item pops out of it and goes into your bag. It's usually a stone, most
 often the one for the foe's type, like a Fire Stone from a Vulpix or a Thunder Stone from
-a Voltorb. About 1 knockout in 13 drops a Link Cable instead, and 1 in 15 a Rare Candy.
+a Voltorb. No gen 1 mon favors the Sun Stone, so only a foe with no stone of its type
+drops one. About 1 knockout in 13 drops a Link Cable instead, and 1 in 15 a Rare Candy.
 Main turns of two minutes or more turn up a Rare Candy 1 time in 10 too.
 Every 10 to 15 s the foe plays one of its own moves at the mon, which flinches and puts
 its next move off.
@@ -494,7 +504,7 @@ To try a mon without changing the repo, `/pokemon new <mon>` fetches it at runti
 1. Copy the four GIFs from `media/gen<N>/<mon>/` in [vscode-pokemon](https://github.com/jakobhoeg/vscode-pokemon/tree/main/media) into `sprites/<mon>/`: `default_idle_8fps.gif`, `default_walk_8fps.gif`, `shiny_idle_8fps.gif`, and `shiny_walk_8fps.gif`.
 2. Run `node scripts/build-frames.mjs`.
 3. Give it a moveset in `MOVES` in `hooks/moves.js`. Every mon needs at least one move.
-4. If it evolves, add it to `hooks/evolutions.js`. If its name isn't just the key capitalized, add it to `hooks/names.js`.
+4. If it evolves, add it to `hooks/evolutions.js`. A mon it evolves into that isn't bundled goes in `FETCHED` there, under its vscode-pokemon folder name. If its name isn't just the key capitalized, add it to `hooks/names.js`.
 5. Mark its eyes on every frame in `EYES` in `hooks/eyes.js`, and check them asleep with `node scripts/preview-sleep.mjs <mon>`.
 6. Run `node scripts/check-data.mjs`, then `/reload-plugins`.
 

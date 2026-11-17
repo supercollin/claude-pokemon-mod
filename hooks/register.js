@@ -97,6 +97,35 @@ async function markSkillCommand($, command) {
 const DOWN_WAITS = ['pet', 'feed', 'attack', 'catch', 'evolve', 'sleep']
 const GONE_WAITS = [...DOWN_WAITS, ...VARIANTS, 'nickname']
 
+// A mon to evolve into that isn't bundled, like Quilava, comes from the store when a
+// session fetched it before, or is fetched the way /pokemon new fetches it. Throws with a
+// line for the person.
+async function ensureMon($, name) {
+  if (SPRITES[name]) return
+  const saved = await $.store.get(CUSTOM_PREFIX + name)
+  if (saved?.sprite) {
+    addCustom(name, saved)
+    return
+  }
+  const entry = await fetchMon((url, init) => $.http.fetch(url, init), name)
+  await $.store.set(CUSTOM_PREFIX + name, entry)
+  addCustom(name, entry)
+}
+
+// A level evolution about to fall due, once the mon it becomes is here. One that can't be
+// fetched now, or whose mon was switched away meanwhile, isn't due: the next level-up,
+// showing the mon again, or /pokemon evolve tries again.
+async function dueEvolution($, into) {
+  const mon = S.mon
+  try {
+    await ensureMon($, into)
+  } catch (err) {
+    $.ui.toast(nameOf(mon) + ' can\'t evolve into ' + displayName(into) + ' yet: ' + (err?.message ?? String(err)))
+    return null
+  }
+  return S.mon === mon ? into : null
+}
+
 // Play the evolve effect with the evolved mon swapped in, in a band grown to fit both.
 // The item it needs, if any, leaves the bag once the evolution is done.
 function startEvolution($, into, item = null) {
@@ -183,6 +212,13 @@ async function evolveCommand($, wanted) {
   if (item && !(await loadBag($))[item]) {
     return { text: name + ' needs a ' + itemName(item) + ' to evolve into ' + displayName(entry.into) + '. Wild mons you knock out drop items, and /pokemon bag lists yours.' }
   }
+  const mon = S.mon
+  try {
+    await ensureMon($, entry.into)
+  } catch (err) {
+    return { text: name + ' can\'t evolve into ' + displayName(entry.into) + ' yet: ' + (err?.message ?? String(err)) }
+  }
+  if (S.mon !== mon) return { text: name + ' isn\'t on show anymore, so it didn\'t evolve.' }
   if (S.attack || S.food) return { text: name + ' is busy right now.' }
   startEvolution($, entry.into, item)
   if (entry.item) return { text: 'You use a ' + entry.item + ' on ' + name + '.' }
@@ -671,6 +707,12 @@ async function syncSessions($) {
       followEvolution($, into, saved[into])
       return
     }
+    // Evolved into a fetched mon this session hasn't loaded yet: load it, and the next
+    // sync follows the evolution rather than taking the mon for released
+    if (into && saved?.[into] && !MONS.includes(into)) {
+      await loadCustom($)
+      return
+    }
     if (S.stats[S.mon] && saved && typeof saved === 'object') {
       delete S.stats[S.mon]
       S.evolveDue = null
@@ -722,7 +764,7 @@ async function gainXp($, durationMs) {
   $.ui.invalidate('ui.render')
   const into = readyToEvolve()
   if (!into) return
-  if (S.autoEvolve) S.evolveDue = into
+  if (S.autoEvolve) S.evolveDue = await dueEvolution($, into)
   else $.ui.toast(nameOf(S.mon) + ' is ready to evolve into ' + displayName(into) + '! /pokemon evolve lets it.')
 }
 
@@ -762,7 +804,7 @@ async function evolveIfReady($) {
   await saveRecords($, [S.mon])
   const into = readyToEvolve()
   if (!into) return
-  if (S.autoEvolve) S.evolveDue = into
+  if (S.autoEvolve) S.evolveDue = await dueEvolution($, into)
   else $.ui.toast(nameOf(S.mon) + ' is ready to evolve into ' + displayName(into) + '! /pokemon evolve lets it.')
 }
 
@@ -815,7 +857,7 @@ async function candyCommand($, wanted) {
   const into = name === S.mon ? readyToEvolve() : null
   if (!into) return { text: grew }
   if (S.autoEvolve) {
-    S.evolveDue = into
+    S.evolveDue = await dueEvolution($, into)
     return { text: grew }
   }
   return { text: grew + ' It\'s ready to evolve into ' + displayName(into) + '. /pokemon evolve lets it.' }
@@ -1540,7 +1582,8 @@ async function runPokemon($, e) {
       return { text: name + ' waits for /pokemon evolve when it reaches its evolution level.' }
     }
     // Already at its level, it evolves once idle
-    S.evolveDue = readyToEvolve()
+    const into = readyToEvolve()
+    S.evolveDue = into && (await dueEvolution($, into))
     return { text: name + ' evolves on its own once idle at its evolution level.' }
   } else if (asked === 'revive' || asked.startsWith('revive ')) {
     return reviveCommand($, asked.slice('revive'.length).trim())

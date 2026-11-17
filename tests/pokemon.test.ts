@@ -4440,13 +4440,70 @@ test('/pokemon use takes an item by a loose name, and a stone on a mon is the sa
   const saved: Record<string, any> = { trainer: false, mon: 'eevee', bag: { firestone: 1, waterstone: 1 } }
   const { clock } = await startedWith($, on, saved, 0)
   expect(await run($, 'use')).toBe('Name the item, like /pokemon use rare candy. /pokemon bag lists yours.')
-  expect(await run($, 'use potion')).toBe('Unknown item "potion". Items: Fire Stone, Water Stone, Thunder Stone, Leaf Stone, Moon Stone, Link Cable, Rare Candy.')
+  expect(await run($, 'use potion')).toBe('Unknown item "potion". Items: Fire Stone, Water Stone, Thunder Stone, Leaf Stone, Moon Stone, Sun Stone, Link Cable, Rare Candy.')
   expect(await run($, 'use leaf stone')).toBe('Eevee can\'t use a Leaf Stone.')
   expect(await run($, 'use fire stone growlithe')).toBe('Show Growlithe first with /pokemon growlithe, then use the Fire Stone.')
   expect(await run($, 'use FireStone eevee')).toBe('You use a Fire Stone on Eevee.')
   await clock.advance(7100)
   expect(saved.mon).toBe('flareon')
   expect(saved.bag).toEqual({ waterstone: 1 })
+})
+
+// Cyndaquil as /pokemon new saves it, one XP short of Lv. 14, where it evolves
+const fetchedCyndaquil = () => ({
+  mon: 'cyndaquil',
+  wander: false,
+  stats: { cyndaquil: { xp: 14 ** 3 - 1 } },
+  'custom:cyndaquil': { gen: 2, sprite: SPRITES.diglett, moves: ['Ember', 'Tackle'] },
+})
+
+test('a level-up evolves a fetched gen 2 mon, fetching the mon it becomes first', { timeoutMs: 30000 }, async ($, on) => {
+  const toasts = toastsOf(on)
+  on('turn.complete', () => ({ text: '' }))
+  const asked = serveMons(on, { 2: ['quilava'] }, { types: ['fire'] })
+  const saved: Record<string, any> = fetchedCyndaquil()
+  const { clock } = await startedWith($, on, saved, 0)
+  expect(await run($, 'stats')).toMatch(/ Can become Quilava at Lv\. 14\./)
+
+  await $.turn.complete(ANSWERED)
+  expect(toasts).toEqual(['Cyndaquil grew to Lv. 14!'])
+  expect(asked.some((url) => url.includes('/gen2/quilava/'))).toBe(true)
+  expect(saved['custom:quilava'].gen).toBe(2)
+  await clock.advance(50)
+  expect(toasts[1]).toBe('What? Cyndaquil is evolving!')
+  await clock.advance(7100)
+  expect(toasts[2]).toBe('Congratulations! Your Cyndaquil evolved into Quilava!')
+  expect(saved.mon).toBe('quilava')
+  expect(saved.stats.cyndaquil).toBeUndefined()
+  expect(saved.stats.quilava.xp).toBeGreaterThanOrEqual(14 ** 3)
+  expect(await run($, 'moves')).toBe('Quilava knows Ember, Flamethrower, Tackle.')
+})
+
+test('a gen 2 evolution that can\'t be fetched waits, and says why', { timeoutMs: 30000 }, async ($, on) => {
+  const toasts = toastsOf(on)
+  on('turn.complete', () => ({ text: '' }))
+  serveMons(on, {}, { status: 403 })
+  const saved: Record<string, any> = fetchedCyndaquil()
+  const { clock } = await startedWith($, on, saved, 0)
+  await $.turn.complete(ANSWERED)
+  const why = 'Cyndaquil can\'t evolve into Quilava yet: GitHub\'s hourly limit for anonymous requests is used up. Try again in a while.'
+  expect(toasts).toEqual(['Cyndaquil grew to Lv. 14!', why])
+  await clock.advance(1000)
+  expect(saved.mon).toBe('cyndaquil')
+  expect(saved['custom:quilava']).toBeUndefined()
+  expect(await run($, 'evolve')).toBe(why)
+})
+
+test('Gloom becomes Vileplume with a Leaf Stone, or a fetched Bellossom with a Sun Stone', { timeoutMs: 30000 }, async ($, on) => {
+  serveMons(on, { 2: ['bellossom'] }, { types: ['grass'] })
+  const saved: Record<string, any> = { trainer: false, mon: 'gloom', bag: { sunstone: 1 } }
+  const { clock } = await startedWith($, on, saved, 0)
+  expect(await run($, 'evolve')).toMatch(/^Gloom can become Vileplume with a Leaf Stone or Bellossom with a Sun Stone\. Try \/pokemon evolve (vileplume|bellossom)\.$/)
+  expect(await run($, 'use sun stone')).toBe('You use a Sun Stone on Gloom.')
+  await clock.advance(7100)
+  expect(saved.mon).toBe('bellossom')
+  expect(saved.bag).toEqual({})
+  expect(saved['custom:bellossom'].gen).toBe(2)
 })
 
 test('Rare Candy raises a level, evolves the shown mon at its level, and a box mon once it\'s shown', { timeoutMs: 30000 }, async ($, on) => {
@@ -4483,7 +4540,7 @@ test('a knocked out foe drops an item into the bag', async ($, on) => {
   const saved: Record<string, any> = {}
   const { clock, toasts } = await inBattle($, on, saved)
   await weaken($, clock, toasts)
-  const fainted = /^Wild Pidgey fainted! It can't be caught now\. It dropped a (Fire Stone|Water Stone|Thunder Stone|Leaf Stone|Moon Stone|Link Cable|Rare Candy), and it's in your bag\.$/
+  const fainted = /^Wild Pidgey fainted! It can't be caught now\. It dropped a (Fire Stone|Water Stone|Thunder Stone|Leaf Stone|Moon Stone|Sun Stone|Link Cable|Rare Candy), and it's in your bag\.$/
   for (let k = 0; k < 60 && !toasts.some((text) => fainted.test(text)); k++) {
     if (k % 12 === 0) await run($, 'attack')
     await clock.advance(500)

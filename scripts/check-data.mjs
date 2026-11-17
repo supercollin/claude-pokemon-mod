@@ -9,7 +9,7 @@
 
 import { effectOf } from '../hooks/attacks.js'
 import { DEX, LEGENDARY, RARE, TIERS, dexKey, tierOf } from '../hooks/dex.js'
-import { EVOLUTIONS } from '../hooks/evolutions.js'
+import { EVOLUTIONS, FETCHED } from '../hooks/evolutions.js'
 import { EYES, eyesOf } from '../hooks/eyes.js'
 import { SPRITES } from '../hooks/frames.js'
 import { MAX_LEVEL, levelAt, xpAt } from '../hooks/levels.js'
@@ -37,15 +37,29 @@ for (const mon of mons) {
   if (!displayName(mon)) fail(`${mon} has no display name`)
 }
 
+// A mon an evolution names is bundled, or fetched at runtime and listed in FETCHED
+const named = new Set()
+const known = (mon) => {
+  named.add(mon)
+  return SPRITES[mon] || FETCHED.includes(mon)
+}
+
 for (const [mon, entries] of Object.entries(EVOLUTIONS)) {
-  if (!SPRITES[mon]) fail(`evolutions for ${mon}, which has no sprites`)
+  if (!known(mon)) fail(`evolutions for ${mon}, which has no sprites and isn't in FETCHED`)
   for (const entry of entries) {
-    if (!SPRITES[entry.into]) fail(`${mon} evolves into ${entry.into}, which has no sprites`)
+    if (!known(entry.into)) fail(`${mon} evolves into ${entry.into}, which has no sprites and isn't in FETCHED`)
     const ways = ['level', 'item', 'trade'].filter((key) => entry[key] !== undefined)
     if (ways.length !== 1) fail(`${mon} into ${entry.into} needs exactly one of level, item, or trade`)
     if (entry.level !== undefined && !(entry.level > 1 && entry.level <= MAX_LEVEL)) fail(`${mon} evolves at level ${entry.level}`)
   }
 }
+
+for (const mon of FETCHED) {
+  if (SPRITES[mon]) fail(`${mon} is in FETCHED but bundled`)
+  if (!named.has(mon)) fail(`${mon} is in FETCHED but no evolution names it`)
+  if (!displayName(mon)) fail(`${mon} has no display name`)
+}
+if (new Set(FETCHED).size !== FETCHED.length) fail('FETCHED names a mon twice')
 
 // Following evolutions from any mon must end, or a chain loops back on itself
 for (const start of Object.keys(EVOLUTIONS)) {

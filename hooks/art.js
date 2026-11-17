@@ -121,6 +121,7 @@ export const ITEM_ART = {
   thunderstone: stoneOf(0x2a7a30, 0x58b848, 0xffe040),
   leafstone: stoneOf(0x5a6a20, 0x98b040, 0x2a7a30),
   moonstone: stoneOf(0x30304a, 0x60607e, 0xd8d8f0),
+  sunstone: stoneOf(0xa02818, 0xe85020, 0xffc830),
   rarecandy: { rows: ['w.ccc.w', 'wwchcww', 'w.ccc.w'], colors: { w: 0xf0f0f8, c: 0x6a50d8, h: 0xd0c8ff } },
   linkcable: { rows: ['kk.kk', 'k...k', 'c...c', 'c...c', '.ccc.'], colors: { k: 0x9898a8, c: 0x8a50c0 } },
 }
