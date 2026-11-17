@@ -42,7 +42,7 @@ Then pick your starter, like `/pokemon charmander`. Bulbasaur, Charmander, Squir
 - 🎒 **You start with one starter.** Bulbasaur, Charmander, Squirtle, or Pikachu. Every other mon has to be caught.
 - 🌿 **Wild Pokémon show up, and they fight back.** Your work wears them down while they strike your mon with their own moves, and each strike costs it some happiness, more while you leave the foe alone. Once one is weak, `/pokemon catch` fills your Pokédex. Knock it out instead, and it drops an item for your bag.
 - ⚡ **It fights.** 135 moves from gen 1, each with its own pixel animation.
-- 🎨 **All 151 gen 1 Pokémon**, each in default and shiny, and gen 2 to 5 with `/pokemon new`. Gen 2 mons evolve too, fetching the mon they become.
+- 🎨 **All 151 gen 1 Pokémon**, each in default and shiny, and gen 2 to 5 with `/pokemon new`. `/pokemon gen 2` brings gen 2 into the wild, and its mons evolve too, fetching the mon they become.
 
 ## See it
 
@@ -94,6 +94,7 @@ Then pick your starter, like `/pokemon charmander`. Bulbasaur, Charmander, Squir
 | `/pokemon catch` | Throw a Poké Ball at a wild mon |
 | `/pokemon trainer` | Turn trainer mode off to show any mon without catching it, or back on |
 | `/pokemon dex` | Every wild mon you've seen and caught |
+| `/pokemon gen 2` | Bring gen 2's mons into the wild, or take them out again |
 | `/pokemon new <mon>` | Fetch a mon from gen 2 to 5, like `/pokemon new mudkip`, or a random one with `/pokemon new gen3` |
 
 <details>
@@ -120,7 +121,8 @@ Then pick your starter, like `/pokemon charmander`. Bulbasaur, Charmander, Squir
 | `/pokemon use <item> [mon]` | Use an item, named loosely, like `thunder stone`, `thunderstone`, or `candy`. A stone or Link Cable on the mon on show is the same as `/pokemon evolve`. Rare Candy raises the mon on show, or a box mon named, one level |
 | `/pokemon revive`, `/pokemon revive <mon>` | Take a fainted mon to a Pokémon Center. Nurse Joy heals it in 5 minutes, and it stands up at 50% food and 30% happiness |
 | `/pokemon nuzlocke` | Toggle nuzlocke (off by default, saved across sessions). On, a mon that faints is gone for good |
-| `/pokemon trainer` | Toggle trainer mode (on by default, saved across sessions). On, `/pokemon <mon>` shows only mons in your box, so the rest have to be caught in the wild. The mons already in your box stay. An empty box, or one whose mons are all gone, picks one starter: Bulbasaur, Charmander, Squirtle, or Pikachu. Mons fetched with `/pokemon new` stay free to show. Off, `/pokemon <mon>` shows any mon |
+| `/pokemon gen <N>` | Toggle a generation's mons in the wild (gen 1 always, saved across sessions). Only gen 2 can be turned on so far. `/pokemon gen` lists the ones on |
+| `/pokemon trainer` | Toggle trainer mode (on by default, saved across sessions). On, `/pokemon <mon>` shows only mons in your box, so the rest have to be caught in the wild. The mons already in your box stay. An empty box, or one whose mons are all gone, picks one starter: Bulbasaur, Charmander, Squirtle, or Pikachu. Mons fetched with `/pokemon new` stay free to show, except from a generation in the wild, which `/pokemon new` won't fetch then. Off, `/pokemon <mon>` shows any mon |
 | `/pokemon sleep` | Tuck the mon in, so its meters drain slower until Claude starts working in a session showing it. Run it again to wake it |
 | `/pokemon needs` | Toggle food and happiness (on by default). Off, the faint and runaway clocks stop too |
 | `/pokemon sync` | Toggle syncing the mon across sessions (off by default, saved across sessions). On, every open session switches to the mon picked last in any of them, fetched mons included. Off, each session keeps its own |
@@ -394,7 +396,18 @@ Smog. An unknown effect plays `impact`.
 About every 20 to 40 minutes of work, a wild mon walks in from the left. Open sessions
 share one timer, so running several brings no more, and the first one comes about 5
 minutes into your work. Base forms turn up most. Evolved mons, fossils, and the likes of
-Lapras and Snorlax are rarer, the five legendaries rarest, and 1 in 128 is shiny.
+Lapras and Snorlax are rarer, the legendaries rarest, and 1 in 128 is shiny.
+
+Gen 1 is always in the wild, and `/pokemon gen 2` brings gen 2 in, with its 100 mons in
+the same tiers: Raikou, Entei, Suicune, Lugia, Ho-Oh, and Celebi are legendary, and the
+babies, like Pichu and Togepi, rare, as the wild is the only place to catch them. Gen 2's
+mons aren't bundled. The first time one turns up, it's fetched from vscode-pokemon,
+without holding up Claude, and comes at the next check 30 s later. After that it's in the
+store, for every session. If it can't be fetched, offline or past GitHub's hourly limit, a
+gen 1 mon comes instead. Unown turns up as one of its 28 forms, each a Pokédex entry for
+Unown. With gen 2 on in trainer mode, its mons have to be caught: `/pokemon new` won't
+fetch them, and one fetched for the wild or an evolution isn't free to show. Turning
+gen 2 off keeps the mons in your box and the ones in your Pokédex.
 
 Your work does the fighting. Each tool call and each answered turn banks a move, two at
 most, and the mon spends one every 6 to 8 s on a random move aimed at the foe. Each hit
@@ -434,7 +447,8 @@ The foe leaves after 4 minutes without a hit, 90 s after it turns weak, after 4 
 without a catch, when the mon falls asleep, or on `/pokemon roar`. `/pokemon feed` waits
 until it's gone, and so does an evolution that comes due.
 
-The Pokédex counts wild mons only, seen when one shows up and caught when you catch it. A
+The Pokédex counts wild mons only, seen when one shows up and caught when you catch it,
+out of 151, or 251 with gen 2 on. A
 caught species joins your box at its first level, unless it's there already, and
 its line in `/pokemon box` shows ◓. `/pokemon <mon>` still picks any mon, and a mon
 keeps its ◓ when it evolves, even one raised before its species was caught. Releasing a mon keeps it in the dex, and raising that species again
@@ -527,6 +541,20 @@ To try a mon without changing the repo, `/pokemon new <mon>` fetches it at runti
 4. If it evolves, add it to `hooks/evolutions.js`. A mon it evolves into that isn't bundled goes in `FETCHED` there, under its vscode-pokemon folder name. If its name isn't just the key capitalized, add it to `hooks/names.js`.
 5. Mark its eyes on every frame in `EYES` in `hooks/eyes.js`, and check them asleep with `node scripts/preview-sleep.mjs <mon>`.
 6. Run `node scripts/check-data.mjs`, then `/reload-plugins`.
+
+</details>
+
+<details>
+<summary>Add a generation to the wild</summary>
+
+A generation in the wild isn't bundled: its mons are fetched the first time one turns up.
+Bringing one in is data, in `hooks/dex.js` and `hooks/evolutions.js`:
+
+1. Add its Pokédex keys to `GEN_DEX`, in national order, named as the vscode-pokemon folders under `media/gen<N>/` are.
+2. Add its legendaries to `LEGENDARY` and its rare mons to `RARE`. The rest takes its tier from its place in its family.
+3. A mon with no folder of its own, only its forms', goes in `WILD_FORMS`, its forms in `BASE_FORM`, and their names in `hooks/names.js`.
+4. Add its evolutions to `EVOLUTIONS`, and every mon they name that isn't bundled to `FETCHED`.
+5. Run `node scripts/check-data.mjs`. `/pokemon gen <N>` turns it on from then on.
 
 </details>
 

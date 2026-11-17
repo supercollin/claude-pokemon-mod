@@ -8,7 +8,7 @@
 // node scripts/check-data.mjs
 
 import { effectOf } from '../hooks/attacks.js'
-import { DEX, LEGENDARY, RARE, TIERS, dexKey, tierOf } from '../hooks/dex.js'
+import { BUNDLED_DEX, BUNDLED_GENS, GEN_DEX, GENS, LEGENDARY, NATIONAL_DEX, RARE, TIERS, WILD_FORMS, dexKey, tierOf } from '../hooks/dex.js'
 import { EVOLUTIONS, FETCHED } from '../hooks/evolutions.js'
 import { EYES, eyesOf } from '../hooks/eyes.js'
 import { ITEM_ART } from '../hooks/art.js'
@@ -125,12 +125,23 @@ for (const mon of mons) {
   }
 }
 
-if (DEX.length !== 151) fail(`the Pokédex has ${DEX.length} entries, not 151`)
-if (new Set(DEX).size !== DEX.length) fail('the Pokédex lists a mon twice')
-for (const mon of DEX) if (!SPRITES[mon]) fail(`Pokédex entry ${mon} has no sprites`)
-for (const mon of mons) if (!DEX.includes(dexKey(mon))) fail(`${mon} has no Pokédex entry`)
-for (const mon of [...LEGENDARY, ...RARE]) if (!DEX.includes(mon)) fail(`tier list names ${mon}, which isn't in the Pokédex`)
-for (const mon of DEX) if (!TIERS[tierOf(mon)]) fail(`${mon} has unknown tier ${tierOf(mon)}`)
+// Each generation's size in the national Pokédex, to catch a mon left out or put in twice
+const GEN_SIZES = { 1: 151, 2: 100, 3: 135, 4: 107, 5: 156 }
+for (const gen of GENS) {
+  const dex = GEN_DEX[gen]
+  if (dex.length !== GEN_SIZES[gen]) fail(`the gen ${gen} Pokédex has ${dex.length} entries, not ${GEN_SIZES[gen]}`)
+  for (const mon of dex) {
+    if (!displayName(mon)) fail(`Pokédex entry ${mon} has no display name`)
+    if (BUNDLED_GENS.includes(gen) && !SPRITES[mon]) fail(`Pokédex entry ${mon} has no sprites`)
+    if (!BUNDLED_GENS.includes(gen) && SPRITES[mon]) fail(`gen ${gen} Pokédex entry ${mon} is bundled`)
+    for (const form of WILD_FORMS[mon] ?? []) if (dexKey(form) !== mon) fail(`${form} doesn't count as ${mon} in the Pokédex`)
+  }
+}
+if (new Set(NATIONAL_DEX).size !== NATIONAL_DEX.length) fail('the Pokédex lists a mon twice')
+for (const mon of mons) if (!BUNDLED_DEX.includes(dexKey(mon))) fail(`${mon} has no Pokédex entry`)
+for (const mon of FETCHED) if (!NATIONAL_DEX.includes(dexKey(mon))) fail(`${mon} is in FETCHED but not in the Pokédex`)
+for (const mon of [...LEGENDARY, ...RARE]) if (!NATIONAL_DEX.includes(mon)) fail(`tier list names ${mon}, which isn't in the Pokédex`)
+for (const mon of NATIONAL_DEX) if (!TIERS[tierOf(mon)]) fail(`${mon} has unknown tier ${tierOf(mon)}`)
 
 if (problems.length > 0) {
   for (const problem of problems) console.error(problem)
@@ -138,5 +149,6 @@ if (problems.length > 0) {
   process.exit(1)
 }
 const moves = Object.values(MOVES).flat().length
-const tiers = Object.keys(TIERS).map((tier) => `${DEX.filter((mon) => tierOf(mon) === tier).length} ${tier}`).join(', ')
-console.log(`${mons.length} mons, ${Object.keys(MOVE_FX).length} moves (${moves} in movesets), ${Object.keys(EVOLUTIONS).length} evolving mons, ${DEX.length} in the Pokédex (${tiers}): all consistent`)
+const tiersOf = (dex) => Object.keys(TIERS).map((tier) => `${dex.filter((mon) => tierOf(mon) === tier).length} ${tier}`).join(', ')
+const gens = GENS.map((gen) => `gen ${gen} ${GEN_DEX[gen].length} (${tiersOf(GEN_DEX[gen])})`).join(', ')
+console.log(`${mons.length} mons, ${Object.keys(MOVE_FX).length} moves (${moves} in movesets), ${Object.keys(EVOLUTIONS).length} evolving mons, Pokédex ${gens}: all consistent`)

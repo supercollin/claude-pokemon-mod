@@ -9,9 +9,24 @@
 
 const FIRST_LEVEL = 5
 
-// Female sprites take their base form's place in the family, so raichu comes from
-// pikachu and venusaur_female from ivysaur
-export const BASE_FORM = { pikachu_female: 'pikachu', venusaur_female: 'venusaur' }
+// The letters and marks each of Unown's forms is a folder for, like unown_a
+export const UNOWN_FORMS = [...'abcdefghijklmnopqrstuvwxyz', 'exclamation', 'question']
+
+// Female sprites and other forms take their base form's place in the family, so raichu
+// comes from pikachu and venusaur_female from ivysaur. Heracross, Wobbuffet, and Unown
+// have no folder of their own, only their forms'.
+export const BASE_FORM = {
+  pikachu_female: 'pikachu',
+  venusaur_female: 'venusaur',
+  meganium_female: 'meganium',
+  pichu_spiky_eared: 'pichu',
+  steelix_female: 'steelix',
+  heracross_male: 'heracross',
+  heracross_female: 'heracross',
+  wobbuffet_male: 'wobbuffet',
+  wobbuffet_female: 'wobbuffet',
+  ...Object.fromEntries(UNOWN_FORMS.map((form) => ['unown_' + form, 'unown'])),
+}
 
 export const EVOLUTIONS = {
   bulbasaur: [{ into: 'ivysaur', level: 16 }],
@@ -153,7 +168,7 @@ export const EVOLUTIONS = {
 }
 
 // The mons EVOLUTIONS names that aren't bundled, as vscode-pokemon names their folders
-// under media/gen2. scripts/check-data.mjs holds every unbundled name to this list.
+// under media/gen<N>. scripts/check-data.mjs holds every unbundled name to this list.
 export const FETCHED = [
   'ampharos', 'ariados', 'azumarill', 'bayleef', 'bellossom', 'blissey', 'chikorita', 'chinchou', 'cleffa', 'crobat',
   'croconaw', 'cyndaquil', 'donphan', 'elekid', 'espeon', 'feraligatr', 'flaaffy', 'forretress', 'furret', 'granbull',

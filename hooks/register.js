@@ -9,7 +9,7 @@ import {
 import { IMAGE_WAIT_TICKS, TICK_MS } from './constants.js'
 import { CREW_SIZE, crewThinking, crewToolEnds, crewToolStarts, isOut, joinCrew } from './crew.js'
 import { CUSTOM_PREFIX, fetchMon, monsOfGen } from './custom.js'
-import { dexKey, isCaught, mergedDexEntry, pickWild, tierOf } from './dex.js'
+import { BUNDLED_GENS, dexKey, GENS, genOf, isCaught, mergedDexEntry, pickWild, tierOf, wildGensOf } from './dex.js'
 import { catchCommand, foeMoves, roarCommand, runawayFoe, wildMoves, wildName } from './encounter.js'
 import { evolutionsOf, isLevelUpOnly, levelEvolutionOf, levelUpEvolutionOf, startLevel, timeOfDay } from './evolutions.js'
 import { SPRITES } from './frames.js'
@@ -97,20 +97,25 @@ async function markSkillCommand($, command) {
 const DOWN_WAITS = ['pet', 'feed', 'attack', 'catch', 'evolve', 'sleep']
 const GONE_WAITS = [...DOWN_WAITS, ...VARIANTS, 'nickname']
 
-// A mon to evolve into that isn't bundled, like Quilava, comes from the store when a
-// session fetched it before, or is fetched the way /pokemon new fetches it. Throws with a
-// line for the person.
-async function ensureMon($, name) {
+// A mon that isn't bundled, like Quilava to evolve into or a gen 2 mon met in the wild,
+// comes from the store when a session fetched it before, or is fetched the way
+// /pokemon new fetches it, from gen when known, its Pokédex generation by default. The saved entry's by says why it was
+// fetched: 'new', 'evolution', or 'wild'. Only one fetched with /pokemon new is free to
+// show in trainer mode. Throws with a line for the person.
+async function ensureMon($, name, by = 'evolution', gen = genOf(name) ?? undefined) {
   if (SPRITES[name]) return
   const saved = await $.store.get(CUSTOM_PREFIX + name)
   if (saved?.sprite) {
     addCustom(name, saved)
     return
   }
-  const entry = await fetchMon((url, init) => $.http.fetch(url, init), name)
+  const entry = { ...(await fetchMon((url, init) => $.http.fetch(url, init), name, gen)), by }
   await $.store.set(CUSTOM_PREFIX + name, entry)
   addCustom(name, entry)
 }
+
+// A fetched mon's entry predating by was fetched with /pokemon new, the only way then
+const freeToShow = (entry) => Boolean(entry?.sprite) && (entry.by ?? 'new') === 'new'
 
 // A level evolution about to fall due, once the mon it becomes is here. One that can't be
 // fetched now, or whose mon was switched away meanwhile, isn't due: the next level-up,
@@ -448,11 +453,32 @@ async function maybeSpawn($) {
   }
   if (typeof gate?.at !== 'number') return $.store.set('wildAt', { at: now + FIRST_WILD_MS, by: S.sessionToken })
   if (now < gate.at) return
-  const next = (await runawayPick($, now)) ?? pickWild(Math.random)
-  if (!battleFits(next.mon, next.variant)) return
+  const next = (await runawayPick($, now)) ?? pickWild(Math.random, S.wildGens)
+  const here = Boolean(SPRITES[next.mon])
+  if (here && !battleFits(next.mon, next.variant)) return
   const wait = WILD_EVERY_MS[0] + Math.random() * (WILD_EVERY_MS[1] - WILD_EVERY_MS[0])
   await $.store.set('wildAt', { at: now + Math.round(wait), by: S.sessionToken })
-  S.claimedPick = next
+  if (here) {
+    S.claimedPick = next
+    return
+  }
+  // Fetched without holding up the tool call, it comes at the next check once it's here
+  arrivingPick($, next).then((pick) => {
+    S.claimedPick = pick
+  })
+}
+
+// A wild pick once its mon is here: a mon of a fetched generation met for the first time is
+// fetched and saved as a wild fetch, and one that can't be fetched gives way to a bundled mon
+function arrivingPick($, pick) {
+  if (SPRITES[pick.mon]) return Promise.resolve(pick)
+  return ensureMon($, pick.mon, 'wild').then(
+    () => pick,
+    (err) => {
+      logOnce($, err)
+      return pickWild(Math.random)
+    },
+  )
 }
 
 const RUNAWAY_BACK_MS = 30 * 60 * 1000
@@ -486,13 +512,14 @@ async function wildCommand($, rest) {
   if ((await $.store.get('debug')) !== true) return null
   const words = rest.split(/\s+/).filter(Boolean)
   const name = words.find((word) => word !== 'shiny')
-  if (name && !MONS.includes(name)) return { text: 'Unknown mon "' + name + '". See /pokemon list for every mon.' }
+  if (name && !MONS.includes(name) && genOf(name) === null) return { text: 'Unknown mon "' + name + '". See /pokemon list for every mon.' }
   if (S.wild) return { text: 'A wild ' + displayName(S.wild.mon) + ' is already here.' }
   if (isTuckedIn()) return { text: nameOf(S.mon) + ' is asleep.' }
   if (isDown()) return downReply()
   if (name) await freshen($, [name])
   const own = name && hasRunAway(name) ? runawayFoe(name) : null
-  const pick = own ?? (name ? { mon: name, variant: 'default', key: dexKey(name), tier: tierOf(name), level: startLevel(name) } : pickWild(Math.random))
+  const asked = name ? { mon: name, variant: 'default', key: dexKey(name), tier: tierOf(name), level: startLevel(name) } : pickWild(Math.random, S.wildGens)
+  const pick = own ?? (await arrivingPick($, asked))
   if (words.includes('shiny')) pick.variant = 'shiny'
   if (!battleFits(pick.mon, pick.variant)) return { text: 'The band is too narrow for a wild ' + displayName(pick.mon) + '. Widen the pane and try again.' }
   S.wild = newWild(pick, Math.floor(Math.random() * 0x7fffffff))
@@ -705,6 +732,7 @@ async function syncSessions($) {
   S.syncOn = (await $.store.get('sync')) === true
   S.nuzlockeOn = (await $.store.get('nuzlocke')) === true
   S.trainerOn = (await $.store.get('trainer')) !== false
+  S.wildGens = wildGensOf(await $.store.get('gens'))
   if (S.syncOn && (await followPick($))) return
   const writes = statWrites
   const saved = await $.store.get('stats')
@@ -1318,6 +1346,23 @@ async function nuzlockeCommand($) {
   return { text: 'Nuzlocke is on. A mon that faints is gone for good, with no revive and no coming back. Keep them fed and happy.' + warning }
 }
 
+// /pokemon gen <N> turns a generation's mons in the wild on or off, and /pokemon gen lists
+// the ones on. The bundled generations are always on.
+async function genCommand($, wanted) {
+  const toggled = GENS.filter((gen) => !BUNDLED_GENS.includes(gen))
+  const how = '/pokemon gen <N> turns ' + orList(toggled.map((gen) => 'gen ' + gen)) + ' on or off.'
+  if (!wanted) return { text: 'In the wild: gen ' + andList(S.wildGens.map(String)) + '. ' + how }
+  if (!/^\d+$/.test(wanted)) return { text: 'Unknown generation "' + wanted + '". ' + how }
+  const gen = Number(wanted)
+  if (BUNDLED_GENS.includes(gen)) return { text: 'Gen ' + gen + ' is always in the wild. ' + how }
+  if (!GENS.includes(gen)) return { text: 'Gen ' + gen + ' isn\'t in the wild yet. ' + how }
+  const on = !S.wildGens.includes(gen)
+  S.wildGens = wildGensOf(on ? [...S.wildGens, gen] : S.wildGens.filter((g) => g !== gen))
+  await $.store.set('gens', S.wildGens.filter((g) => !BUNDLED_GENS.includes(g)))
+  if (!on) return { text: 'Gen ' + gen + ' is off. Its mons no longer turn up in the wild. The ones in your box stay.' }
+  return { text: 'Gen ' + gen + ' is on. Its mons turn up in the wild too, each fetched from GitHub the first time you meet one.' }
+}
+
 async function trainerCommand($) {
   S.trainerOn = !S.trainerOn
   await $.store.set('trainer', S.trainerOn)
@@ -1340,7 +1385,7 @@ async function boxIsEmpty($) {
 // Why trainer mode keeps asked off the band, or null when it may be shown. The caller has
 // freshened asked's record. A starter picked joins the box at its first level.
 async function trainerWait($, asked) {
-  if (!S.trainerOn || asked === S.mon || S.stats[asked] || (await $.store.get(CUSTOM_PREFIX + asked))) return null
+  if (!S.trainerOn || asked === S.mon || S.stats[asked] || freeToShow(await $.store.get(CUSTOM_PREFIX + asked))) return null
   const off = ', or turn trainer mode off with /pokemon trainer.'
   if (!(await boxIsEmpty($))) return { text: 'Trainer mode is on, so you can only switch to mons in your box. Catch a wild ' + displayName(asked) + ' to raise one' + off }
   if (!STARTERS.includes(asked)) return { text: 'Trainer mode is on, so pick your starter first: ' + orList(STARTERS.map(displayName)) + '. Catch the rest in the wild' + off }
@@ -1402,8 +1447,20 @@ async function loadCustom($) {
   }
 }
 
+// With gen 2 on in trainer mode, gen 2's mons are caught in the wild, not fetched for free
+// In trainer mode, a generation in the wild has its mons caught there, not fetched for free
+const caughtInWild = (gen) => S.trainerOn && !BUNDLED_GENS.includes(gen) && S.wildGens.includes(gen)
+
+const catchInWildReply = (gen, name) => ({
+  text: 'Gen ' + gen + ' is on, so catch ' + (name ? displayName(name) : 'gen ' + gen + ' mons') + ' in the wild, or turn gen ' + gen + ' off with /pokemon gen ' + gen + '.',
+})
+
+// The generations /pokemon new picks a random mon from
+const NEW_GENS = [2, 3, 4, 5]
+
 // /pokemon new <mon> fetches a mon from any generation and shows it. "random" picks one
 // from gen 2 to 5 you don't have yet, and "random gen3" or "gen3" one from that generation.
+// A mon fetched before for the wild or an evolution becomes free to show, like one fetched now.
 async function newCommand($, wanted) {
   const genAsked = wanted.match(/^(?:random\s*)?gen\s*([1-5])$/)
   const random = wanted === 'random' || genAsked !== null
@@ -1412,17 +1469,23 @@ async function newCommand($, wanted) {
   const get = (url, init) => $.http.fetch(url, init)
   if (!wanted) return { text: 'Name a mon to fetch, like /pokemon new mudkip, or try /pokemon new random or /pokemon new gen3.' }
   try {
+    if (genAsked && caughtInWild(Number(genAsked[1]))) return catchInWildReply(Number(genAsked[1]), null)
+    if (!random && caughtInWild(genOf(name))) return catchInWildReply(genOf(name), name)
     if (random) {
-      gen = genAsked ? Number(genAsked[1]) : 2 + Math.floor(Math.random() * 4)
+      const open = NEW_GENS.filter((g) => !caughtInWild(g))
+      if (!genAsked && open.length === 0) return { text: 'Every generation is in the wild, so catch your mons there.' }
+      gen = genAsked ? Number(genAsked[1]) : open[Math.floor(Math.random() * open.length)]
       const fresh = (await monsOfGen(get, gen)).filter((n) => !SPRITES[n])
       if (fresh.length === 0) return { text: 'You already have every gen ' + gen + ' mon.' }
       name = fresh[Math.floor(Math.random() * fresh.length)]
     } else if (SPRITES[name]) {
+      const saved = await $.store.get(CUSTOM_PREFIX + name)
+      if (saved?.sprite && !freeToShow(saved)) await $.store.set(CUSTOM_PREFIX + name, { ...saved, by: 'new' })
       return { text: nameOf(name) + ' is already here. /pokemon ' + name + ' shows it.' }
     } else if (!/^[a-z0-9_.-]+$/.test(name)) {
       return { text: 'Unknown mon "' + wanted + '". Names are like mudkip or mr._mime.' }
     }
-    const entry = await fetchMon(get, name, gen)
+    const entry = { ...(await fetchMon(get, name, gen)), by: 'new' }
     await $.store.set(CUSTOM_PREFIX + name, entry)
     addCustom(name, entry)
     await switchTo($, name)
@@ -1618,6 +1681,8 @@ async function runPokemon($, e) {
     return nuzlockeCommand($)
   } else if (asked === 'trainer') {
     return trainerCommand($)
+  } else if (asked === 'gen' || asked.startsWith('gen ') || /^gen\d+$/.test(asked)) {
+    return genCommand($, asked.slice('gen'.length).trim())
   } else if (asked === 'evolve' || asked.startsWith('evolve ')) {
     return evolveCommand($, asked.slice('evolve'.length).trim())
   } else if (asked === 'stop') {
@@ -1650,7 +1715,7 @@ async function runPokemon($, e) {
     const saved = await $.store.get('stats')
     if (saved && typeof saved === 'object') await freshen($, Object.keys(saved))
     const dex = await $.store.get('dex')
-    return { text: dexText(dex && typeof dex === 'object' ? dex : {}, asked.slice('dex'.length).trim(), await $.store.get('graveyard')) }
+    return { text: dexText(dex && typeof dex === 'object' ? dex : {}, asked.slice('dex'.length).trim(), await $.store.get('graveyard'), S.wildGens) }
   } else if (asked === 'release' || asked.startsWith('release ')) {
     const wanted = asked.slice('release'.length).trim()
     if (MONS.includes(wanted)) await freshen($, [wanted])
@@ -1700,6 +1765,7 @@ export function register(on) {
     S.syncOn = (await $.store.get('sync')) === true
     S.nuzlockeOn = (await $.store.get('nuzlocke')) === true
     S.trainerOn = (await $.store.get('trainer')) !== false
+    S.wildGens = wildGensOf(await $.store.get('gens'))
     await loadPartyPicks($)
     forgetOldKeys($).catch((err) => logOnce($, err))
     const savedVariant = await $.store.get('variant')

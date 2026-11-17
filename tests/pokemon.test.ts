@@ -4,7 +4,7 @@ import { DIZZY_COLORS, faintedPalette, faintedRows } from '../hooks/faint.js'
 import { SPRITES } from '../hooks/frames.js'
 import { atCenter, CENTER_ROWS, centerPhase, centerSpan, centerStamps, JOY_COLORS, recallFlash, recallTint } from '../hooks/joy.js'
 import { dropOf, findItem, heldItemOf, stoneOfType } from '../hooks/items.js'
-import { tierOf } from '../hooks/dex.js'
+import { dexKey, dexNumber, genOf, pickWild, tierOf } from '../hooks/dex.js'
 import { startLevel } from '../hooks/evolutions.js'
 import { encodePng } from '../hooks/png.js'
 import { zoomedPixel } from '../hooks/zoom.js'
@@ -2487,7 +2487,7 @@ test('/pokemon list names every mon, and the hint and status stay short', async 
   on('env.get', () => ({ value: undefined }))
   on('store.get', () => ({ value: undefined }))
   await $.session.start({ surface: 'terminal', isInteractive: true, cwd: '/work' })
-  expect(hint).toBe('[<mon>|default|shiny|new|list|pet|feed|sleep|revive|nickname|attack|moves|catch|roar|evolve|stop|bag|use|stats|box|party|dex|release|wander|needs|emoji|size|images|pane|sync|autoevolve|nuzlocke|trainer|help]')
+  expect(hint).toBe('[<mon>|default|shiny|new|list|pet|feed|sleep|revive|nickname|attack|moves|catch|roar|evolve|stop|bag|use|stats|box|party|dex|release|wander|needs|emoji|size|images|pane|sync|autoevolve|nuzlocke|trainer|gen|help]')
 
   const list = await $.command.run({ command: 'pokemon', args: 'list' })
   expect(list.text).toMatch(/^\d+ mons: abra, /)
@@ -3252,7 +3252,7 @@ test('a mon fetched in another session loads at session start', async ($, on) =>
   expect((await $.command.run({ command: 'pokemon', args: '' })).text).toMatch(/^Showing default Torchic Lv\. /)
   expect((await $.command.run({ command: 'pokemon', args: 'list' })).text).toMatch(/, torchic$/)
   expect((await $.command.run({ command: 'pokemon', args: 'moves' })).text).toBe('Torchic knows Ember, Tackle.')
-  expect((await $.command.run({ command: 'pokemon', args: 'dex torchic' })).text).toBe("Torchic isn't in the Pokédex. Only gen 1 mons appear in the wild.")
+  expect((await $.command.run({ command: 'pokemon', args: 'dex torchic' })).text).toBe("Torchic isn't in the Pokédex. Only gen 1 and 2 mons appear in the wild.")
 })
 
 test('/pokemon new gen3 picks a gen 3 mon you do not have yet', async ($, on) => {
@@ -3638,12 +3638,12 @@ test('/pokemon feed waits until the foe is gone', async ($, on) => {
 const WEAK = 'Wild Pidgey is weak! Throw a ball with /pokemon catch. Another hit could knock it out.'
 
 // Bank work until the foe in battle is weak
-async function weaken($, clock, toasts: string[]) {
-  for (let k = 0; k < 6 && !toasts.includes(WEAK); k++) {
+async function weaken($, clock, toasts: string[], weak = WEAK) {
+  for (let k = 0; k < 6 && !toasts.includes(weak); k++) {
     await $.tool.call({ tool: 'Read', file_path: '/work/a.ts' })
     await clock.advance(9000)
   }
-  expect(toasts).toContain(WEAK)
+  expect(toasts).toContain(weak)
 }
 
 // Throw balls at the foe until one holds
@@ -4802,4 +4802,109 @@ test('a party mon earns half XP for its own subagent\'s answered turns, and evol
   await run($, 'charmander')
   await clock.advance(9000)
   expect(saved.mon).toBe('charmeleon')
+})
+
+// A gen 2 mon saved as fetched, by 'new', 'wild', or 'evolution', or with no by as saved
+// before by existed
+const fetchedAs = (by?: string) => ({ gen: 2, sprite: SPRITES.diglett, moves: ['Tackle'], ...(by ? { by } : {}) })
+
+test('a generation stays out of the wild until it\'s turned on, and every form of a mon is one Pokédex entry', () => {
+  let seed = 1
+  const random = () => {
+    seed = (seed * 16807) % 2147483647
+    return (seed - 1) / 2147483646
+  }
+  const gen1 = Array.from({ length: 4000 }, () => pickWild(random))
+  expect(gen1.every((pick) => genOf(pick.mon) === 1)).toBe(true)
+  const both = Array.from({ length: 4000 }, () => pickWild(random, [1, 2]))
+  expect(both.filter((pick) => genOf(pick.mon) === 2).length).toBeGreaterThan(1000)
+  for (const pick of both) expect(pick.key).toBe(dexKey(pick.mon))
+  expect(both.some((pick) => pick.mon.startsWith('unown_'))).toBe(true)
+  expect(both.some((pick) => pick.mon === 'unown')).toBe(false)
+  expect(dexNumber('chikorita')).toBe(152)
+  expect(dexNumber('unown_question')).toBe(201)
+  expect(dexNumber('hooh')).toBe(250)
+  expect(tierOf('celebi')).toBe('legendary')
+  expect(tierOf('pichu')).toBe('rare')
+  expect(tierOf('chikorita')).toBe('common')
+  expect(tierOf('bayleef')).toBe('uncommon')
+})
+
+test('/pokemon gen <N> turns a generation on and off, saved across sessions, and the Pokédex counts it', async ($, on) => {
+  const saved: Record<string, any> = { mon: 'pidgey', trainer: false }
+  await startedWith($, on, saved, 0)
+  const how = '/pokemon gen <N> turns gen 2 on or off.'
+  expect(await run($, 'gen')).toBe('In the wild: gen 1. ' + how)
+  expect(await run($, 'dex')).toBe('Pokédex: seen 0, caught 0 of 151. No wild mons met yet.')
+  expect(await run($, 'dex chikorita')).toBe('#152 Chikorita, common. It turns up in the wild once gen 2 is on: /pokemon gen 2 turns it on.')
+  expect(await run($, 'gen 2')).toBe('Gen 2 is on. Its mons turn up in the wild too, each fetched from GitHub the first time you meet one.')
+  expect(saved.gens).toEqual([2])
+  expect(await run($, 'gen')).toBe('In the wild: gen 1 and 2. ' + how)
+  expect(await run($, 'dex')).toBe('Pokédex: seen 0, caught 0 of 251. No wild mons met yet.')
+  expect(await run($, 'dex chikorita')).toBe('#152 Chikorita, common. Not seen yet.')
+  expect(await run($, 'help')).toContain('gen <N>')
+  expect(await run($, 'gen 1')).toBe('Gen 1 is always in the wild. ' + how)
+  expect(await run($, 'gen 3')).toBe('Gen 3 isn\'t in the wild yet. ' + how)
+  expect(await run($, 'gen two')).toBe('Unknown generation "two". ' + how)
+  expect(await run($, 'gen2')).toBe('Gen 2 is off. Its mons no longer turn up in the wild. The ones in your box stay.')
+  expect(saved.gens).toEqual([])
+  // A mon named like gen isn't the command
+  expect(await run($, 'gengar')).toBe('Now showing default Gengar.')
+})
+
+test('a gen 2 mon met for the first time is fetched from gen 2 and saved as a wild fetch', { timeoutMs: 30000 }, async ($, on) => {
+  const asked = serveMons(on, { 2: ['celebi'] }, { types: ['psychic', 'grass'] })
+  const saved: Record<string, any> = { gens: [2] }
+  const { toasts } = await inBattle($, on, saved, 'celebi')
+  expect(asked.some((url) => url.includes('/gen2/celebi/'))).toBe(true)
+  expect(asked.some((url) => url.includes('/gen1/'))).toBe(false)
+  expect(saved['custom:celebi'].by).toBe('wild')
+  expect(toasts.filter((text) => APPEARED.test(text))).toEqual(['A wild Celebi (Lv. 5) appeared!'])
+})
+
+test('a gen 2 mon that can\'t be fetched gives way to a gen 1 one', { timeoutMs: 30000 }, async ($, on) => {
+  serveMons(on, {}, { status: 403 })
+  const saved: Record<string, any> = { gens: [2] }
+  const { toasts } = await inBattle($, on, saved, 'celebi')
+  const appeared = toasts.filter((text) => APPEARED.test(text))
+  expect(appeared.length).toBe(1)
+  expect(appeared[0]).not.toContain('Celebi')
+  expect(saved['custom:celebi']).toBeUndefined()
+})
+
+test('a caught Unown of any form is the one Unown entry, listed with gen 2 off too', { timeoutMs: 30000 }, async ($, on) => {
+  const saved: Record<string, any> = { gens: [2], 'custom:unown_b': fetchedAs('wild') }
+  const { clock, toasts } = await inBattle($, on, saved, 'unown_b')
+  await weaken($, clock, toasts, WEAK.replace('Pidgey', 'Unown B'))
+  await catchFoe($, clock, toasts)
+  expect(toasts).toContain('Gotcha! Unown B was caught! It joined your box.')
+  expect(saved.dex.unown.caught).toEqual(expect.any(Number))
+  expect(await run($, 'dex')).toBe('Pokédex: seen 1, caught 1 of 251.\n#201 Unown ◓')
+  await run($, 'gen 2')
+  expect(await run($, 'dex')).toBe('Pokédex: seen 1, caught 1 of 151.\n#201 Unown ◓')
+})
+
+test('in trainer mode only a mon fetched with /pokemon new is free to show, and a generation on keeps its mons to the wild', { timeoutMs: 30000 }, async ($, on) => {
+  const saved: Record<string, any> = {
+    mon: 'pidgey',
+    stats: { pidgey: { xp: 5 ** 3 } },
+    'custom:mudkip': { ...fetchedAs(), gen: 3 },
+    'custom:chikorita': fetchedAs('wild'),
+    'custom:quilava': fetchedAs('evolution'),
+  }
+  await startedWith($, on, saved, 0)
+  expect(await run($, 'mudkip')).toBe('Now showing default Mudkip.')
+  expect(await run($, 'chikorita')).toMatch(/^Trainer mode is on, so you can only switch to mons in your box\. Catch a wild Chikorita/)
+  expect(await run($, 'quilava')).toMatch(/^Trainer mode is on, so you can only switch to mons in your box\. Catch a wild Quilava/)
+
+  await run($, 'gen 2')
+  expect(await run($, 'new chikorita')).toBe('Gen 2 is on, so catch Chikorita in the wild, or turn gen 2 off with /pokemon gen 2.')
+  expect(await run($, 'new gen2')).toBe('Gen 2 is on, so catch gen 2 mons in the wild, or turn gen 2 off with /pokemon gen 2.')
+  expect(saved['custom:chikorita'].by).toBe('wild')
+
+  // Off again, /pokemon new makes it free to show without fetching it again
+  await run($, 'gen 2')
+  expect(await run($, 'new chikorita')).toBe('Chikorita is already here. /pokemon chikorita shows it.')
+  expect(saved['custom:chikorita'].by).toBe('new')
+  expect(await run($, 'chikorita')).toBe('Now showing default Chikorita.')
 })
