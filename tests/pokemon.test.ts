@@ -3,7 +3,9 @@ import { DOT_EYED, closedEyes, eyesOf, keptEyesOf, pupilsOf } from '../hooks/eye
 import { DIZZY_COLORS, faintedPalette, faintedRows } from '../hooks/faint.js'
 import { SPRITES } from '../hooks/frames.js'
 import { atCenter, CENTER_ROWS, centerPhase, centerSpan, centerStamps, JOY_COLORS, recallFlash, recallTint } from '../hooks/joy.js'
-import { dropOf, findItem, stoneOfType } from '../hooks/items.js'
+import { dropOf, findItem, heldItemOf, stoneOfType } from '../hooks/items.js'
+import { tierOf } from '../hooks/dex.js'
+import { startLevel } from '../hooks/evolutions.js'
 import { encodePng } from '../hooks/png.js'
 import { zoomedPixel } from '../hooks/zoom.js'
 
@@ -4398,6 +4400,7 @@ test('item names match loosely', () => {
   expect(['Thunder Stone', 'thunderstone', 'THUNDER', 'thunder-stone'].map(findItem)).toEqual(Array(4).fill('thunderstone'))
   expect(findItem('candy')).toBe('rarecandy')
   expect(findItem('link cable')).toBe('linkcable')
+  expect(['King\'s Rock', 'kings rock', 'metal coat', 'scale', 'Up-Grade', 'upgrade'].map(findItem)).toEqual(['kingsrock', 'kingsrock', 'metalcoat', 'dragonscale', 'upgrade', 'upgrade'])
   expect(findItem('stone')).toBeNull()
   expect(findItem('potion')).toBeNull()
 })
@@ -4440,7 +4443,7 @@ test('/pokemon use takes an item by a loose name, and a stone on a mon is the sa
   const saved: Record<string, any> = { trainer: false, mon: 'eevee', bag: { firestone: 1, waterstone: 1 } }
   const { clock } = await startedWith($, on, saved, 0)
   expect(await run($, 'use')).toBe('Name the item, like /pokemon use rare candy. /pokemon bag lists yours.')
-  expect(await run($, 'use potion')).toBe('Unknown item "potion". Items: Fire Stone, Water Stone, Thunder Stone, Leaf Stone, Moon Stone, Sun Stone, Link Cable, Rare Candy.')
+  expect(await run($, 'use potion')).toBe('Unknown item "potion". Items: Fire Stone, Water Stone, Thunder Stone, Leaf Stone, Moon Stone, Sun Stone, King\'s Rock, Metal Coat, Dragon Scale, Up-Grade, Link Cable, Rare Candy.')
   expect(await run($, 'use leaf stone')).toBe('Eevee can\'t use a Leaf Stone.')
   expect(await run($, 'use fire stone growlithe')).toBe('Show Growlithe first with /pokemon growlithe, then use the Fire Stone.')
   expect(await run($, 'use FireStone eevee')).toBe('You use a Fire Stone on Eevee.')
@@ -4504,6 +4507,81 @@ test('Gloom becomes Vileplume with a Leaf Stone, or a fetched Bellossom with a S
   expect(saved.mon).toBe('bellossom')
   expect(saved.bag).toEqual({})
   expect(saved['custom:bellossom'].gen).toBe(2)
+})
+
+test('a foe that holds a trade item drops it now and then, and the same foe always drops the same', () => {
+  const count = (key: string) => {
+    const drops: Record<string, number> = {}
+    for (let seed = 0; seed < 6000; seed++) drops[dropOf(key, seed)] = (drops[dropOf(key, seed)] ?? 0) + 1
+    return drops
+  }
+  const magnemite = count('magnemite')
+  expect(Object.keys(magnemite).sort()).toEqual(['linkcable', 'metalcoat', 'rarecandy', 'thunderstone'])
+  expect(magnemite.metalcoat / 6000).toBeGreaterThan(0.05)
+  expect(magnemite.metalcoat / 6000).toBeLessThan(0.12)
+  expect(Object.keys(count('porygon'))).toContain('upgrade')
+  expect(Object.keys(count('horsea'))).toContain('dragonscale')
+  expect(Object.keys(count('slowpoke'))).toContain('kingsrock')
+  expect(heldItemOf('pidgey')).toBeNull()
+  expect(Object.keys(count('pidgey')).some((item) => ['kingsrock', 'metalcoat', 'dragonscale', 'upgrade'].includes(item))).toBe(false)
+  expect(dropOf('magnemite', 42)).toBe(dropOf('magnemite', 42))
+})
+
+test('Onix trades into a fetched Steelix holding a Metal Coat, which it spends, and a Link Cable alone won\'t do', { timeoutMs: 30000 }, async ($, on) => {
+  serveMons(on, { 2: ['steelix'] }, { types: ['steel', 'ground'] })
+  const saved: Record<string, any> = { trainer: false, mon: 'onix', bag: { linkcable: 1 } }
+  const { clock } = await startedWith($, on, saved, 0)
+  expect(await run($, 'stats')).toMatch(/ Can become Steelix by trade holding a Metal Coat\./)
+  expect(await run($, 'evolve')).toBe('Onix needs a Metal Coat to evolve into Steelix. Wild mons you knock out drop items, and /pokemon bag lists yours.')
+  expect(await run($, 'use link cable')).toBe('Onix can\'t use a Link Cable.')
+  expect(await run($, 'use upgrade')).toBe('Onix can\'t use an Up-Grade.')
+
+  saved.bag = { metalcoat: 1, linkcable: 1 }
+  expect(await run($, 'use metal coat')).toBe('You trade Onix holding a Metal Coat to a friend, and they trade it right back.')
+  await clock.advance(7100)
+  expect(saved.mon).toBe('steelix')
+  expect(saved.bag).toEqual({ linkcable: 1 })
+  expect(saved['custom:steelix'].gen).toBe(2)
+})
+
+test('Poliwhirl becomes Poliwrath with a Water Stone, or a fetched Politoed by trade holding a King\'s Rock', { timeoutMs: 30000 }, async ($, on) => {
+  serveMons(on, { 2: ['politoed'] }, { types: ['water'] })
+  const saved: Record<string, any> = { trainer: false, mon: 'poliwhirl', bag: { kingsrock: 1 } }
+  const { clock } = await startedWith($, on, saved, 0)
+  expect(await run($, 'evolve')).toMatch(/^Poliwhirl can become Poliwrath with a Water Stone or Politoed by trade holding a King's Rock\. Try \/pokemon evolve (poliwrath|politoed)\.$/)
+  expect(await run($, 'evolve politoed')).toBe('You trade Poliwhirl holding a King\'s Rock to a friend, and they trade it right back.')
+  await clock.advance(7100)
+  expect(saved.mon).toBe('politoed')
+  expect(saved.bag).toEqual({})
+})
+
+test('a fetched Magby evolves into the bundled Magmar at Lv. 30', { timeoutMs: 30000 }, async ($, on) => {
+  const toasts = toastsOf(on)
+  on('turn.complete', () => ({ text: '' }))
+  const saved: Record<string, any> = {
+    mon: 'magby',
+    wander: false,
+    stats: { magby: { xp: 30 ** 3 - 1 } },
+    'custom:magby': { gen: 2, sprite: SPRITES.diglett, moves: ['Ember', 'Tackle'] },
+  }
+  const { clock } = await startedWith($, on, saved, 0)
+  await $.turn.complete(ANSWERED)
+  expect(toasts[0]).toBe('Magby grew to Lv. 30!')
+  await clock.advance(7200)
+  expect(toasts.at(-1)).toBe('Congratulations! Your Magby evolved into Magmar!')
+  expect(saved.mon).toBe('magmar')
+})
+
+test('a gen 1 mon with a gen 2 baby or a gen 2 evolution keeps its wild tier and start level', () => {
+  for (const mon of ['jynx', 'electabuzz', 'magmar', 'onix']) {
+    expect(tierOf(mon)).toBe('uncommon')
+    expect(startLevel(mon)).toBe(startLevel('pidgey'))
+  }
+  expect(tierOf('scyther')).toBe('rare')
+  expect(tierOf('seadra')).toBe('uncommon')
+  expect(startLevel('seadra')).toBe(32)
+  expect(startLevel('steelix')).toBe(startLevel('onix'))
+  expect(startLevel('kingdra')).toBe(32)
 })
 
 test('Rare Candy raises a level, evolves the shown mon at its level, and a box mon once it\'s shown', { timeoutMs: 30000 }, async ($, on) => {

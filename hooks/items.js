@@ -13,6 +13,10 @@ export const ITEMS = [
   { key: 'leafstone', name: 'Leaf Stone' },
   { key: 'moonstone', name: 'Moon Stone' },
   { key: 'sunstone', name: 'Sun Stone' },
+  { key: 'kingsrock', name: "King's Rock" },
+  { key: 'metalcoat', name: 'Metal Coat' },
+  { key: 'dragonscale', name: 'Dragon Scale' },
+  { key: 'upgrade', name: 'Up-Grade' },
   { key: 'linkcable', name: 'Link Cable' },
   { key: 'rarecandy', name: 'Rare Candy' },
 ]
@@ -20,11 +24,12 @@ export const STONES = ['firestone', 'waterstone', 'thunderstone', 'leafstone', '
 export const RARE_CANDY = 'rarecandy'
 export const LINK_CABLE = 'linkcable'
 
-// A knockout drops Rare Candy one time in 15, a Link Cable one in 12 of the rest, and
-// otherwise a stone. A foe with a stone type drops only its own stone, and any other foe
-// drops any stone.
+// A knockout drops Rare Candy one time in 15, a Link Cable one in 12 of the rest, a foe
+// that holds an item that item one in 10 of the rest, and otherwise a stone. A foe with a
+// stone type drops only its own stone, and any other foe drops any stone.
 const CANDY_ODDS = 1 / 15
 const CABLE_ODDS = 1 / 12
+const HELD_ODDS = 1 / 10
 // A main turn of two minutes or more turns up Rare Candy one time in 10
 export const LONG_TURN_CANDY_ODDS = 1 / 10
 const DROP_SALT = 0x17e5
@@ -47,10 +52,24 @@ const STONE_FAMILIES = {
 
 export const stoneOfType = (key) => STONES.find((stone) => STONE_FAMILIES[stone].includes(key)) ?? null
 
+// The wild mons, by Pokédex key, that hold each item a trade evolution needs, as wild
+// Magnemite hold a Metal Coat and Horsea a Dragon Scale in Gold and Silver. No wild mon
+// holds an Up-Grade there, so Porygon stands in.
+const HELD_FAMILIES = {
+  kingsrock: ['poliwag', 'poliwhirl', 'slowpoke', 'slowbro'],
+  metalcoat: ['magnemite', 'magneton'],
+  dragonscale: ['horsea', 'seadra'],
+  upgrade: ['porygon'],
+}
+
+export const heldItemOf = (key) => Object.keys(HELD_FAMILIES).find((item) => HELD_FAMILIES[item].includes(key)) ?? null
+
 // What a knocked out foe drops, rolled from its seed so the same foe always drops the same
 export function dropOf(key, seed) {
   if (rnd(seed, 0, DROP_SALT) < CANDY_ODDS) return RARE_CANDY
   if (rnd(seed, 1, DROP_SALT) < CABLE_ODDS) return LINK_CABLE
+  const held = heldItemOf(key)
+  if (held && rnd(seed, 2, DROP_SALT) < HELD_ODDS) return held
   const typed = stoneOfType(key)
   if (typed) return typed
   return STONES[Math.floor(rnd(seed, 3, DROP_SALT) * STONES.length)]
@@ -71,7 +90,8 @@ export function findItem(text) {
   return partial.length === 1 ? partial[0].key : null
 }
 
-// The item an evolution entry needs: its stone, a Link Cable for a trade, or null for a level
+// The item an evolution entry needs: its stone or held item, a Link Cable for a trade
+// holding none, or null for a level
 export const itemFor = (entry) => (entry.item ? keyOf(entry.item) : entry.trade ? LINK_CABLE : null)
 
 // A bag as saved, keeping only known items with whole counts above zero

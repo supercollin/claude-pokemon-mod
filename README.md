@@ -113,7 +113,7 @@ Then pick your starter, like `/pokemon charmander`. Bulbasaur, Charmander, Squir
 | `/pokemon attack <move>` | Use a named move, ignoring case, spaces, and dashes |
 | `/pokemon moves`, `/pokemon attack list` | List the active mon's moves |
 | `/pokemon moves <mon>` | List another mon's moves |
-| `/pokemon evolve` | Evolve with a stone or a trade, which takes that stone or a Link Cable from your bag. Also evolves a mon at its level with autoevolve off, and restarts an evolution you cancelled |
+| `/pokemon evolve` | Evolve with a stone or a trade, which takes that stone, a Link Cable, or the item the mon trades holding, like a Metal Coat for Onix, from your bag. Also evolves a mon at its level with autoevolve off, and restarts an evolution you cancelled |
 | `/pokemon evolve <mon>` | Pick what Eevee becomes, like `/pokemon evolve jolteon` |
 | `/pokemon stop` | Cancel an evolution. A stone or cable it needed stays in your bag |
 | `/pokemon bag` | List the items in your bag and how many of each, saved across sessions |
@@ -307,16 +307,22 @@ you run `/pokemon evolve`.
 Gen 2 mons aren't bundled, so a mon evolving into one, like Cyndaquil into Quilava,
 fetches it first, the way `/pokemon new` does, and every session can show it after. If the
 fetch fails, the mon doesn't evolve yet and says why, and the next level-up, showing it
-again, or `/pokemon evolve` tries again. Evolutions by friendship, time of day, or a held
-item, and the baby mons, aren't in yet.
+again, or `/pokemon evolve` tries again. Smoochum, Elekid, and Magby, fetched with
+`/pokemon new`, grow into Jynx, Electabuzz, and Magmar at 30. Evolutions by friendship,
+time of day, or stats, and the babies that need them, aren't in yet.
 
-The 19 gen 1 mons that evolve with a stone or a trade, like Pikachu, Eevee, and Kadabra, need an
+The mons that evolve with a stone or a trade, like Pikachu, Eevee, and Kadabra, need an
 item from your bag. A stone mon needs its stone, like a Thunder Stone for Pikachu, and
-Kadabra, Machoke, Graveler, and Haunter need a Link Cable. `/pokemon evolve`, or
+Kadabra, Machoke, Graveler, and Haunter need a Link Cable. Six gen 1 mons trade into a
+fetched gen 2 mon while holding an item, which they need instead of a Link Cable:
+Poliwhirl into Politoed and Slowpoke into Slowking with a King's Rock, Onix into Steelix
+and Scyther into Scizor with a Metal Coat, Seadra into Kingdra with a Dragon Scale, and
+Porygon into Porygon2 with an Up-Grade. `/pokemon use metal coat` on Onix starts it. `/pokemon evolve`, or
 `/pokemon use thunder stone`, starts the evolution, and the item leaves the bag once it's
 done. Eevee needs a pick, like `/pokemon evolve jolteon`, which takes a Thunder Stone.
 Gloom needs one too: a Leaf Stone makes it Vileplume, and a Sun Stone a fetched
-Bellossom. Sunkern, from gen 2, also takes a Sun Stone.
+Bellossom, and Poliwhirl one between Poliwrath and Politoed. Sunkern, from gen 2, also
+takes a Sun Stone.
 Without the item, it says which one is missing.
 
 Items come from wild mons you knock out, and `/pokemon bag` lists them. The first time
@@ -388,6 +394,9 @@ caught, but an item pops out of it and goes into your bag. It's usually a stone,
 often the one for the foe's type, like a Fire Stone from a Vulpix or a Thunder Stone from
 a Voltorb. No gen 1 mon favors the Sun Stone, so only a foe with no stone of its type
 drops one. About 1 knockout in 13 drops a Link Cable instead, and 1 in 15 a Rare Candy.
+A foe that holds an item in Gold and Silver drops it about 1 time in 12: a Metal Coat from
+Magnemite and Magneton, a Dragon Scale from Horsea and Seadra, and a King's Rock from the
+Poliwag and Slowpoke lines. Porygon drops the Up-Grade, which no wild mon holds there.
 Main turns of two minutes or more turn up a Rare Candy 1 time in 10 too.
 Every 10 to 15 s the foe plays one of its own moves at the mon, which flinches and puts
 its next move off.

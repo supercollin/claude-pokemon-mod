@@ -35,7 +35,7 @@ import {
   hasRunAway, isAsleep, isDead, isDown, isFainted, isFlinching, isFree, isGone, isHealing, isPetted, isTuckedIn, markActive,
 } from './status.js'
 import { assignedTo, canWork, crewVariant, endAgent, partyMons, stepCrewMons, typesOf } from './team.js'
-import { andList, boxText, dexText, evolutionText, HELP, helpText, orList, statsText } from './texts.js'
+import { andList, boxText, dexText, evolutionText, HELP, helpText, orList, statsText, withArticle } from './texts.js'
 import {
   chargedWild, damageOf, engagedWild, faintedWild, fleeingWild, foeX, isHere, isOnStage, isWeak, newWild, partingBite,
   STRIKE_GAP_MS, STRIKE_JITTER_MS, stepWild, strikeBite, strikingWild, struckWild, WEAK_MS, WILD_STAY_MS, WILD_TURNS,
@@ -192,7 +192,8 @@ function stopEvolution($) {
 }
 
 // A stone, a trade, or a level the mon has reached starts its evolution now. A stone or
-// a trade needs its item in the bag. Several ways and none named get a list.
+// a trade needs its item in the bag: the stone, the item the mon trades holding, or a
+// Link Cable. Several ways and none named get a list.
 async function evolveCommand($, wanted) {
   const name = nameOf(S.mon)
   const entries = evolutionsOf(S.mon)
@@ -210,7 +211,7 @@ async function evolveCommand($, wanted) {
   }
   const item = itemFor(entry)
   if (item && !(await loadBag($))[item]) {
-    return { text: name + ' needs a ' + itemName(item) + ' to evolve into ' + displayName(entry.into) + '. Wild mons you knock out drop items, and /pokemon bag lists yours.' }
+    return { text: name + ' needs ' + withArticle(itemName(item)) + ' to evolve into ' + displayName(entry.into) + '. Wild mons you knock out drop items, and /pokemon bag lists yours.' }
   }
   const mon = S.mon
   try {
@@ -221,7 +222,8 @@ async function evolveCommand($, wanted) {
   if (S.mon !== mon) return { text: name + ' isn\'t on show anymore, so it didn\'t evolve.' }
   if (S.attack || S.food) return { text: name + ' is busy right now.' }
   startEvolution($, entry.into, item)
-  if (entry.item) return { text: 'You use a ' + entry.item + ' on ' + name + '.' }
+  if (entry.trade && entry.item) return { text: 'You trade ' + name + ' holding ' + withArticle(entry.item) + ' to a friend, and they trade it right back.' }
+  if (entry.item) return { text: 'You use ' + withArticle(entry.item) + ' on ' + name + '.' }
   if (entry.trade) return { text: 'You trade ' + name + ' to a friend, and they trade it right back.' }
   return { text: 'You let ' + name + ' evolve.' }
 }
@@ -405,7 +407,7 @@ function hitFoe($) {
   if (hp === 0) {
     const item = dropOf(S.wild.key, S.wild.seed)
     S.wild = { ...faintedWild(S.wild, S.tick), drop: { item, at: S.tick } }
-    $.ui.toast('Wild ' + name + ' fainted! It can\'t be caught now. It dropped a ' + itemName(item) + ', and it\'s in your bag.')
+    $.ui.toast('Wild ' + name + ' fainted! It can\'t be caught now. It dropped ' + withArticle(itemName(item)) + ', and it\'s in your bag.')
     changeBag($, (bag) => addedTo(bag, item)).catch((err) => logOnce($, err))
     return
   }
@@ -879,7 +881,7 @@ async function useCommand($, rest) {
   if (wanted && wanted !== S.mon) return { text: 'Show ' + nameOf(wanted) + ' first with /pokemon ' + wanted + ', then use the ' + itemName(item) + '.' }
   if (isDown()) return downReply()
   const entry = evolutionsOf(S.mon).find((e) => itemFor(e) === item)
-  if (!entry) return { text: nameOf(S.mon) + ' can\'t use a ' + itemName(item) + '.' }
+  if (!entry) return { text: nameOf(S.mon) + ' can\'t use ' + withArticle(itemName(item)) + '.' }
   return evolveCommand($, entry.into)
 }
 

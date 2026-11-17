@@ -13,10 +13,15 @@ import { hasRunAway, isDead, isFainted, isGone } from './status.js'
 // Joins items as "A", "A or B", or "A, B, or C"
 export const orList = (items) => (items.length < 3 ? items.join(' or ') : items.slice(0, -1).join(', ') + ', or ' + items.at(-1))
 
-// How one entry evolves the mon, like "Jolteon with a Thunder Stone"
+// A name after "a" or "an", like "a Fire Stone" or "an Up-Grade"
+export const withArticle = (name) => (/^[aeiou]/i.test(name) ? 'an ' : 'a ') + name
+
+// How one entry evolves the mon, like "Jolteon with a Thunder Stone" or "Steelix by trade
+// holding a Metal Coat"
 export function evolutionText(entry) {
   const into = displayName(entry.into)
-  if (entry.item) return into + ' with a ' + entry.item
+  if (entry.trade && entry.item) return into + ' by trade holding ' + withArticle(entry.item)
+  if (entry.item) return into + ' with ' + withArticle(entry.item)
   return entry.trade ? into + ' by trade' : into + ' at Lv. ' + entry.level
 }
 
@@ -125,7 +130,7 @@ export const HELP = [
     ['roar', 'Roar to send the wild mon away'],
   ]],
   ['Evolve', [
-    ['evolve [mon]', 'Evolve with a stone or a Link Cable from your bag, or pick what Eevee becomes'],
+    ['evolve [mon]', 'Evolve with a stone, a Link Cable, or a held item from your bag, or pick what Eevee becomes'],
     ['stop', 'Cancel an evolution'],
   ]],
   ['Items', [

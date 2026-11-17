@@ -1,4 +1,4 @@
-import { BASE_FORM, evolutionsOf, preEvolutionOf, startLevel } from './evolutions.js'
+import { BASE_FORM, evolutionsOf, FETCHED, preEvolutionOf, startLevel } from './evolutions.js'
 
 // The gen 1 Pokédex and how often each mon turns up in the wild. DEX lists the 151
 // sprite keys in national dex order. A female sprite counts as its base form's entry.
@@ -48,7 +48,8 @@ const SHINY_ODDS = 1 / 128
 const FEMALE_FORM = Object.fromEntries(Object.entries(BASE_FORM).map(([female, base]) => [base, female]))
 
 // Outside the short lists, a family's base form is common and each evolution a tier
-// rarer. A mon with no family is uncommon.
+// rarer. A mon with no family is uncommon, and one that only evolves into a fetched mon,
+// like Onix into Steelix, has none.
 export function tierOf(mon) {
   const key = dexKey(mon)
   if (LEGENDARY.includes(key)) return 'legendary'
@@ -59,7 +60,7 @@ export function tierOf(mon) {
     stage++
   }
   if (RARE.includes(base)) return 'rare'
-  if (stage === 0 && evolutionsOf(base).length === 0) return 'uncommon'
+  if (stage === 0 && evolutionsOf(base).every((entry) => FETCHED.includes(entry.into))) return 'uncommon'
   return STAGE_TIERS[stage]
 }
 

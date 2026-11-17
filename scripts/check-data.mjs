@@ -11,6 +11,8 @@ import { effectOf } from '../hooks/attacks.js'
 import { DEX, LEGENDARY, RARE, TIERS, dexKey, tierOf } from '../hooks/dex.js'
 import { EVOLUTIONS, FETCHED } from '../hooks/evolutions.js'
 import { EYES, eyesOf } from '../hooks/eyes.js'
+import { ITEM_ART } from '../hooks/art.js'
+import { ITEMS, itemFor } from '../hooks/items.js'
 import { SPRITES } from '../hooks/frames.js'
 import { MAX_LEVEL, levelAt, xpAt } from '../hooks/levels.js'
 import { MOVE_FX, MOVES } from '../hooks/moves.js'
@@ -48,8 +50,9 @@ for (const [mon, entries] of Object.entries(EVOLUTIONS)) {
   if (!known(mon)) fail(`evolutions for ${mon}, which has no sprites and isn't in FETCHED`)
   for (const entry of entries) {
     if (!known(entry.into)) fail(`${mon} evolves into ${entry.into}, which has no sprites and isn't in FETCHED`)
-    const ways = ['level', 'item', 'trade'].filter((key) => entry[key] !== undefined)
-    if (ways.length !== 1) fail(`${mon} into ${entry.into} needs exactly one of level, item, or trade`)
+    const ways = ['level', 'item', 'trade'].filter((key) => entry[key] !== undefined).join('+')
+    if (!['level', 'item', 'trade', 'item+trade'].includes(ways)) fail(`${mon} into ${entry.into} needs a level, an item, a trade, or a trade and an item`)
+    if (entry.item !== undefined && !ITEMS.some((item) => item.key === itemFor(entry) && item.name === entry.item)) fail(`${mon} into ${entry.into} needs ${entry.item}, which isn't an item`)
     if (entry.level !== undefined && !(entry.level > 1 && entry.level <= MAX_LEVEL)) fail(`${mon} evolves at level ${entry.level}`)
   }
 }
@@ -60,6 +63,7 @@ for (const mon of FETCHED) {
   if (!displayName(mon)) fail(`${mon} has no display name`)
 }
 if (new Set(FETCHED).size !== FETCHED.length) fail('FETCHED names a mon twice')
+for (const { key } of ITEMS) if (!ITEM_ART[key]) fail(`${key} has no art`)
 
 // Following evolutions from any mon must end, or a chain loops back on itself
 for (const start of Object.keys(EVOLUTIONS)) {

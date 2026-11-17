@@ -1,7 +1,8 @@
 // The gen 1 evolutions follow the Red and Blue rules and are keyed by sprite key, in
 // Pokédex order, followed by gen 2's. Each entry is one thing the mon can become: { into, level } on level-up,
-// { into, item } with an evolution stone, or { into, trade: true }. A mon that doesn't
-// evolve has no entry.
+// { into, item } with an evolution stone, { into, trade: true }, or { into, trade: true,
+// item } for a trade holding an item, which takes that item and no Link Cable. A mon that
+// doesn't evolve has no entry.
 
 const FIRST_LEVEL = 5
 
@@ -49,7 +50,10 @@ export const EVOLUTIONS = {
   mankey: [{ into: 'primeape', level: 28 }],
   growlithe: [{ into: 'arcanine', item: 'Fire Stone' }],
   poliwag: [{ into: 'poliwhirl', level: 25 }],
-  poliwhirl: [{ into: 'poliwrath', item: 'Water Stone' }],
+  poliwhirl: [
+    { into: 'poliwrath', item: 'Water Stone' },
+    { into: 'politoed', trade: true, item: "King's Rock" },
+  ],
   abra: [{ into: 'kadabra', level: 16 }],
   kadabra: [{ into: 'alakazam', trade: true }],
   machop: [{ into: 'machoke', level: 28 }],
@@ -60,7 +64,10 @@ export const EVOLUTIONS = {
   geodude: [{ into: 'graveler', level: 25 }],
   graveler: [{ into: 'golem', trade: true }],
   ponyta: [{ into: 'rapidash', level: 40 }],
-  slowpoke: [{ into: 'slowbro', level: 37 }],
+  slowpoke: [
+    { into: 'slowbro', level: 37 },
+    { into: 'slowking', trade: true, item: "King's Rock" },
+  ],
   magnemite: [{ into: 'magneton', level: 30 }],
   doduo: [{ into: 'dodrio', level: 31 }],
   seel: [{ into: 'dewgong', level: 34 }],
@@ -68,6 +75,7 @@ export const EVOLUTIONS = {
   shellder: [{ into: 'cloyster', item: 'Water Stone' }],
   gastly: [{ into: 'haunter', level: 25 }],
   haunter: [{ into: 'gengar', trade: true }],
+  onix: [{ into: 'steelix', trade: true, item: 'Metal Coat' }],
   drowzee: [{ into: 'hypno', level: 26 }],
   krabby: [{ into: 'kingler', level: 28 }],
   voltorb: [{ into: 'electrode', level: 30 }],
@@ -76,14 +84,17 @@ export const EVOLUTIONS = {
   koffing: [{ into: 'weezing', level: 35 }],
   rhyhorn: [{ into: 'rhydon', level: 42 }],
   horsea: [{ into: 'seadra', level: 32 }],
+  seadra: [{ into: 'kingdra', trade: true, item: 'Dragon Scale' }],
   goldeen: [{ into: 'seaking', level: 33 }],
   staryu: [{ into: 'starmie', item: 'Water Stone' }],
+  scyther: [{ into: 'scizor', trade: true, item: 'Metal Coat' }],
   magikarp: [{ into: 'gyarados', level: 20 }],
   eevee: [
     { into: 'vaporeon', item: 'Water Stone' },
     { into: 'jolteon', item: 'Thunder Stone' },
     { into: 'flareon', item: 'Fire Stone' },
   ],
+  porygon: [{ into: 'porygon2', trade: true, item: 'Up-Grade' }],
   omanyte: [{ into: 'omastar', level: 40 }],
   kabuto: [{ into: 'kabutops', level: 40 }],
   dratini: [{ into: 'dragonair', level: 30 }],
@@ -91,7 +102,7 @@ export const EVOLUTIONS = {
 
   // Gen 2, by Gold and Silver rules. These mons aren't bundled: /pokemon new fetches
   // them, and a mon evolving into one fetches it first. Evolutions by friendship, time of
-  // day, a held item, or stats, and the baby mons, aren't here yet.
+  // day, or stats, and the babies that need them, aren't here yet.
   chikorita: [{ into: 'bayleef', level: 16 }],
   bayleef: [{ into: 'meganium', level: 32 }],
   cyndaquil: [{ into: 'quilava', level: 14 }],
@@ -119,6 +130,9 @@ export const EVOLUTIONS = {
   remoraid: [{ into: 'octillery', level: 25 }],
   houndour: [{ into: 'houndoom', level: 24 }],
   phanpy: [{ into: 'donphan', level: 25 }],
+  smoochum: [{ into: 'jynx', level: 30 }],
+  elekid: [{ into: 'electabuzz', level: 30 }],
+  magby: [{ into: 'magmar', level: 30 }],
   larvitar: [{ into: 'pupitar', level: 30 }],
   pupitar: [{ into: 'tyranitar', level: 55 }],
 }
@@ -127,18 +141,24 @@ export const EVOLUTIONS = {
 // under media/gen2. scripts/check-data.mjs holds every unbundled name to this list.
 export const FETCHED = [
   'ampharos', 'ariados', 'azumarill', 'bayleef', 'bellossom', 'chikorita', 'chinchou', 'croconaw', 'cyndaquil', 'donphan',
-  'feraligatr', 'flaaffy', 'forretress', 'furret', 'granbull', 'hoothoot', 'hoppip', 'houndoom', 'houndour', 'jumpluff',
-  'lanturn', 'larvitar', 'ledian', 'ledyba', 'magcargo', 'mareep', 'marill', 'meganium', 'natu', 'noctowl',
-  'octillery', 'phanpy', 'piloswine', 'pineco', 'pupitar', 'quagsire', 'quilava', 'remoraid', 'sentret', 'skiploom',
-  'slugma', 'snubbull', 'spinarak', 'sunflora', 'sunkern', 'swinub', 'teddiursa', 'totodile', 'typhlosion', 'tyranitar',
-  'ursaring', 'wooper', 'xatu',
+  'elekid', 'feraligatr', 'flaaffy', 'forretress', 'furret', 'granbull', 'hoothoot', 'hoppip', 'houndoom', 'houndour',
+  'jumpluff', 'kingdra', 'lanturn', 'larvitar', 'ledian', 'ledyba', 'magby', 'magcargo', 'mareep', 'marill',
+  'meganium', 'natu', 'noctowl', 'octillery', 'phanpy', 'piloswine', 'pineco', 'politoed', 'porygon2', 'pupitar',
+  'quagsire', 'quilava', 'remoraid', 'scizor', 'sentret', 'skiploom', 'slowking', 'slugma', 'smoochum', 'snubbull',
+  'spinarak', 'steelix', 'sunflora', 'sunkern', 'swinub', 'teddiursa', 'totodile', 'typhlosion', 'tyranitar', 'ursaring',
+  'wooper', 'xatu',
 ]
 
-// PARENTS maps each evolved mon to the mon it comes from and the entry that takes it there
+// PARENTS maps each evolved mon to the mon it comes from and the entry that takes it there.
+// A bundled mon keeps no fetched parent, like Jynx from Smoochum, so its start level and
+// wild tier stay as in gen 1.
 const PARENTS = new Map()
 for (const [from, entries] of Object.entries(EVOLUTIONS)) {
   if (BASE_FORM[from]) continue
-  for (const entry of entries) PARENTS.set(entry.into, { from, entry })
+  for (const entry of entries) {
+    if (FETCHED.includes(from) && !FETCHED.includes(entry.into)) continue
+    PARENTS.set(entry.into, { from, entry })
+  }
 }
 
 const parentOf = (mon) => PARENTS.get(BASE_FORM[mon] ?? mon)
