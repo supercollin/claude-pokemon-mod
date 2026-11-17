@@ -545,7 +545,7 @@ const HOUR = 3600 * 1000
 const GHOSTTY = { TERM_PROGRAM: 'ghostty' }
 
 // Fire session.start with a saved store and a clock set to a given time
-async function startedWith($, on, saved: Record<string, unknown>, now: number, env: Record<string, string> = GHOSTTY, answer: (e: any) => object = () => ({}), hooks: (clock) => void = () => {}) {
+async function startedWith($, on, saved: Record<string, unknown>, now: number, env: Record<string, string> = GHOSTTY, answer: (e: any) => object = () => ({}), hooks: (clock) => void = () => {}, lag = 0) {
   const clock = mock.clock(on, { now })
   const blits: string[] = []
   // Each blit's width in columns, and the blit itself, alongside blits
@@ -563,7 +563,8 @@ async function startedWith($, on, saved: Record<string, unknown>, now: number, e
   on('session.start', () => ({ cwd: '/work' }))
   on('env.get', ($, e) => ({ value: env[e.name] }))
   on('command.register', () => ({ value: undefined }))
-  on('store.get', ($, e) => ({ value: saved[e.key] }))
+  // lag ms of real time before a read of the records answers, as the engine's store can take
+  on('store.get', ($, e) => (lag && e.key === 'stats' ? new Promise((resolve) => setTimeout(() => resolve({ value: saved[e.key] }), lag)) : { value: saved[e.key] }))
   on('store.set', ($, e) => {
     saved[e.key] = e.value
     return { value: undefined }
@@ -984,7 +985,7 @@ function shutFrames() {
   return frames
 }
 
-test('shutting the eyes keeps every frame\'s size and palette', async () => {
+test('shutting the eyes keeps every frame\'s size and palette', { timeoutMs: 30000 }, async () => {
   for (const { rows, palette, shut } of shutFrames()) {
     expect(shut.length).toBe(rows.length)
     for (const [y, row] of shut.entries()) {
@@ -1373,6 +1374,24 @@ test('/pokemon evolve uses a stone or a trade, lists Eevee\'s choices, and says 
   expect(await run('evolve')).toBe('Charizard doesn\'t evolve.')
   await run('charmander')
   expect(await run('evolve')).toBe('Charmander evolves into Charmeleon at Lv. 16. It\'s Lv. 9.')
+})
+
+// The evolved mon used to show its own first level, like Raichu at Lv 5, until the band was
+// drawn again, as the engine's store answered after the first frame
+test('an evolved mon shows its own level from the first frame, however slow the store', { timeoutMs: 30000 }, async ($, on) => {
+  const saved: Record<string, any> = { trainer: false, mon: 'pikachu', wander: false, bag: { thunderstone: 1 }, stats: { pikachu: { xp: 30 ** 3 } } }
+  const { clock } = await startedWith($, on, saved, 0, GHOSTTY, () => ({}), () => {}, 20)
+  const band = await $.ui.mount({ ...BAND, surface: 'terminal' })
+  const levels = new Set<string>()
+  expect(await run($, 'evolve')).toBe('You use a Thunder Stone on Pikachu.')
+  for (let t = 0; t < 120; t++) {
+    await clock.advance(100)
+    if (saved.mon === 'raichu' || t > 60) levels.add((await band.find({ type: 'Text', text: /^Lv/ }))?.text)
+    // Real time for the slow reads to answer once the evolution is done
+    if (t > 75) await new Promise((resolve) => setTimeout(resolve, 5))
+  }
+  expect(saved.mon).toBe('raichu')
+  expect([...levels]).toEqual(['Lv 30'])
 })
 
 test('/pokemon shows the level in its status and above the meters', async ($, on) => {

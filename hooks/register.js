@@ -114,13 +114,18 @@ function stepEvolution($) {
   else if (S.evolveDue && isFree()) startEvolution($, S.evolveDue)
 }
 
-// The evolved mon takes over the record as last saved, so XP earned elsewhere comes along.
-// 'evolved' tells another session showing the old mon that it evolved rather than being released.
+// The evolved mon takes over the record, so its level, XP, and meters carry over. It's taken
+// here first, so the band shows the evolved mon at its own level from its first frame, then
+// again as last saved, so XP earned elsewhere meanwhile comes along. 'evolved' tells another
+// session showing the old mon that it evolved rather than being released.
+const evolvedRecord = (from) => ({ ...S.stats[from], xp: xpOf(from) })
+
 async function moveRecord($, from, into) {
   await freshen($, [from])
-  S.stats[into] = { ...S.stats[from], xp: xpOf(from) }
+  S.stats[into] = evolvedRecord(from)
   delete S.stats[from]
   await saveStats($, [from, into])
+  $.ui.invalidate('ui.render')
   const evolved = (await $.store.get('evolved')) ?? {}
   await $.store.set('evolved', { ...evolved, [from]: into })
 }
@@ -130,6 +135,7 @@ function finishEvolution($) {
   const { from, into, item } = S.evolving
   const wasHome = isHome()
   S.evolving = null
+  S.stats[into] = evolvedRecord(from)
   S.mon = into
   if (wasHome) S.x = homeX()
   clampX()
