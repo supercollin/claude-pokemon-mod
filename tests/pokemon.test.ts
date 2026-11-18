@@ -1394,6 +1394,20 @@ test('an evolved mon shows its own level from the first frame, however slow the 
   expect([...levels]).toEqual(['Lv 30'])
 })
 
+for (const caught of [true, false]) {
+  test(`a raised mon whose species is ${caught ? '' : 'not '}caught evolves ${caught ? 'keeping' : 'without'} its ◓ in the box`, { timeoutMs: 30000 }, async ($, on) => {
+    const dex = caught ? { pikachu: { seen: 0, caught: 0 } } : {}
+    const saved: Record<string, any> = { trainer: false, mon: 'pikachu', wander: false, bag: { thunderstone: 1 }, dex, stats: { pikachu: { xp: 30 ** 3 } } }
+    const { clock } = await startedWith($, on, saved, 0)
+    expect(await run($, 'box')).toContain(caught ? 'Pikachu ◓, Lv. 30' : 'Pikachu, Lv. 30')
+    await run($, 'evolve')
+    await clock.advance(7200)
+    expect(saved.mon).toBe('raichu')
+    expect(Boolean(saved.stats.raichu.caught)).toBe(caught)
+    expect(await run($, 'box')).toContain(caught ? 'Raichu ◓, Lv. 30' : 'Raichu, Lv. 30')
+  })
+}
+
 test('/pokemon shows the level in its status and above the meters', async ($, on) => {
   // Lv. 12
   await startedWith($, on, { mon: 'charmander', stats: { charmander: { xp: 12 ** 3 } } }, 0)

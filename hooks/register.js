@@ -122,7 +122,11 @@ const evolvedRecord = (from) => ({ ...S.stats[from], xp: xpOf(from) })
 
 async function moveRecord($, from, into) {
   await freshen($, [from])
-  S.stats[into] = evolvedRecord(from)
+  // The ◓ the box showed stays: a mon raised before its species was caught showed it by the
+  // dex, and the species it becomes may not be caught
+  const dex = await $.store.get('dex')
+  const marked = Boolean(S.stats[from]?.caught) || isCaught(dex?.[dexKey(from)])
+  S.stats[into] = { ...evolvedRecord(from), ...(marked ? { caught: true } : {}) }
   delete S.stats[from]
   await saveStats($, [from, into])
   $.ui.invalidate('ui.render')
