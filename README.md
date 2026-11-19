@@ -329,7 +329,16 @@ into Tangrowth, and Yanma into Yanmega at 33, Bonsly into Sudowoodo at 17, and M
 into Mr. Mime at 18. Piloswine only relearns Ancient Power there, so it becomes Mamoswine
 at its first level-up, from 34. Only a female Combee becomes Vespiquen, at 21. Shellos
 from the east sea becomes the eastern Gastrodon and from the west the western one, and
-the female Gible, Gabite, Hippopotas, and Hippowdon keep their female sprites.
+the female Gible, Gabite, Hippopotas, and Hippowdon keep their female sprites. Burmy at 20
+becomes the Wormadam of its cloak if female, and Mothim if male. Mantyke becomes Mantine
+at a level-up with a Remoraid on show or in your party.
+
+A few gen 4 evolutions need a mon of one sex: a Dawn Stone makes a male Kirlia Gallade and
+a female Snorunt Froslass, and asking another Kirlia or Snorunt for it only says which sex
+can. The games evolve Sneasel, Gligar, and Happiny at a level-up while holding an item at
+a time of day. Here you use the item then: a Razor Claw makes Sneasel Weavile and a Razor
+Fang Gligar Gliscor by night, and an Oval Stone makes Happiny Chansey by day, on your
+computer's clock. At the wrong time, the item stays in the bag and the mon says when.
 
 Some mons evolve on a level-up with all five hearts full, from a turn or a Rare Candy:
 Golbat into Crobat, Chansey into Blissey, and the fetched Pichu, Cleffa, Igglybuff, and

@@ -1,9 +1,8 @@
 import { BUNDLED_GENS, dexKey, dexNumber, dexOf, GENS, genOf, isCaught, NATIONAL_DEX, tierOf } from './dex.js'
-import { evolutionsOf } from './evolutions.js'
 import { MAX_LEVEL, xpAt } from './levels.js'
 import { iconsFor, statNow } from './meters.js'
 import { displayName } from './names.js'
-import { conditionOf, downReply, fullNameOf, goneLine, levelOf, nameOf, readyToEvolve, xpOf } from './records.js'
+import { conditionOf, downReply, fullNameOf, goneLine, levelOf, nameOf, ownEvolutionsOf, readyToEvolve, xpOf } from './records.js'
 import { MONS } from './sprites.js'
 import { S } from './state.js'
 import { hasRunAway, isDead, isFainted, isGone } from './status.js'
@@ -28,9 +27,10 @@ export function evolutionText(entry) {
   const into = displayName(entry.into)
   if (entry.happy) return into + ' at a level-up with full hearts' + (entry.time ? ' by ' + entry.time : '')
   if (entry.fed) return into + ' at a level-up with full food'
+  if (entry.with) return into + ' at a level-up with ' + displayName(entry.with) + ' in your party'
   if (entry.more) return into + ' at Lv. ' + entry.level + MORE_TEXTS[entry.more]
   if (entry.trade && entry.item) return into + ' by trade holding ' + withArticle(entry.item)
-  if (entry.item) return into + ' with ' + withArticle(entry.item)
+  if (entry.item) return into + ' with ' + withArticle(entry.item) + (entry.time ? ' by ' + entry.time : '')
   return entry.trade ? into + ' by trade' : into + ' at Lv. ' + entry.level
 }
 
@@ -55,7 +55,7 @@ export function statsText(pets, feeds) {
   if (isGone(S.mon)) return goneLine(S.mon) + ' /pokemon <mon> picks another.'
   const level = levelOf(S.mon)
   const next = level < MAX_LEVEL ? ' (' + (xpAt(level + 1) - xpOf(S.mon)) + ' to Lv. ' + (level + 1) + ')' : ''
-  const evolutions = evolutionsOf(S.mon)
+  const evolutions = ownEvolutionsOf(S.mon)
   const ready = readyToEvolve()
   const becomes = ready
     ? ' Ready to evolve into ' + displayName(ready) + '. /pokemon evolve lets it.'

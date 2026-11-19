@@ -28,7 +28,7 @@ import {
 import { joinParty } from './party.js'
 import {
   conditionOf, downReply, fullNameOf, goneLine, HEAL_MS, healingReply, levelOf, nameOf, readyToEvolve, revivedMeters,
-  lacksSex, settleHeal, sexedRecord, sexOf, xpOf,
+  lacksSex, ownEvolutionsOf, settleHeal, sexedRecord, sexOf, xpOf,
 } from './records.js'
 import { addCustom, MONS, VARIANTS } from './sprites.js'
 import { S } from './state.js'
@@ -233,7 +233,11 @@ function stopEvolution($) {
 // Link Cable. Several ways and none named get a list.
 async function evolveCommand($, wanted) {
   const name = nameOf(S.mon)
-  const entries = evolutionsOf(S.mon)
+  const entries = ownEvolutionsOf(S.mon)
+  if (wanted && !entries.some((entry) => moveKey(entry.into) === moveKey(wanted))) {
+    const other = otherSexReply((entry) => moveKey(entry.into) === moveKey(wanted))
+    if (other) return other
+  }
   if (entries.length === 0) return { text: name + ' doesn\'t evolve.' }
   if (S.attack || S.food) return { text: name + ' is busy right now.' }
   const reached = S.stats[S.mon]?.readyFor
@@ -251,6 +255,10 @@ async function evolveCommand($, wanted) {
   const level = levelOf(S.mon)
   if (entry.level && level < entry.level) {
     return { text: name + ' evolves into ' + displayName(entry.into) + ' at Lv. ' + entry.level + '. It\'s Lv. ' + level + '.' }
+  }
+  if (entry.item && entry.time) {
+    const now = timeOfDay(await $.clock.now())
+    if (now !== entry.time) return { text: name + ' evolves into ' + displayName(entry.into) + ' with ' + withArticle(entry.item) + ' by ' + entry.time + '. It\'s ' + now + ' now.' }
   }
   const item = itemFor(entry)
   if (item && !(await loadBag($))[item]) {
@@ -270,6 +278,13 @@ async function evolveCommand($, wanted) {
   if (entry.item) return { text: 'You use ' + withArticle(entry.item) + ' on ' + name + '.' }
   if (entry.trade) return { text: 'You trade ' + name + ' to a friend, and they trade it right back.' }
   return { text: 'You let ' + name + ' evolve.' }
+}
+
+// What the shown mon says when asked for an evolution only the other sex has, like "Only a
+// male Kirlia can become Gallade.", or null when no such evolution matches
+function otherSexReply(matches) {
+  const entry = evolutionsOf(S.mon).find((e) => e.sex && e.sex !== sexOf(S.mon) && matches(e))
+  return entry ? { text: 'Only a ' + entry.sex + ' ' + displayName(S.mon) + ' can become ' + displayName(entry.into) + '.' } : null
 }
 
 // Send the foe off, with a toast unless quiet. One still calling just doesn't come, and
@@ -867,14 +882,17 @@ async function gainXp($, durationMs) {
 const PARTY_XP_SHARE = 0.5
 
 // A level-up reaches a friendship evolution with full hearts, by day or night when it asks,
-// Feebas's with full food, Tyrogue's by which meter has more icons, and picks one left to
-// chance at its level. With needs off both meters count as full. The record keeps what it
-// reached, so it stays ready the way a level evolution does, and a pick stays the same.
+// Feebas's with full food, Tyrogue's by which meter has more icons, Mantyke's with a
+// Remoraid on show or in the party, and picks one left to chance at its level. With needs
+// off both meters count as full. The record keeps what it reached, so it stays ready the
+// way a level evolution does, and a pick stays the same.
 function markedLevelUp(name) {
   const food = S.needsOn ? filledIcons('food', name) : STAT_ICONS
   const hearts = S.needsOn ? filledIcons('happiness', name) : STAT_ICONS
   const kept = S.stats[name]?.readyFor
-  const entry = levelUpEvolutionOf(name, { level: levelOf(name), food, hearts, full: STAT_ICONS, time: timeOfDay(S.nowMs), kept })
+  const team = [S.mon, ...partyMons()].filter((mon) => mon !== name).map(dexKey)
+  const level = levelOf(name)
+  const entry = levelUpEvolutionOf(name, { level, food, hearts, full: STAT_ICONS, time: timeOfDay(S.nowMs), sex: sexOf(name), team, kept })
   return entry ? { ...S.stats[name], readyFor: entry.into } : S.stats[name]
 }
 
@@ -885,7 +903,7 @@ function markedReady(name, was) {
   const level = levelOf(name)
   if (level <= was) return S.stats[name]
   const record = markedLevelUp(name)
-  const evolution = levelEvolutionOf(name)
+  const evolution = levelEvolutionOf(name, sexOf(name))
   const ready = (evolution && level >= evolution.level) || record.readyFor
   return ready ? { ...record, evolveReady: true } : record
 }
@@ -989,8 +1007,8 @@ async function useCommand($, rest) {
   if (wanted && !MONS.includes(wanted)) return { text: 'Unknown mon "' + wanted + '". /pokemon box lists yours.' }
   if (wanted && wanted !== S.mon) return { text: 'Show ' + nameOf(wanted) + ' first with /pokemon ' + wanted + ', then use the ' + itemName(item) + '.' }
   if (isDown()) return downReply()
-  const entry = evolutionsOf(S.mon).find((e) => itemFor(e) === item)
-  if (!entry) return { text: nameOf(S.mon) + ' can\'t use ' + withArticle(itemName(item)) + '.' }
+  const entry = ownEvolutionsOf(S.mon).find((e) => itemFor(e) === item)
+  if (!entry) return otherSexReply((e) => itemFor(e) === item) ?? { text: nameOf(S.mon) + ' can\'t use ' + withArticle(itemName(item)) + '.' }
   return evolveCommand($, entry.into)
 }
 

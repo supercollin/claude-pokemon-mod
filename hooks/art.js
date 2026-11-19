@@ -115,8 +115,10 @@ export function stampPixel(s, cx, py) {
 // c candy, h shine), and the Link Cable two plugs (k) on a cable (c). King's Rock is a
 // gold crown (y) set with red gems (r), the Metal Coat a steel shield (s, h shine), the
 // Dragon Scale a blue scale (d, h shine), the Up-Grade a box (p) with a screen (w) and
-// keys (k), the Deep Sea Tooth a white fang (t) with a grey edge (g), and the Deep Sea
-// Scale a pink shell (p, h shine).
+// keys (k), the Deep Sea Tooth a white fang (t) with a grey edge (g), the Deep Sea
+// Scale a pink shell (p, h shine), the Razor Claw three grey claws (c), the Razor Fang a
+// white fang (f) with a red base (r), and the Oval Stone a pale egg (e, h shine). The Dawn
+// Stone is a stone with a green glint.
 const STONE = ['.ooo.', 'obhbo', 'obmbo', 'obbbo', '.ooo.']
 const stoneOf = (o, b, m) => ({ rows: STONE, colors: { o, b, m, h: 0xffffff } })
 export const ITEM_ART = {
@@ -126,6 +128,7 @@ export const ITEM_ART = {
   leafstone: stoneOf(0x5a6a20, 0x98b040, 0x2a7a30),
   moonstone: stoneOf(0x30304a, 0x60607e, 0xd8d8f0),
   sunstone: stoneOf(0xa02818, 0xe85020, 0xffc830),
+  dawnstone: stoneOf(0x1a6a6a, 0x40b0a8, 0xa0ffb0),
   rarecandy: { rows: ['w.ccc.w', 'wwchcww', 'w.ccc.w'], colors: { w: 0xf0f0f8, c: 0x6a50d8, h: 0xd0c8ff } },
   linkcable: { rows: ['kk.kk', 'k...k', 'c...c', 'c...c', '.ccc.'], colors: { k: 0x9898a8, c: 0x8a50c0 } },
   kingsrock: { rows: ['y.y.y', 'yyyyy', 'yryry', 'yyyyy'], colors: { y: 0xe0b020, r: 0xe03030 } },
@@ -134,6 +137,9 @@ export const ITEM_ART = {
   upgrade: { rows: ['ppppp', 'pwwwp', 'ppppp', 'pkpkp', 'ppppp'], colors: { p: 0x5060c8, w: 0xd8f0ff, k: 0x202838 } },
   deepseatooth: { rows: ['gtttg', '.ttt.', '.ttg.', '..t..', '..g..'], colors: { t: 0xf4f0e0, g: 0x9a9888 } },
   deepseascale: { rows: ['.ppp.', 'phpph', 'ppppp', '.ppp.', '..p..'], colors: { p: 0xe878a8, h: 0xffd8e8 } },
+  razorclaw: { rows: ['c.c.c', 'c.c.c', 'c.c.c', '.ccc.', '..c..'], colors: { c: 0xb8b8c8 } },
+  razorfang: { rows: ['..f..', '.fff.', '.fff.', 'rrfrr', 'rrrrr'], colors: { f: 0xf4f0e0, r: 0xc83030 } },
+  ovalstone: { rows: ['.eee.', 'eheee', 'eeeee', 'eeeee', '.eee.'], colors: { e: 0xe8e0c8, h: 0xffffff } },
 }
 
 export const SPARKLE = { s: 0xfff2a0, w: 0xffffff }

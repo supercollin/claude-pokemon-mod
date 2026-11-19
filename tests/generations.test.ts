@@ -227,7 +227,7 @@ test('/pokemon use takes an item by a loose name, and a stone on a mon is the sa
   const saved: Record<string, any> = { trainer: false, mon: 'eevee', bag: { firestone: 1, waterstone: 1 } }
   const { clock } = await startedWith($, on, saved, 0)
   expect(await run($, 'use')).toBe('Name the item, like /pokemon use rare candy. /pokemon bag lists yours.')
-  expect(await run($, 'use potion')).toBe('Unknown item "potion". Items: Fire Stone, Water Stone, Thunder Stone, Leaf Stone, Moon Stone, Sun Stone, King\'s Rock, Metal Coat, Dragon Scale, Up-Grade, Deep Sea Tooth, Deep Sea Scale, Link Cable, Rare Candy.')
+  expect(await run($, 'use potion')).toBe('Unknown item "potion". Items: Fire Stone, Water Stone, Thunder Stone, Leaf Stone, Moon Stone, Sun Stone, Dawn Stone, King\'s Rock, Metal Coat, Dragon Scale, Up-Grade, Deep Sea Tooth, Deep Sea Scale, Razor Claw, Razor Fang, Oval Stone, Link Cable, Rare Candy.')
   expect(await run($, 'use moon stone')).toBe('Eevee can\'t use a Moon Stone.')
   expect(await run($, 'use fire stone growlithe')).toBe('Show Growlithe first with /pokemon growlithe, then use the Fire Stone.')
   expect(await run($, 'use FireStone eevee')).toBe('You use a Fire Stone on Eevee.')
@@ -376,6 +376,64 @@ test('Clamperl trades into Huntail holding a Deep Sea Tooth or Gorebyss holding 
   expect(saved.bag).toEqual({})
   expect(asked.some((url) => url.includes('/gen3/gorebyss/'))).toBe(true)
 })
+
+test('a Dawn Stone makes a male Kirlia Gallade, and a female Kirlia says only a male can', { timeoutMs: 30000 }, async ($, on) => {
+  const asked = serveMons(on, { 4: ['gallade'] }, { types: ['psychic', 'fighting'] })
+  const kirlia = (sex: string) => ({
+    trainer: false,
+    mon: 'kirlia',
+    bag: { dawnstone: 1 },
+    stats: { kirlia: { xp: 20 ** 3, sex } },
+    'custom:kirlia': { gen: 3, sprite: SPRITES.diglett, moves: ['Confusion'], by: 'new' },
+  })
+  const saved: Record<string, any> = kirlia('female')
+  const { clock } = await startedWith($, on, saved, 0)
+  expect(await run($, 'stats')).toMatch(/ Can become Gardevoir at Lv\. 30\. /)
+  expect(await run($, 'evolve gallade')).toBe('Only a male Kirlia can become Gallade.')
+  expect(await run($, 'use dawn stone')).toBe('Only a male Kirlia can become Gallade.')
+  saved.stats.kirlia.sex = 'male'
+  await run($, 'kirlia')
+  expect(await run($, 'stats')).toMatch(/ Can become Gardevoir at Lv\. 30 or Gallade with a Dawn Stone\. /)
+  expect(await run($, 'use dawn stone')).toBe('You use a Dawn Stone on Kirlia.')
+  await clock.advance(7100)
+  expect(saved.mon).toBe('gallade')
+  expect(saved.stats.gallade.sex).toBe('male')
+  expect(saved.bag).toEqual({})
+  expect(asked.some((url) => url.includes('/gen4/gallade/'))).toBe(true)
+})
+
+test('Burmy at 20 becomes the Wormadam of its cloak when female and Mothim when male', () => {
+  expect(levelEvolutionOf('burmy_sandy', 'female')).toEqual({ into: 'wormadam_sandy', level: 20, sex: 'female' })
+  expect(levelEvolutionOf('burmy_sandy', 'male')).toEqual({ into: 'mothim', level: 20, sex: 'male' })
+  expect(levelEvolutionOf('burmy_trash', null)).toBeNull()
+  expect(startLevel('wormadam_trash')).toBe(20)
+  expect(preEvolutionOf('mothim')).toBe('burmy')
+  expect(levelEvolutionOf('snorunt', 'female')?.into).toBe('glalie')
+})
+
+test('Mantyke levels up into Mantine with a Remoraid on show or in the party', () => {
+  const at = (team: string[]) => ({ level: 12, food: 0, hearts: 0, full: 5, time: 'day', sex: 'male', team })
+  expect(levelUpEvolutionOf('mantyke', at(['remoraid']))?.into).toBe('mantine')
+  expect(levelUpEvolutionOf('mantyke', at(['octillery', 'pikachu']))).toBeNull()
+})
+
+for (const [hour, evolves] of [[22, true], [12, false]] as const) {
+  test(`a Razor Claw ${evolves ? 'makes Sneasel Weavile at night' : 'waits for the night'}`, { timeoutMs: 30000 }, async ($, on) => {
+    serveMons(on, { 4: ['weavile'] }, { types: ['dark', 'ice'] })
+    const now = new Date(2026, 10, 17, hour).getTime()
+    const saved: Record<string, any> = { trainer: false, mon: 'sneasel', bag: { razorclaw: 1 }, stats: { sneasel: { xp: 20 ** 3, sex: 'female' } } }
+    saved['custom:sneasel'] = { gen: 2, sprite: SPRITES.diglett, moves: ['Scratch'], by: 'new' }
+    const { clock } = await startedWith($, on, saved, now)
+    if (evolves) {
+      expect(await run($, 'use razor claw')).toBe('You use a Razor Claw on Sneasel.')
+      await clock.advance(7100)
+      expect(saved.mon).toBe('weavile')
+    } else {
+      expect(await run($, 'use razor claw')).toBe('Sneasel evolves into Weavile with a Razor Claw by night. It\'s day now.')
+      expect(saved.bag).toEqual({ razorclaw: 1 })
+    }
+  })
+}
 
 test('gen 3 foes drop their own type\'s stone, and Carvanha and Relicanth the Deep Sea items', () => {
   const kinds = (key: string) => {

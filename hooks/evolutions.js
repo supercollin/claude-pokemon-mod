@@ -8,7 +8,10 @@
 // 'random' } entries at one level share it by chance, like Wurmple's, the pick made at the
 // level-up that reaches it. { into, fed: true } is a level-up with full food, standing in
 // for Feebas's beauty, and { into, level, also } a level evolution that puts another mon in
-// the box too, like Nincada's Shedinja. A mon that doesn't evolve has no entry. The mon
+// the box too, like Nincada's Shedinja. sex: 'male' or 'female' keeps an entry to a mon
+// of that sex, like Kirlia's Gallade, and time on an item entry to that time of day, like
+// Sneasel's Razor Claw by night. { into, with } is a level-up with that mon in the party,
+// like Mantyke's Remoraid. A mon that doesn't evolve has no entry. The mon
 // an entry names shows as its sprite for the evolving mon's sex, so a female Bayleef
 // becomes meganium_female and a female Wynaut wobbuffet_female.
 
@@ -224,7 +227,10 @@ export const EVOLUTIONS = {
   taillow: [{ into: 'swellow', level: 22 }],
   wingull: [{ into: 'pelipper', level: 25 }],
   ralts: [{ into: 'kirlia', level: 20 }],
-  kirlia: [{ into: 'gardevoir', level: 30 }],
+  kirlia: [
+    { into: 'gardevoir', level: 30 },
+    { into: 'gallade', item: 'Dawn Stone', sex: 'male' },
+  ],
   surskit: [{ into: 'masquerain', level: 22 }],
   shroomish: [{ into: 'breloom', level: 23 }],
   nincada: [{ into: 'ninjask', level: 20, also: 'shedinja' }],
@@ -257,7 +263,10 @@ export const EVOLUTIONS = {
   shuppet: [{ into: 'banette', level: 37 }],
   duskull: [{ into: 'dusclops', level: 37 }],
   wynaut: [{ into: 'wobbuffet_male', level: 15 }],
-  snorunt: [{ into: 'glalie', level: 42 }],
+  snorunt: [
+    { into: 'glalie', level: 42 },
+    { into: 'froslass', item: 'Dawn Stone', sex: 'female' },
+  ],
   spheal: [{ into: 'sealeo', level: 32 }],
   sealeo: [{ into: 'walrein', level: 44 }],
   clamperl: [
@@ -274,7 +283,9 @@ export const EVOLUTIONS = {
   // at 32 for Double Hit. Piloswine only relearns Ancient Power, so it evolves at its first
   // level-up. Magneton and Nosepass, which evolve at Mt. Coronet, take a Thunder Stone, and
   // Eevee a Leaf Stone for Leafeon, as in Sword and Shield. Each of Shellos's seas, Gible's
-  // and Hippopotas's sexes, and the female Combee evolve on their own.
+  // and Hippopotas's sexes, and the female Combee evolve on their own. A Burmy keeps its
+  // cloak as Wormadam, and a male becomes Mothim. Holding an item at a time of day, as
+  // Sneasel, Gligar, and Happiny level up in the games, is using it then here.
   magneton: [{ into: 'magnezone', item: 'Thunder Stone' }],
   lickitung: [{ into: 'lickilicky', level: 33 }],
   tangela: [{ into: 'tangrowth', level: 33 }],
@@ -282,6 +293,8 @@ export const EVOLUTIONS = {
   yanma: [{ into: 'yanmega', level: 33 }],
   piloswine: [{ into: 'mamoswine', level: 34 }],
   nosepass: [{ into: 'probopass', item: 'Thunder Stone' }],
+  sneasel: [{ into: 'weavile', item: 'Razor Claw', time: 'night' }],
+  gligar: [{ into: 'gliscor', item: 'Razor Fang', time: 'night' }],
   turtwig: [{ into: 'grotle', level: 18 }],
   grotle: [{ into: 'torterra', level: 32 }],
   chimchar: [{ into: 'monferno', level: 14 }],
@@ -296,6 +309,15 @@ export const EVOLUTIONS = {
   luxio: [{ into: 'luxray', level: 30 }],
   budew: [{ into: 'roselia', happy: true, time: 'day' }],
   cranidos: [{ into: 'rampardos', level: 30 }],
+  ...Object.fromEntries(
+    BURMY_CLOAKS.map((cloak) => [
+      'burmy_' + cloak,
+      [
+        { into: 'wormadam_' + cloak, level: 20, sex: 'female' },
+        { into: 'mothim', level: 20, sex: 'male' },
+      ],
+    ]),
+  ),
   shieldon: [{ into: 'bastiodon', level: 30 }],
   combee_female: [{ into: 'vespiquen', level: 21 }],
   buizel: [{ into: 'floatzel', level: 26 }],
@@ -310,6 +332,7 @@ export const EVOLUTIONS = {
   bronzor: [{ into: 'bronzong', level: 33 }],
   bonsly: [{ into: 'sudowoodo', level: 17 }],
   mimejr: [{ into: 'mrmime', level: 18 }],
+  happiny: [{ into: 'chansey', item: 'Oval Stone', time: 'day' }],
   gible: [{ into: 'gabite', level: 24 }],
   gible_female: [{ into: 'gabite_female', level: 24 }],
   gabite: [{ into: 'garchomp', level: 48 }],
@@ -321,6 +344,7 @@ export const EVOLUTIONS = {
   skorupi: [{ into: 'drapion', level: 40 }],
   croagunk: [{ into: 'toxicroak', level: 37 }],
   finneon: [{ into: 'lumineon', level: 31 }],
+  mantyke: [{ into: 'mantine', with: 'remoraid' }],
   snover: [{ into: 'abomasnow', level: 40 }],
 }
 
@@ -330,30 +354,31 @@ export const FETCHED = [
   'abomasnow', 'aggron', 'aipom', 'altaria', 'ambipom', 'ampharos', 'anorith', 'ariados', 'armaldo', 'aron',
   'azumarill', 'azurill', 'bagon', 'baltoy', 'banette', 'barboach', 'bastiodon', 'bayleef', 'beautifly', 'beldum',
   'bellossom', 'bibarel', 'bidoof', 'blaziken', 'blissey', 'bonsly', 'breloom', 'bronzong', 'bronzor', 'budew',
-  'buizel', 'buneary', 'cacnea', 'cacturne', 'camerupt', 'carvanha', 'cascoon', 'cherrim', 'cherubi', 'chikorita',
-  'chimchar', 'chimecho', 'chinchou', 'chingling', 'clamperl', 'claydol', 'cleffa', 'combee_female', 'combusken', 'corphish',
-  'cradily', 'cranidos', 'crawdaunt', 'croagunk', 'crobat', 'croconaw', 'cyndaquil', 'delcatty', 'donphan', 'drapion',
-  'drifblim', 'drifloon', 'dusclops', 'duskull', 'dustox', 'electrike', 'elekid', 'empoleon', 'espeon', 'exploud',
-  'feebas', 'feraligatr', 'finneon', 'flaaffy', 'floatzel', 'flygon', 'forretress', 'furret', 'gabite', 'gabite_female',
-  'garchomp', 'garchomp_female', 'gardevoir', 'gastrodon_east', 'gastrodon_west', 'gible', 'gible_female', 'glalie', 'glameow', 'gorebyss',
-  'granbull', 'grotle', 'grovyle', 'grumpig', 'gulpin', 'hariyama', 'hippopotas_female', 'hippopotas_male', 'hippowdon_female', 'hippowdon_male',
-  'hitmontop', 'hoothoot', 'hoppip', 'houndoom', 'houndour', 'huntail', 'igglybuff', 'infernape', 'jumpluff', 'kingdra',
-  'kirlia', 'kricketot', 'kricketune', 'lairon', 'lanturn', 'larvitar', 'leafeon', 'ledian', 'ledyba', 'lickilicky',
-  'lileep', 'linoone', 'lombre', 'lopunny', 'lotad', 'loudred', 'lucario', 'ludicolo', 'lumineon', 'luxio',
-  'luxray', 'magby', 'magcargo', 'magnezone', 'makuhita', 'mamoswine', 'manectric', 'mareep', 'marill', 'marshtomp',
+  'buizel', 'buneary', 'burmy_plant', 'burmy_sandy', 'burmy_trash', 'cacnea', 'cacturne', 'camerupt', 'carvanha', 'cascoon',
+  'cherrim', 'cherubi', 'chikorita', 'chimchar', 'chimecho', 'chinchou', 'chingling', 'clamperl', 'claydol', 'cleffa',
+  'combee_female', 'combusken', 'corphish', 'cradily', 'cranidos', 'crawdaunt', 'croagunk', 'crobat', 'croconaw', 'cyndaquil',
+  'delcatty', 'donphan', 'drapion', 'drifblim', 'drifloon', 'dusclops', 'duskull', 'dustox', 'electrike', 'elekid',
+  'empoleon', 'espeon', 'exploud', 'feebas', 'feraligatr', 'finneon', 'flaaffy', 'floatzel', 'flygon', 'forretress',
+  'froslass', 'furret', 'gabite', 'gabite_female', 'gallade', 'garchomp', 'garchomp_female', 'gardevoir', 'gastrodon_east', 'gastrodon_west',
+  'gible', 'gible_female', 'glalie', 'glameow', 'gligar', 'gliscor', 'gorebyss', 'granbull', 'grotle', 'grovyle',
+  'grumpig', 'gulpin', 'happiny', 'hariyama', 'hippopotas_female', 'hippopotas_male', 'hippowdon_female', 'hippowdon_male', 'hitmontop', 'hoothoot',
+  'hoppip', 'houndoom', 'houndour', 'huntail', 'igglybuff', 'infernape', 'jumpluff', 'kingdra', 'kirlia', 'kricketot',
+  'kricketune', 'lairon', 'lanturn', 'larvitar', 'leafeon', 'ledian', 'ledyba', 'lickilicky', 'lileep', 'linoone',
+  'lombre', 'lopunny', 'lotad', 'loudred', 'lucario', 'ludicolo', 'lumineon', 'luxio', 'luxray', 'magby',
+  'magcargo', 'magnezone', 'makuhita', 'mamoswine', 'manectric', 'mantine', 'mantyke', 'mareep', 'marill', 'marshtomp',
   'masquerain', 'medicham', 'meditite', 'meganium', 'metagross', 'metang', 'mightyena', 'milotic', 'mimejr', 'monferno',
-  'mudkip', 'munchlax', 'natu', 'nincada', 'ninjask', 'noctowl', 'nosepass', 'numel', 'nuzleaf', 'octillery',
-  'pelipper', 'phanpy', 'pichu', 'piloswine', 'pineco', 'piplup', 'politoed', 'poochyena', 'porygon2', 'prinplup',
-  'probopass', 'pupitar', 'purugly', 'quagsire', 'quilava', 'ralts', 'rampardos', 'remoraid', 'riolu', 'roselia',
-  'salamence', 'sceptile', 'scizor', 'sealeo', 'seedot', 'sentret', 'sharpedo', 'shedinja', 'shelgon', 'shellos_east',
-  'shellos_west', 'shieldon', 'shiftry', 'shinx', 'shroomish', 'shuppet', 'silcoon', 'skiploom', 'skitty', 'skorupi',
-  'skuntank', 'slaking', 'slakoth', 'slowking', 'slugma', 'smoochum', 'snorunt', 'snover', 'snubbull', 'spheal',
-  'spinarak', 'spoink', 'staraptor', 'staravia', 'starly', 'steelix', 'stunky', 'sudowoodo', 'sunflora', 'sunkern',
-  'surskit', 'swablu', 'swalot', 'swampert', 'swellow', 'swinub', 'taillow', 'tangrowth', 'teddiursa', 'togepi',
-  'togetic', 'torchic', 'torterra', 'totodile', 'toxicroak', 'trapinch', 'treecko', 'turtwig', 'typhlosion', 'tyranitar',
-  'tyrogue', 'umbreon', 'ursaring', 'vespiquen', 'vibrava', 'vigoroth', 'wailmer', 'wailord', 'walrein', 'whiscash',
-  'whismur', 'wingull', 'wobbuffet_female', 'wobbuffet_male', 'wooper', 'wurmple', 'wynaut', 'xatu', 'yanma', 'yanmega',
-  'zigzagoon',
+  'mothim', 'mudkip', 'munchlax', 'natu', 'nincada', 'ninjask', 'noctowl', 'nosepass', 'numel', 'nuzleaf',
+  'octillery', 'pelipper', 'phanpy', 'pichu', 'piloswine', 'pineco', 'piplup', 'politoed', 'poochyena', 'porygon2',
+  'prinplup', 'probopass', 'pupitar', 'purugly', 'quagsire', 'quilava', 'ralts', 'rampardos', 'remoraid', 'riolu',
+  'roselia', 'salamence', 'sceptile', 'scizor', 'sealeo', 'seedot', 'sentret', 'sharpedo', 'shedinja', 'shelgon',
+  'shellos_east', 'shellos_west', 'shieldon', 'shiftry', 'shinx', 'shroomish', 'shuppet', 'silcoon', 'skiploom', 'skitty',
+  'skorupi', 'skuntank', 'slaking', 'slakoth', 'slowking', 'slugma', 'smoochum', 'sneasel', 'snorunt', 'snover',
+  'snubbull', 'spheal', 'spinarak', 'spoink', 'staraptor', 'staravia', 'starly', 'steelix', 'stunky', 'sudowoodo',
+  'sunflora', 'sunkern', 'surskit', 'swablu', 'swalot', 'swampert', 'swellow', 'swinub', 'taillow', 'tangrowth',
+  'teddiursa', 'togepi', 'togetic', 'torchic', 'torterra', 'totodile', 'toxicroak', 'trapinch', 'treecko', 'turtwig',
+  'typhlosion', 'tyranitar', 'tyrogue', 'umbreon', 'ursaring', 'vespiquen', 'vibrava', 'vigoroth', 'wailmer', 'wailord',
+  'walrein', 'weavile', 'whiscash', 'whismur', 'wingull', 'wobbuffet_female', 'wobbuffet_male', 'wooper', 'wormadam_plant', 'wormadam_sandy',
+  'wormadam_trash', 'wurmple', 'wynaut', 'xatu', 'yanma', 'yanmega', 'zigzagoon',
 ]
 
 // PARENTS maps each evolved mon to the mon it comes from and the entry that takes it there.
@@ -372,15 +397,20 @@ for (const [from, entries] of Object.entries(EVOLUTIONS)) {
 
 const parentOf = (mon) => PARENTS.get(BASE_FORM[mon] ?? mon)
 
-export const evolutionsOf = (mon) => EVOLUTIONS[mon] ?? []
+// A mon's evolutions, for a mon of that sex when sex is given, so a female Kirlia has no
+// Gallade, and a mon with no sex none for either
+export function evolutionsOf(mon, sex) {
+  const entries = EVOLUTIONS[mon] ?? []
+  return sex === undefined ? entries : entries.filter((entry) => !entry.sex || entry.sex === sex)
+}
 
 // The evolution a level alone reaches, leaving out Tyrogue's that also weigh the meters
 // and the ones left to chance
-export const levelEvolutionOf = (mon) => evolutionsOf(mon).find((entry) => entry.level && !entry.more && !entry.pick) ?? null
+export const levelEvolutionOf = (mon, sex) => evolutionsOf(mon, sex).find((entry) => entry.level && !entry.more && !entry.pick) ?? null
 
-// An evolution a level-up reaches by the meters, the clock, or chance, kept on the record
-// as readyFor
-export const isLevelUpOnly = (entry) => Boolean(entry.happy || entry.more || entry.pick || entry.fed)
+// An evolution a level-up reaches by the meters, the clock, chance, or the party, kept on
+// the record as readyFor
+export const isLevelUpOnly = (entry) => Boolean(entry.happy || entry.more || entry.pick || entry.fed || entry.with)
 
 // Which meter has more icons, as a Tyrogue entry's more names it
 export function moreOf(food, hearts) {
@@ -395,19 +425,21 @@ export function timeOfDay(ms) {
   return hour >= 4 && hour < 18 ? 'day' : 'night'
 }
 
-// The evolution a level-up reaches by the meters, the clock, or chance, or null: one by
-// friendship with full hearts at this time of day, Feebas's with full food, Tyrogue's at
-// its level by which meter has more, or one of those left to chance at their level. A pick
-// already made, kept, stays; random() returns a number in [0, 1).
-export function levelUpEvolutionOf(mon, { level, food, hearts, full, time, random = Math.random, kept = null }) {
-  const picks = evolutionsOf(mon).filter((entry) => entry.pick && level >= entry.level)
+// The evolution a level-up reaches by the meters, the clock, chance, or the party, or null:
+// one by friendship with full hearts at this time of day, Feebas's with full food,
+// Tyrogue's at its level by which meter has more, Mantyke's with a Remoraid among the
+// Pokédex keys in team, or one of those left to chance at their level. A pick already
+// made, kept, stays; random() returns a number in [0, 1).
+export function levelUpEvolutionOf(mon, { level, food, hearts, full, time, sex, team = [], random = Math.random, kept = null }) {
+  const picks = evolutionsOf(mon, sex).filter((entry) => entry.pick && level >= entry.level)
   if (picks.length > 0) return picks.find((entry) => entry.into === kept) ?? picks[Math.floor(random() * picks.length)]
   const reached = (entry) => {
     if (entry.happy) return hearts === full && (!entry.time || entry.time === time)
     if (entry.fed) return food === full
+    if (entry.with) return team.includes(entry.with)
     return Boolean(entry.more) && level >= entry.level && entry.more === moreOf(food, hearts)
   }
-  return evolutionsOf(mon).find(reached) ?? null
+  return evolutionsOf(mon, sex).find(reached) ?? null
 }
 
 export const preEvolutionOf = (mon) => parentOf(mon)?.from ?? null

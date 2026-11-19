@@ -23,6 +23,10 @@ export const lacksSex = (name, record) => Boolean(record) && typeof record === '
 
 export const sexedRecord = (name, record, random = Math.random) => (lacksSex(name, record) ? { ...record, sex: sexFor(name, random) } : record)
 
+// The ways a mon can evolve for its sex: a female Kirlia has no Gallade, and a Kirlia not
+// raised yet, with no sex, neither
+export const ownEvolutionsOf = (name) => evolutionsOf(name, sexOf(name))
+
 // Like "Sparky (Pikachu ♀)", or just "Pikachu ♀" without a nickname
 export function fullNameOf(name) {
   const species = withSexMark(displayName(name), sexOf(name))
@@ -40,10 +44,10 @@ export const levelLine = () => (levelOf(S.mon) < MAX_LEVEL ? 'Lv ' : 'Lv') + lev
 // isn't evolving already
 export function readyToEvolve() {
   if (S.evolving || isDown()) return null
-  const evolution = levelEvolutionOf(S.mon)
+  const evolution = levelEvolutionOf(S.mon, sexOf(S.mon))
   if (evolution && levelOf(S.mon) >= evolution.level) return evolution.into
   const reached = S.stats[S.mon]?.readyFor
-  return evolutionsOf(S.mon).some((entry) => isLevelUpOnly(entry) && entry.into === reached) ? reached : null
+  return ownEvolutionsOf(S.mon).some((entry) => isLevelUpOnly(entry) && entry.into === reached) ? reached : null
 }
 
 export const HEAL_MS = 5 * 60 * 1000
