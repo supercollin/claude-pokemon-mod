@@ -1,5 +1,5 @@
 // The gen 1 evolutions follow the Red and Blue rules and are keyed by sprite key, in
-// Pokédex order, followed by gen 2's and gen 3's. Each entry is one thing the mon can become: { into, level } on level-up,
+// Pokédex order, followed by gen 2's, gen 3's, and gen 4's. Each entry is one thing the mon can become: { into, level } on level-up,
 // { into, item } with an evolution stone, { into, trade: true }, { into, trade: true,
 // item } for a trade holding an item, which takes that item and no Link Cable, or
 // { into, happy: true } on a level-up with full hearts, with time: 'day' or 'night' when
@@ -16,6 +16,14 @@ const FIRST_LEVEL = 5
 
 // The letters and marks each of Unown's forms is a folder for, like unown_a
 export const UNOWN_FORMS = [...'abcdefghijklmnopqrstuvwxyz', 'exclamation', 'question']
+
+// Gen 4's forms with a folder each: Burmy's and Wormadam's cloaks, Rotom's appliances, and
+// Arceus's types, one for each plate
+export const BURMY_CLOAKS = ['plant', 'sandy', 'trash']
+export const ROTOM_FORMS = ['fan', 'frost', 'heat', 'mow', 'wash']
+export const ARCEUS_TYPES = [
+  'bug', 'dark', 'dragon', 'electric', 'fighting', 'fire', 'flying', 'ghost', 'grass', 'ground', 'ice', 'poison', 'psychic', 'rock', 'steel', 'water',
+]
 
 // Female sprites and other forms take their base form's place in the family, so raichu
 // comes from pikachu and venusaur_female from ivysaur. Heracross, Wobbuffet, and Unown
@@ -34,6 +42,24 @@ export const BASE_FORM = {
   deoxys_attack: 'deoxys',
   deoxys_defense: 'deoxys',
   deoxys_speed: 'deoxys',
+  ...Object.fromEntries(BURMY_CLOAKS.flatMap((cloak) => [['burmy_' + cloak, 'burmy'], ['wormadam_' + cloak, 'wormadam']])),
+  combee_male: 'combee',
+  combee_female: 'combee',
+  shellos_east: 'shellos',
+  shellos_west: 'shellos',
+  gastrodon_east: 'gastrodon',
+  gastrodon_west: 'gastrodon',
+  gible_female: 'gible',
+  gabite_female: 'gabite',
+  garchomp_female: 'garchomp',
+  hippopotas_male: 'hippopotas',
+  hippopotas_female: 'hippopotas',
+  hippowdon_male: 'hippowdon',
+  hippowdon_female: 'hippowdon',
+  ...Object.fromEntries(ROTOM_FORMS.map((form) => ['rotom_' + form, 'rotom'])),
+  giratina_origin: 'giratina',
+  shaymin_sky: 'shaymin',
+  ...Object.fromEntries(ARCEUS_TYPES.map((type) => ['arceus_' + type, 'arceus'])),
 }
 
 export const EVOLUTIONS = {
@@ -123,6 +149,7 @@ export const EVOLUTIONS = {
     { into: 'flareon', item: 'Fire Stone' },
     { into: 'espeon', happy: true, time: 'day' },
     { into: 'umbreon', happy: true, time: 'night' },
+    { into: 'leafeon', item: 'Leaf Stone' },
   ],
   porygon: [{ into: 'porygon2', trade: true, item: 'Up-Grade' }],
   omanyte: [{ into: 'omastar', level: 40 }],
@@ -241,40 +268,105 @@ export const EVOLUTIONS = {
   shelgon: [{ into: 'salamence', level: 50 }],
   beldum: [{ into: 'metang', level: 20 }],
   metang: [{ into: 'metagross', level: 45 }],
+
+  // Gen 4, by Diamond, Pearl, and Platinum rules, fetched like gen 2's. A mon the games
+  // evolve once it knows a move evolves at the level it learns that move there, like Aipom
+  // at 32 for Double Hit. Piloswine only relearns Ancient Power, so it evolves at its first
+  // level-up. Magneton and Nosepass, which evolve at Mt. Coronet, take a Thunder Stone, and
+  // Eevee a Leaf Stone for Leafeon, as in Sword and Shield. Each of Shellos's seas, Gible's
+  // and Hippopotas's sexes, and the female Combee evolve on their own.
+  magneton: [{ into: 'magnezone', item: 'Thunder Stone' }],
+  lickitung: [{ into: 'lickilicky', level: 33 }],
+  tangela: [{ into: 'tangrowth', level: 33 }],
+  aipom: [{ into: 'ambipom', level: 32 }],
+  yanma: [{ into: 'yanmega', level: 33 }],
+  piloswine: [{ into: 'mamoswine', level: 34 }],
+  nosepass: [{ into: 'probopass', item: 'Thunder Stone' }],
+  turtwig: [{ into: 'grotle', level: 18 }],
+  grotle: [{ into: 'torterra', level: 32 }],
+  chimchar: [{ into: 'monferno', level: 14 }],
+  monferno: [{ into: 'infernape', level: 36 }],
+  piplup: [{ into: 'prinplup', level: 16 }],
+  prinplup: [{ into: 'empoleon', level: 36 }],
+  starly: [{ into: 'staravia', level: 14 }],
+  staravia: [{ into: 'staraptor', level: 34 }],
+  bidoof: [{ into: 'bibarel', level: 15 }],
+  kricketot: [{ into: 'kricketune', level: 10 }],
+  shinx: [{ into: 'luxio', level: 15 }],
+  luxio: [{ into: 'luxray', level: 30 }],
+  budew: [{ into: 'roselia', happy: true, time: 'day' }],
+  cranidos: [{ into: 'rampardos', level: 30 }],
+  shieldon: [{ into: 'bastiodon', level: 30 }],
+  combee_female: [{ into: 'vespiquen', level: 21 }],
+  buizel: [{ into: 'floatzel', level: 26 }],
+  cherubi: [{ into: 'cherrim', level: 25 }],
+  shellos_east: [{ into: 'gastrodon_east', level: 30 }],
+  shellos_west: [{ into: 'gastrodon_west', level: 30 }],
+  drifloon: [{ into: 'drifblim', level: 28 }],
+  buneary: [{ into: 'lopunny', happy: true }],
+  glameow: [{ into: 'purugly', level: 38 }],
+  chingling: [{ into: 'chimecho', happy: true, time: 'night' }],
+  stunky: [{ into: 'skuntank', level: 34 }],
+  bronzor: [{ into: 'bronzong', level: 33 }],
+  bonsly: [{ into: 'sudowoodo', level: 17 }],
+  mimejr: [{ into: 'mrmime', level: 18 }],
+  gible: [{ into: 'gabite', level: 24 }],
+  gible_female: [{ into: 'gabite_female', level: 24 }],
+  gabite: [{ into: 'garchomp', level: 48 }],
+  gabite_female: [{ into: 'garchomp_female', level: 48 }],
+  munchlax: [{ into: 'snorlax', happy: true }],
+  riolu: [{ into: 'lucario', happy: true, time: 'day' }],
+  hippopotas_male: [{ into: 'hippowdon_male', level: 34 }],
+  hippopotas_female: [{ into: 'hippowdon_female', level: 34 }],
+  skorupi: [{ into: 'drapion', level: 40 }],
+  croagunk: [{ into: 'toxicroak', level: 37 }],
+  finneon: [{ into: 'lumineon', level: 31 }],
+  snover: [{ into: 'abomasnow', level: 40 }],
 }
 
 // The mons EVOLUTIONS names that aren't bundled, as vscode-pokemon names their folders
 // under media/gen<N>. scripts/check-data.mjs holds every unbundled name to this list.
 export const FETCHED = [
-  'aggron', 'altaria', 'ampharos', 'anorith', 'ariados', 'armaldo', 'aron', 'azumarill', 'azurill', 'bagon',
-  'baltoy', 'banette', 'barboach', 'bayleef', 'beautifly', 'beldum', 'bellossom', 'blaziken', 'blissey', 'breloom',
-  'cacnea', 'cacturne', 'camerupt', 'carvanha', 'cascoon', 'chikorita', 'chinchou', 'clamperl', 'claydol', 'cleffa',
-  'combusken', 'corphish', 'cradily', 'crawdaunt', 'crobat', 'croconaw', 'cyndaquil', 'delcatty', 'donphan', 'dusclops',
-  'duskull', 'dustox', 'electrike', 'elekid', 'espeon', 'exploud', 'feebas', 'feraligatr', 'flaaffy', 'flygon',
-  'forretress', 'furret', 'gardevoir', 'glalie', 'gorebyss', 'granbull', 'grovyle', 'grumpig', 'gulpin', 'hariyama',
-  'hitmontop', 'hoothoot', 'hoppip', 'houndoom', 'houndour', 'huntail', 'igglybuff', 'jumpluff', 'kingdra', 'kirlia',
-  'lairon', 'lanturn', 'larvitar', 'ledian', 'ledyba', 'lileep', 'linoone', 'lombre', 'lotad', 'loudred',
-  'ludicolo', 'magby', 'magcargo', 'makuhita', 'manectric', 'mareep', 'marill', 'marshtomp', 'masquerain', 'medicham',
-  'meditite', 'meganium', 'metagross', 'metang', 'mightyena', 'milotic', 'mudkip', 'natu', 'nincada', 'ninjask',
-  'noctowl', 'numel', 'nuzleaf', 'octillery', 'pelipper', 'phanpy', 'pichu', 'piloswine', 'pineco', 'politoed',
-  'poochyena', 'porygon2', 'pupitar', 'quagsire', 'quilava', 'ralts', 'remoraid', 'salamence', 'sceptile', 'scizor',
-  'sealeo', 'seedot', 'sentret', 'sharpedo', 'shedinja', 'shelgon', 'shiftry', 'shroomish', 'shuppet', 'silcoon',
-  'skiploom', 'skitty', 'slaking', 'slakoth', 'slowking', 'slugma', 'smoochum', 'snorunt', 'snubbull', 'spheal',
-  'spinarak', 'spoink', 'steelix', 'sunflora', 'sunkern', 'surskit', 'swablu', 'swalot', 'swampert', 'swellow',
-  'swinub', 'taillow', 'teddiursa', 'togepi', 'togetic', 'torchic', 'totodile', 'trapinch', 'treecko', 'typhlosion',
-  'tyranitar', 'tyrogue', 'umbreon', 'ursaring', 'vibrava', 'vigoroth', 'wailmer', 'wailord', 'walrein', 'whiscash',
-  'whismur', 'wingull', 'wobbuffet_female', 'wobbuffet_male', 'wooper', 'wurmple', 'wynaut', 'xatu', 'zigzagoon',
+  'abomasnow', 'aggron', 'aipom', 'altaria', 'ambipom', 'ampharos', 'anorith', 'ariados', 'armaldo', 'aron',
+  'azumarill', 'azurill', 'bagon', 'baltoy', 'banette', 'barboach', 'bastiodon', 'bayleef', 'beautifly', 'beldum',
+  'bellossom', 'bibarel', 'bidoof', 'blaziken', 'blissey', 'bonsly', 'breloom', 'bronzong', 'bronzor', 'budew',
+  'buizel', 'buneary', 'cacnea', 'cacturne', 'camerupt', 'carvanha', 'cascoon', 'cherrim', 'cherubi', 'chikorita',
+  'chimchar', 'chimecho', 'chinchou', 'chingling', 'clamperl', 'claydol', 'cleffa', 'combee_female', 'combusken', 'corphish',
+  'cradily', 'cranidos', 'crawdaunt', 'croagunk', 'crobat', 'croconaw', 'cyndaquil', 'delcatty', 'donphan', 'drapion',
+  'drifblim', 'drifloon', 'dusclops', 'duskull', 'dustox', 'electrike', 'elekid', 'empoleon', 'espeon', 'exploud',
+  'feebas', 'feraligatr', 'finneon', 'flaaffy', 'floatzel', 'flygon', 'forretress', 'furret', 'gabite', 'gabite_female',
+  'garchomp', 'garchomp_female', 'gardevoir', 'gastrodon_east', 'gastrodon_west', 'gible', 'gible_female', 'glalie', 'glameow', 'gorebyss',
+  'granbull', 'grotle', 'grovyle', 'grumpig', 'gulpin', 'hariyama', 'hippopotas_female', 'hippopotas_male', 'hippowdon_female', 'hippowdon_male',
+  'hitmontop', 'hoothoot', 'hoppip', 'houndoom', 'houndour', 'huntail', 'igglybuff', 'infernape', 'jumpluff', 'kingdra',
+  'kirlia', 'kricketot', 'kricketune', 'lairon', 'lanturn', 'larvitar', 'leafeon', 'ledian', 'ledyba', 'lickilicky',
+  'lileep', 'linoone', 'lombre', 'lopunny', 'lotad', 'loudred', 'lucario', 'ludicolo', 'lumineon', 'luxio',
+  'luxray', 'magby', 'magcargo', 'magnezone', 'makuhita', 'mamoswine', 'manectric', 'mareep', 'marill', 'marshtomp',
+  'masquerain', 'medicham', 'meditite', 'meganium', 'metagross', 'metang', 'mightyena', 'milotic', 'mimejr', 'monferno',
+  'mudkip', 'munchlax', 'natu', 'nincada', 'ninjask', 'noctowl', 'nosepass', 'numel', 'nuzleaf', 'octillery',
+  'pelipper', 'phanpy', 'pichu', 'piloswine', 'pineco', 'piplup', 'politoed', 'poochyena', 'porygon2', 'prinplup',
+  'probopass', 'pupitar', 'purugly', 'quagsire', 'quilava', 'ralts', 'rampardos', 'remoraid', 'riolu', 'roselia',
+  'salamence', 'sceptile', 'scizor', 'sealeo', 'seedot', 'sentret', 'sharpedo', 'shedinja', 'shelgon', 'shellos_east',
+  'shellos_west', 'shieldon', 'shiftry', 'shinx', 'shroomish', 'shuppet', 'silcoon', 'skiploom', 'skitty', 'skorupi',
+  'skuntank', 'slaking', 'slakoth', 'slowking', 'slugma', 'smoochum', 'snorunt', 'snover', 'snubbull', 'spheal',
+  'spinarak', 'spoink', 'staraptor', 'staravia', 'starly', 'steelix', 'stunky', 'sudowoodo', 'sunflora', 'sunkern',
+  'surskit', 'swablu', 'swalot', 'swampert', 'swellow', 'swinub', 'taillow', 'tangrowth', 'teddiursa', 'togepi',
+  'togetic', 'torchic', 'torterra', 'totodile', 'toxicroak', 'trapinch', 'treecko', 'turtwig', 'typhlosion', 'tyranitar',
+  'tyrogue', 'umbreon', 'ursaring', 'vespiquen', 'vibrava', 'vigoroth', 'wailmer', 'wailord', 'walrein', 'whiscash',
+  'whismur', 'wingull', 'wobbuffet_female', 'wobbuffet_male', 'wooper', 'wurmple', 'wynaut', 'xatu', 'yanma', 'yanmega',
+  'zigzagoon',
 ]
 
 // PARENTS maps each evolved mon to the mon it comes from and the entry that takes it there.
 // A bundled mon keeps no fetched parent, like Jynx from Smoochum, so its start level and
 // wild tier stay as in gen 1.
 const PARENTS = new Map()
+// A form's entries stand for its base form's when that has none of its own, like
+// Combee's female or Shellos's seas, and are left out when it does, like Pikachu's female.
 for (const [from, entries] of Object.entries(EVOLUTIONS)) {
-  if (BASE_FORM[from]) continue
+  if (BASE_FORM[from] && EVOLUTIONS[BASE_FORM[from]]) continue
   for (const entry of entries) {
     if (FETCHED.includes(from) && !FETCHED.includes(entry.into)) continue
-    PARENTS.set(BASE_FORM[entry.into] ?? entry.into, { from, entry })
+    PARENTS.set(BASE_FORM[entry.into] ?? entry.into, { from: BASE_FORM[from] ?? from, entry })
   }
 }
 

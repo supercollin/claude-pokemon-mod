@@ -3,6 +3,7 @@ import { SPRITES } from '../hooks/frames.js'
 import { dropOf, findItem, heldItemOf, stoneOfType } from '../hooks/items.js'
 import { dexKey, dexNumber, genOf, pickWild, tierOf } from '../hooks/dex.js'
 import { levelEvolutionOf, levelUpEvolutionOf, preEvolutionOf, startLevel } from '../hooks/evolutions.js'
+import { displayName } from '../hooks/names.js'
 import { test, BAND, THEIRS, startedWith, ANSWERED, toastsOf, spawnOf, runningAgents, inBattle, WEAK, weaken, catchFoe, APPEARED, run } from './helpers.ts'
 
 // Diglett's idle GIF, served for every file of a fetched mon
@@ -64,16 +65,16 @@ test('/pokemon new fetches a mon from the generation that has it, saves it, and 
 test('a mon fetched in another session loads at session start', async ($, on) => {
   mock.clock(on)
   const sprite = SPRITES.diglett
-  mock.store(on, { mon: 'turtwig', 'custom:turtwig': { gen: 4, sprite, moves: ['Ember', 'Tackle'] } })
+  mock.store(on, { mon: 'snivy', 'custom:snivy': { gen: 5, sprite, moves: ['Ember', 'Tackle'] } })
   on('ui.render', () => THEIRS)
   on('command.register', () => ({ value: undefined }))
   on('session.start', () => ({ cwd: '/work' }))
   on('env.get', () => ({ value: undefined }))
   await $.session.start({ surface: 'terminal', isInteractive: true, cwd: '/work' })
-  expect((await $.command.run({ command: 'pokemon', args: '' })).text).toMatch(/^Showing default Turtwig Lv\. /)
-  expect((await $.command.run({ command: 'pokemon', args: 'list' })).text).toMatch(/, turtwig$/)
-  expect((await $.command.run({ command: 'pokemon', args: 'moves' })).text).toBe('Turtwig knows Ember, Tackle.')
-  expect((await $.command.run({ command: 'pokemon', args: 'dex turtwig' })).text).toBe("Turtwig isn't in the Pokédex. Only gen 1, 2, and 3 mons appear in the wild.")
+  expect((await $.command.run({ command: 'pokemon', args: '' })).text).toMatch(/^Showing default Snivy Lv\. /)
+  expect((await $.command.run({ command: 'pokemon', args: 'list' })).text).toMatch(/, snivy$/)
+  expect((await $.command.run({ command: 'pokemon', args: 'moves' })).text).toBe('Snivy knows Ember, Tackle.')
+  expect((await $.command.run({ command: 'pokemon', args: 'dex snivy' })).text).toBe("Snivy isn't in the Pokédex. Only gen 1, 2, 3, and 4 mons appear in the wild.")
 })
 
 test('/pokemon new gen3 picks a gen 3 mon you do not have yet', async ($, on) => {
@@ -195,8 +196,8 @@ test('the first bag grants the item every stone or trade mon in the box needs, a
   }
   const saved: Record<string, any> = { mon: 'charmander', stats }
   await startedWith($, on, saved, 0)
-  expect(await run($, 'bag')).toBe('Your bag:\nFire Stone, 1\nWater Stone, 1\nThunder Stone, 2\nLink Cable, 1')
-  expect(saved.bag).toEqual({ thunderstone: 2, waterstone: 1, firestone: 1, linkcable: 1 })
+  expect(await run($, 'bag')).toBe('Your bag:\nFire Stone, 1\nWater Stone, 1\nThunder Stone, 2\nLeaf Stone, 1\nLink Cable, 1')
+  expect(saved.bag).toEqual({ thunderstone: 2, waterstone: 1, firestone: 1, leafstone: 1, linkcable: 1 })
   // Made once, the bag is never granted again
   saved.bag = {}
   expect(await run($, 'bag')).toBe('Your bag is empty. Knock out a wild mon with /pokemon attack, and it may drop an item.')
@@ -227,7 +228,7 @@ test('/pokemon use takes an item by a loose name, and a stone on a mon is the sa
   const { clock } = await startedWith($, on, saved, 0)
   expect(await run($, 'use')).toBe('Name the item, like /pokemon use rare candy. /pokemon bag lists yours.')
   expect(await run($, 'use potion')).toBe('Unknown item "potion". Items: Fire Stone, Water Stone, Thunder Stone, Leaf Stone, Moon Stone, Sun Stone, King\'s Rock, Metal Coat, Dragon Scale, Up-Grade, Deep Sea Tooth, Deep Sea Scale, Link Cable, Rare Candy.')
-  expect(await run($, 'use leaf stone')).toBe('Eevee can\'t use a Leaf Stone.')
+  expect(await run($, 'use moon stone')).toBe('Eevee can\'t use a Moon Stone.')
   expect(await run($, 'use fire stone growlithe')).toBe('Show Growlithe first with /pokemon growlithe, then use the Fire Stone.')
   expect(await run($, 'use FireStone eevee')).toBe('You use a Fire Stone on Eevee.')
   await clock.advance(7100)
@@ -526,7 +527,7 @@ test('a Rare Candy with full hearts grows a fetched Pichu into Pikachu', { timeo
     mon: 'pichu',
     wander: false,
     bag: { rarecandy: 1 },
-    stats: { pichu: { xp: 10 ** 3, happiness: { value: 100, at: 0 }, food: { value: 100, at: 0 } } },
+    stats: { pichu: { xp: 10 ** 3, sex: 'male', happiness: { value: 100, at: 0 }, food: { value: 100, at: 0 } } },
     'custom:pichu': { gen: 2, sprite: SPRITES.diglett, moves: ['Thunder Shock', 'Tackle'] },
   }
   const { clock } = await startedWith($, on, saved, 0)
@@ -549,6 +550,76 @@ test('gen 3 families take their tiers and start levels from Ruby and Sapphire, a
   expect(tierOf('marill')).toBe('common')
   expect(tierOf('azumarill')).toBe('uncommon')
   expect(startLevel('marill')).toBe(5)
+})
+
+test('gen 4 families take their tiers and start levels from Diamond and Pearl, and its forms and sexes evolve on their own', () => {
+  expect(tierOf('turtwig')).toBe('common')
+  expect(tierOf('torterra')).toBe('rare')
+  expect(tierOf('gible')).toBe('rare')
+  expect(tierOf('rotom')).toBe('rare')
+  expect(tierOf('arceus')).toBe('legendary')
+  expect(tierOf('vespiquen')).toBe('uncommon')
+  expect(tierOf('hippowdon')).toBe('uncommon')
+  expect(tierOf('gastrodon')).toBe('uncommon')
+  expect(startLevel('grotle')).toBe(18)
+  expect(startLevel('garchomp_female')).toBe(48)
+  expect(startLevel('hippowdon_female')).toBe(34)
+  expect(startLevel('vespiquen')).toBe(21)
+  expect(startLevel('gastrodon_west')).toBe(30)
+  expect(preEvolutionOf('vespiquen')).toBe('combee')
+  expect(preEvolutionOf('gabite_female')).toBe('gible')
+  // Only a female Combee evolves, and each sea and sex keeps to its own line
+  expect(levelEvolutionOf('combee_male')).toBeNull()
+  expect(levelEvolutionOf('combee_female')).toEqual({ into: 'vespiquen', level: 21 })
+  expect(levelEvolutionOf('shellos_east')?.into).toBe('gastrodon_east')
+  expect(levelEvolutionOf('gible_female')?.into).toBe('gabite_female')
+  expect(levelEvolutionOf('hippopotas_male')?.into).toBe('hippowdon_male')
+  // A move the games wait for is the level it's learned at
+  expect(levelEvolutionOf('aipom')).toEqual({ into: 'ambipom', level: 32 })
+  expect(levelEvolutionOf('bonsly')).toEqual({ into: 'sudowoodo', level: 17 })
+  expect(startLevel('ambipom')).toBe(32)
+  // A bundled mon keeps its gen 1 tier and start level when it only grows into a gen 4 mon
+  expect(tierOf('magneton')).toBe('uncommon')
+  expect(tierOf('mrmime')).toBe('uncommon')
+  expect(startLevel('mrmime')).toBe(5)
+  expect(tierOf('mimejr')).toBe('rare')
+  expect(displayName('mimejr')).toBe('Mime Jr.')
+  expect(displayName('porygonz')).toBe('Porygon-Z')
+  expect(displayName('rotom_wash')).toBe('Rotom (Wash)')
+  expect(displayName('burmy_sandy')).toBe('Burmy (Sandy)')
+  expect(displayName('combee_female')).toBe('Combee')
+  expect(displayName('garchomp_female')).toBe('Garchomp')
+  expect(dexNumber('turtwig')).toBe(387)
+  expect(dexNumber('arceus_fire')).toBe(493)
+})
+
+test('gen 4 in the wild: Burmy in a cloak, Combee and Gible by sex, Rotom in a forme, and Arceus always Normal', () => {
+  let seed = 3
+  const random = () => {
+    seed = (seed * 16807) % 2147483647
+    return (seed - 1) / 2147483646
+  }
+  const picks = Array.from({ length: 20000 }, () => pickWild(random, [1, 4]))
+  expect(picks.filter((pick) => genOf(pick.mon) === 4).length).toBeGreaterThan(5000)
+  for (const pick of picks) expect(pick.key).toBe(dexKey(pick.mon))
+  const of = (key: string) => picks.filter((pick) => pick.key === key)
+  expect(of('burmy').every((pick) => /^burmy_(plant|sandy|trash)$/.test(pick.mon))).toBe(true)
+  expect(of('combee').every((pick) => pick.mon === 'combee_' + pick.sex)).toBe(true)
+  expect(of('combee').filter((pick) => pick.sex === 'male').length).toBeGreaterThan(of('combee').filter((pick) => pick.sex === 'female').length)
+  expect(of('gible').every((pick) => pick.mon === (pick.sex === 'female' ? 'gible_female' : 'gible'))).toBe(true)
+  expect(of('rotom').some((pick) => pick.mon !== 'rotom')).toBe(true)
+  expect(of('rotom').every((pick) => pick.sex === null)).toBe(true)
+  expect(of('arceus').every((pick) => pick.mon === 'arceus')).toBe(true)
+})
+
+test('/pokemon new fetches Mime Jr. from its mimeJr folder, and a form takes its species\' types when PokéAPI has none for it', { timeoutMs: 30000 }, async ($, on) => {
+  const asked = serveMons(on, { 4: ['mimeJr', 'combee_female'] }, { types: ['psychic'] })
+  const saved: Record<string, any> = { trainer: false }
+  await startedWith($, on, saved, 0)
+  expect(await run($, 'new mimejr')).toMatch(/Mime Jr\./)
+  expect(asked.some((url) => url.includes('/gen4/mimeJr/'))).toBe(true)
+  expect(asked.some((url) => url.endsWith('/pokemon-form/mime-jr'))).toBe(true)
+  expect(saved['custom:mimejr'].gen).toBe(4)
 })
 
 test('a Rare Candy with full hearts grows a fetched Azurill into Marill, fetched from gen 2', { timeoutMs: 30000 }, async ($, on) => {
@@ -844,7 +915,7 @@ test('a generation stays out of the wild until it\'s turned on, and every form o
 test('/pokemon gen <N> turns a generation on and off, saved across sessions, and the Pokédex counts it', async ($, on) => {
   const saved: Record<string, any> = { mon: 'pidgey', trainer: false }
   await startedWith($, on, saved, 0)
-  const how = '/pokemon gen <N> turns gen 2 or gen 3 on or off.'
+  const how = '/pokemon gen <N> turns gen 2, gen 3, or gen 4 on or off.'
   expect(await run($, 'gen')).toBe('In the wild: gen 1. ' + how)
   expect(await run($, 'dex')).toBe('Pokédex: seen 0, caught 0 of 151. No wild mons met yet.')
   expect(await run($, 'dex chikorita')).toBe('#152 Chikorita, common. It turns up in the wild once gen 2 is on: /pokemon gen 2 turns it on.')
@@ -855,13 +926,18 @@ test('/pokemon gen <N> turns a generation on and off, saved across sessions, and
   expect(await run($, 'dex chikorita')).toBe('#152 Chikorita, common. Not seen yet.')
   expect(await run($, 'help')).toContain('gen <N>')
   expect(await run($, 'gen 1')).toBe('Gen 1 is always in the wild. ' + how)
-  expect(await run($, 'gen 4')).toBe('Gen 4 isn\'t in the wild yet. ' + how)
+  expect(await run($, 'gen 5')).toBe('Gen 5 isn\'t in the wild yet. ' + how)
   // Gen 3 comes in the same way
   expect(await run($, 'dex deoxys')).toBe('#386 Deoxys, legendary. It turns up in the wild once gen 3 is on: /pokemon gen 3 turns it on.')
   expect(await run($, 'gen 3')).toBe('Gen 3 is on. Its mons turn up in the wild too, each fetched from GitHub the first time you meet one.')
   expect(await run($, 'gen')).toBe('In the wild: gen 1, 2, and 3. ' + how)
   expect(await run($, 'dex')).toBe('Pokédex: seen 0, caught 0 of 386. No wild mons met yet.')
   expect(await run($, 'gen 3')).toBe('Gen 3 is off. Its mons no longer turn up in the wild. The ones in your box stay.')
+  // And gen 4
+  expect(await run($, 'dex arceus')).toBe('#493 Arceus, legendary. It turns up in the wild once gen 4 is on: /pokemon gen 4 turns it on.')
+  expect(await run($, 'gen 4')).toBe('Gen 4 is on. Its mons turn up in the wild too, each fetched from GitHub the first time you meet one.')
+  expect(await run($, 'dex')).toBe('Pokédex: seen 0, caught 0 of 358. No wild mons met yet.')
+  expect(await run($, 'gen 4')).toBe('Gen 4 is off. Its mons no longer turn up in the wild. The ones in your box stay.')
   expect(await run($, 'gen two')).toBe('Unknown generation "two". ' + how)
   expect(await run($, 'gen2')).toBe('Gen 2 is off. Its mons no longer turn up in the wild. The ones in your box stay.')
   expect(saved.gens).toEqual([])

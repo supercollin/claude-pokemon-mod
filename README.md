@@ -94,7 +94,7 @@ Then pick your starter, like `/pokemon charmander`. Bulbasaur, Charmander, Squir
 | `/pokemon catch` | Throw a Poké Ball at a wild mon |
 | `/pokemon trainer` | Turn trainer mode off to show any mon without catching it, or back on |
 | `/pokemon dex` | Every wild mon you've seen and caught |
-| `/pokemon gen 2` | Bring gen 2's mons into the wild, or take them out again, and `/pokemon gen 3` gen 3's |
+| `/pokemon gen 2` | Bring gen 2's mons into the wild, or take them out again, and `/pokemon gen 3` and `/pokemon gen 4` gen 3's and gen 4's |
 | `/pokemon new <mon>` | Fetch a mon from gen 2 to 5, like `/pokemon new mudkip`, or a random one with `/pokemon new gen3` |
 
 <details>
@@ -121,7 +121,7 @@ Then pick your starter, like `/pokemon charmander`. Bulbasaur, Charmander, Squir
 | `/pokemon use <item> [mon]` | Use an item, named loosely, like `thunder stone`, `thunderstone`, or `candy`. A stone or Link Cable on the mon on show is the same as `/pokemon evolve`. Rare Candy raises the mon on show, or a box mon named, one level |
 | `/pokemon revive`, `/pokemon revive <mon>` | Take a fainted mon to a Pokémon Center. Nurse Joy heals it in 5 minutes, and it stands up at 50% food and 30% happiness |
 | `/pokemon nuzlocke` | Toggle nuzlocke (off by default, saved across sessions). On, a mon that faints is gone for good |
-| `/pokemon gen <N>` | Toggle a generation's mons in the wild (gen 1 always, saved across sessions). Gen 2 and gen 3 can be turned on so far. `/pokemon gen` lists the ones on |
+| `/pokemon gen <N>` | Toggle a generation's mons in the wild (gen 1 always, saved across sessions). Gen 2, gen 3, and gen 4 can be turned on so far. `/pokemon gen` lists the ones on |
 | `/pokemon trainer` | Toggle trainer mode (on by default, saved across sessions). On, `/pokemon <mon>` shows only mons in your box, so the rest have to be caught in the wild. The mons already in your box stay. An empty box, or one whose mons are all gone, picks one starter: Bulbasaur, Charmander, Squirtle, or Pikachu. Mons fetched with `/pokemon new` stay free to show, except from a generation in the wild, which `/pokemon new` won't fetch then. Off, `/pokemon <mon>` shows any mon |
 | `/pokemon sleep` | Tuck the mon in, so its meters drain slower until Claude starts working in a session showing it. Run it again to wake it |
 | `/pokemon needs` | Toggle food and happiness (on by default). Off, the faint and runaway clocks stop too |
@@ -300,13 +300,13 @@ level L takes L³ XP. A new mon starts at 5, or at the level it evolves at, so C
 starts at 16. With 30 s turns and full meters, 5 to 16 takes about 75 turns.
 
 When the mon reaches its evolution level from Red and Blue, Gold and Silver for gen 2, or
-Ruby and Sapphire for gen 3, it evolves once idle. It glows,
+Ruby and Sapphire for gen 3, or Diamond and Pearl for gen 4, it evolves once idle. It glows,
 flickers between its two shapes, and flashes into its new form. `/pokemon stop` cancels,
 and the next level-up tries again. Level, XP, and meters carry over. With
 `/pokemon autoevolve` off, reaching the level only makes the mon ready, and it evolves when
 you run `/pokemon evolve`.
 
-Gen 2 and gen 3 mons aren't bundled, so a mon evolving into one, like Cyndaquil into
+Gen 2 to gen 4 mons aren't bundled, so a mon evolving into one, like Cyndaquil into
 Quilava or Treecko into Grovyle, fetches it first, the way `/pokemon new` does, and every session can show it after. If the
 fetch fails, the mon doesn't evolve yet and says why, and the next level-up, showing it
 again, or `/pokemon evolve` tries again. Smoochum, Elekid, and Magby, fetched with
@@ -323,10 +323,19 @@ its beauty from Pokéblocks, evolves here on a level-up with a full food meter. 
 becomes Ninjask at 20, and the shell it sheds joins your box as a Shedinja at that level,
 caught in your Pokédex.
 
+Gen 4 evolves some older mons once they know a move, so here they evolve at the level
+Diamond and Pearl teach it: Aipom into Ambipom at 32, Lickitung into Lickilicky, Tangela
+into Tangrowth, and Yanma into Yanmega at 33, Bonsly into Sudowoodo at 17, and Mime Jr.
+into Mr. Mime at 18. Piloswine only relearns Ancient Power there, so it becomes Mamoswine
+at its first level-up, from 34. Only a female Combee becomes Vespiquen, at 21. Shellos
+from the east sea becomes the eastern Gastrodon and from the west the western one, and
+the female Gible, Gabite, Hippopotas, and Hippowdon keep their female sprites.
+
 Some mons evolve on a level-up with all five hearts full, from a turn or a Rare Candy:
 Golbat into Crobat, Chansey into Blissey, and the fetched Pichu, Cleffa, Igglybuff, and
-Togepi into Pikachu, Clefairy, Jigglypuff, and Togetic, and gen 3's Azurill into gen 2's
-Marill. Eevee does too, into Espeon by day
+Togepi into Pikachu, Clefairy, Jigglypuff, and Togetic, gen 3's Azurill into gen 2's
+Marill, and gen 4's Buneary and Munchlax into Lopunny and Snorlax, Budew and Riolu by day
+into Roselia and Lucario, and Chingling by night into Chimecho. Eevee does too, into Espeon by day
 and Umbreon by night, on your computer's clock as in Gold and Silver: day runs from 4:00
 to 18:00. With needs off, every level-up counts as full hearts. A level-up that reaches
 one makes the mon ready the way its level would, and `/pokemon evolve` alone only
@@ -344,13 +353,15 @@ done. Eevee needs a pick, like `/pokemon evolve jolteon`, which takes a Thunder 
 Gloom needs one too: a Leaf Stone makes it Vileplume, and a Sun Stone a fetched
 Bellossom, and Poliwhirl one between Poliwrath and Politoed. Sunkern, from gen 2, also
 takes a Sun Stone, and from gen 3 Lombre a Water Stone, Nuzleaf a Leaf Stone, and Skitty a
-Moon Stone. Gen 3's Clamperl trades into Huntail holding a Deep Sea Tooth, or Gorebyss
+Moon Stone. Magneton and Nosepass, which evolve at Mt. Coronet in gen 4, take a Thunder
+Stone into Magnezone and Probopass, and Eevee a Leaf Stone into Leafeon, as in Sword and
+Shield. Gen 3's Clamperl trades into Huntail holding a Deep Sea Tooth, or Gorebyss
 holding a Deep Sea Scale.
 Without the item, it says which one is missing.
 
 Items come from wild mons you knock out, and `/pokemon bag` lists them. The first time
 the bag is made, every stone or trade mon already in your box gets one of the item it
-needs, so none is left stranded, and Eevee gets one of each of its three stones.
+needs, so none is left stranded, and Eevee gets one of each of its four stones.
 
 Rare Candy raises a mon one level, to the start of the next, with `/pokemon use rare
 candy` for the mon on show or `/pokemon use rare candy <mon>` for one in your box. A
@@ -423,7 +434,17 @@ gen 2 off keeps the mons in your box and the ones in your Pokédex.
 Latias, Latios, Kyogre, Groudon, Rayquaza, Jirachi, and Deoxys are legendary, and Bagon,
 Beldum, Feebas, Absol, and the babies Azurill and Wynaut among the rare ones. Deoxys turns
 up in one of its four formes, Normal, Attack, Defense, or Speed, each the one Pokédex
-entry for Deoxys. Gen 2 and gen 3 go on and off on their own.
+entry for Deoxys.
+
+`/pokemon gen 4` brings gen 4's 107 mons. Uxie, Mesprit, Azelf, Dialga, Palkia, Heatran,
+Regigigas, Giratina, Cresselia, Phione, Manaphy, Darkrai, Shaymin, and Arceus are
+legendary, and Gible, Riolu, Spiritomb, Rotom, Chatot, the fossils Cranidos and Shieldon,
+and the babies Budew, Chingling, Bonsly, Mime Jr., Happiny, Munchlax, and Mantyke among
+the rare ones. Burmy and Wormadam turn up in their Plant, Sandy, or Trash Cloak, Shellos
+and Gastrodon from the east or west sea, Rotom in its own forme or one of its five
+appliances, Giratina in its Altered or Origin Forme, and Shaymin in its Land or Sky Forme,
+each the one Pokédex entry for its species. Arceus always comes as Normal. Gen 2, gen 3,
+and gen 4 go on and off on their own.
 
 Your work does the fighting. Each tool call and each answered turn banks a move, two at
 most, and the mon spends one every 6 to 8 s on a random move aimed at the foe. Each hit
@@ -471,7 +492,7 @@ without a catch, when the mon falls asleep, or on `/pokemon roar`. `/pokemon fee
 until it's gone, and so does an evolution that comes due.
 
 The Pokédex counts wild mons only, seen when one shows up and caught when you catch it,
-out of 151, plus 100 with gen 2 on and 135 with gen 3. A
+out of 151, plus 100 with gen 2 on, 135 with gen 3, and 107 with gen 4. A
 caught species joins your box at its first level, unless it's there already, and
 its line in `/pokemon box` shows ◓. `/pokemon <mon>` still picks any mon, and a mon
 keeps its ◓ when it evolves, even one raised before its species was caught. Releasing a mon keeps it in the dex, and raising that species again
@@ -499,7 +520,8 @@ a narrower one only the smaller foes, and under about 40 columns no encounter co
 
 All 151 gen 1 Pokémon are included, plus `pikachu_female` and `venusaur_female`. Names
 match the source folders, so use `mrmime`, `farfetchd`, `nidoran_female`, and
-`nidoran_male`.
+`nidoran_male`, in lowercase: gen 4's `mimeJr` and `porygonZ` folders are `mimejr` and
+`porygonz`.
 
 Each terminal cell holds two pixels with `▀`/`▄` half blocks, and the mon paces inside a
 40 column strip. The Desktop app has no cell grid to paint, so it draws the same pixels as

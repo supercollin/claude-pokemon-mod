@@ -11,22 +11,26 @@ const GENDERLESS = [
   'moltres', 'mewtwo', 'mew', 'unown', 'porygon2', 'raikou', 'entei', 'suicune', 'lugia', 'hooh',
   'celebi', 'shedinja', 'lunatone', 'solrock', 'baltoy', 'claydol', 'beldum', 'metang', 'metagross', 'regirock',
   'regice', 'registeel', 'kyogre', 'groudon', 'rayquaza', 'jirachi', 'deoxys',
+  'bronzor', 'bronzong', 'magnezone', 'porygonz', 'rotom', 'uxie', 'mesprit', 'azelf', 'dialga', 'palkia',
+  'regigigas', 'giratina', 'phione', 'manaphy', 'darkrai', 'shaymin', 'arceus',
 ]
 const FEMALE_EIGHTHS = {
-  0: ['nidoran_male', 'nidorino', 'nidoking', 'hitmonlee', 'hitmonchan', 'tauros', 'tyrogue', 'hitmontop', 'volbeat', 'latios'],
+  0: ['nidoran_male', 'nidorino', 'nidoking', 'hitmonlee', 'hitmonchan', 'tauros', 'tyrogue', 'hitmontop', 'volbeat', 'latios', 'mothim', 'gallade'],
   1: [
     'bulbasaur', 'ivysaur', 'venusaur', 'charmander', 'charmeleon', 'charizard', 'squirtle', 'wartortle', 'blastoise', 'eevee',
     'vaporeon', 'jolteon', 'flareon', 'omanyte', 'omastar', 'kabuto', 'kabutops', 'aerodactyl', 'snorlax', 'chikorita',
     'bayleef', 'meganium', 'cyndaquil', 'quilava', 'typhlosion', 'totodile', 'croconaw', 'feraligatr', 'togepi', 'togetic',
     'espeon', 'umbreon', 'treecko', 'grovyle', 'sceptile', 'torchic', 'combusken', 'blaziken', 'mudkip', 'marshtomp',
     'swampert', 'lileep', 'cradily', 'anorith', 'armaldo', 'relicanth',
+    'turtwig', 'grotle', 'torterra', 'chimchar', 'monferno', 'infernape', 'piplup', 'prinplup', 'empoleon', 'cranidos',
+    'rampardos', 'shieldon', 'bastiodon', 'combee', 'munchlax', 'riolu', 'lucario', 'togekiss', 'leafeon', 'glaceon',
   ],
-  2: ['growlithe', 'arcanine', 'abra', 'kadabra', 'alakazam', 'machop', 'machoke', 'machamp', 'electabuzz', 'magmar', 'elekid', 'magby', 'makuhita', 'hariyama'],
+  2: ['growlithe', 'arcanine', 'abra', 'kadabra', 'alakazam', 'machop', 'machoke', 'machamp', 'electabuzz', 'magmar', 'elekid', 'magby', 'makuhita', 'hariyama', 'electivire', 'magmortar'],
   6: [
     'clefairy', 'clefable', 'vulpix', 'ninetales', 'jigglypuff', 'wigglytuff', 'cleffa', 'igglybuff', 'snubbull', 'granbull',
-    'corsola', 'azurill', 'skitty', 'delcatty', 'luvdisc',
+    'corsola', 'azurill', 'skitty', 'delcatty', 'luvdisc', 'glameow', 'purugly',
   ],
-  8: ['nidoran_female', 'nidorina', 'nidoqueen', 'chansey', 'kangaskhan', 'jynx', 'smoochum', 'miltank', 'blissey', 'illumise', 'latias'],
+  8: ['nidoran_female', 'nidorina', 'nidoqueen', 'chansey', 'kangaskhan', 'jynx', 'smoochum', 'miltank', 'blissey', 'illumise', 'latias', 'wormadam', 'vespiquen', 'happiny', 'froslass', 'cresselia'],
 }
 const DEFAULT_EIGHTHS = 4
 
