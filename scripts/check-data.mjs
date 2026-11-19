@@ -8,9 +8,11 @@
 // node scripts/check-data.mjs
 
 import { effectOf } from '../hooks/attacks.js'
-import { DEX, LEGENDARY, RARE, TIERS, dexKey, tierOf } from '../hooks/dex.js'
-import { EVOLUTIONS } from '../hooks/evolutions.js'
+import { BUNDLED_DEX, BUNDLED_GENS, GEN_DEX, GENS, LEGENDARY, NATIONAL_DEX, RARE, TIERS, WILD_FORMS, dexKey, tierOf } from '../hooks/dex.js'
+import { EVOLUTIONS, FETCHED } from '../hooks/evolutions.js'
 import { EYES, eyesOf } from '../hooks/eyes.js'
+import { ITEM_ART } from '../hooks/art.js'
+import { HELD_FAMILIES, ITEMS, STONE_FAMILIES, itemFor } from '../hooks/items.js'
 import { SPRITES } from '../hooks/frames.js'
 import { MAX_LEVEL, levelAt, xpAt } from '../hooks/levels.js'
 import { MOVE_FX, MOVES } from '../hooks/moves.js'
@@ -37,15 +39,36 @@ for (const mon of mons) {
   if (!displayName(mon)) fail(`${mon} has no display name`)
 }
 
+// A mon an evolution names is bundled, or fetched at runtime and listed in FETCHED
+const named = new Set()
+const known = (mon) => {
+  named.add(mon)
+  return SPRITES[mon] || FETCHED.includes(mon)
+}
+
 for (const [mon, entries] of Object.entries(EVOLUTIONS)) {
-  if (!SPRITES[mon]) fail(`evolutions for ${mon}, which has no sprites`)
+  if (!known(mon)) fail(`evolutions for ${mon}, which has no sprites and isn't in FETCHED`)
   for (const entry of entries) {
-    if (!SPRITES[entry.into]) fail(`${mon} evolves into ${entry.into}, which has no sprites`)
-    const ways = ['level', 'item', 'trade'].filter((key) => entry[key] !== undefined)
-    if (ways.length !== 1) fail(`${mon} into ${entry.into} needs exactly one of level, item, or trade`)
+    if (!known(entry.into)) fail(`${mon} evolves into ${entry.into}, which has no sprites and isn't in FETCHED`)
+    const ways = ['level', 'item', 'trade', 'happy', 'time', 'more'].filter((key) => entry[key] !== undefined).join('+')
+    if (!['level', 'item', 'trade', 'item+trade', 'happy', 'happy+time', 'level+more'].includes(ways)) {
+      fail(`${mon} into ${entry.into} needs a level, an item, a trade, a trade and an item, full hearts with or without a time of day, or a level and a meter`)
+    }
+    if (entry.happy !== undefined && entry.happy !== true) fail(`${mon} into ${entry.into} has happy ${entry.happy}`)
+    if (entry.time !== undefined && !['day', 'night'].includes(entry.time)) fail(`${mon} into ${entry.into} has time ${entry.time}`)
+    if (entry.more !== undefined && !['food', 'happiness', 'neither'].includes(entry.more)) fail(`${mon} into ${entry.into} has more ${entry.more}`)
+    if (entry.item !== undefined && !ITEMS.some((item) => item.key === itemFor(entry) && item.name === entry.item)) fail(`${mon} into ${entry.into} needs ${entry.item}, which isn't an item`)
     if (entry.level !== undefined && !(entry.level > 1 && entry.level <= MAX_LEVEL)) fail(`${mon} evolves at level ${entry.level}`)
   }
 }
+
+for (const mon of FETCHED) {
+  if (SPRITES[mon]) fail(`${mon} is in FETCHED but bundled`)
+  if (!named.has(mon)) fail(`${mon} is in FETCHED but no evolution names it`)
+  if (!displayName(mon)) fail(`${mon} has no display name`)
+}
+if (new Set(FETCHED).size !== FETCHED.length) fail('FETCHED names a mon twice')
+for (const { key } of ITEMS) if (!ITEM_ART[key]) fail(`${key} has no art`)
 
 // Following evolutions from any mon must end, or a chain loops back on itself
 for (const start of Object.keys(EVOLUTIONS)) {
@@ -102,12 +125,35 @@ for (const mon of mons) {
   }
 }
 
-if (DEX.length !== 151) fail(`the Pokédex has ${DEX.length} entries, not 151`)
-if (new Set(DEX).size !== DEX.length) fail('the Pokédex lists a mon twice')
-for (const mon of DEX) if (!SPRITES[mon]) fail(`Pokédex entry ${mon} has no sprites`)
-for (const mon of mons) if (!DEX.includes(dexKey(mon))) fail(`${mon} has no Pokédex entry`)
-for (const mon of [...LEGENDARY, ...RARE]) if (!DEX.includes(mon)) fail(`tier list names ${mon}, which isn't in the Pokédex`)
-for (const mon of DEX) if (!TIERS[tierOf(mon)]) fail(`${mon} has unknown tier ${tierOf(mon)}`)
+// Each generation's size in the national Pokédex, to catch a mon left out or put in twice
+const GEN_SIZES = { 1: 151, 2: 100, 3: 135, 4: 107, 5: 156 }
+for (const gen of GENS) {
+  const dex = GEN_DEX[gen]
+  if (dex.length !== GEN_SIZES[gen]) fail(`the gen ${gen} Pokédex has ${dex.length} entries, not ${GEN_SIZES[gen]}`)
+  for (const mon of dex) {
+    if (!displayName(mon)) fail(`Pokédex entry ${mon} has no display name`)
+    if (BUNDLED_GENS.includes(gen) && !SPRITES[mon]) fail(`Pokédex entry ${mon} has no sprites`)
+    if (!BUNDLED_GENS.includes(gen) && SPRITES[mon]) fail(`gen ${gen} Pokédex entry ${mon} is bundled`)
+    for (const form of WILD_FORMS[mon] ?? []) if (dexKey(form) !== mon) fail(`${form} doesn't count as ${mon} in the Pokédex`)
+  }
+}
+if (new Set(NATIONAL_DEX).size !== NATIONAL_DEX.length) fail('the Pokédex lists a mon twice')
+for (const mon of mons) if (!BUNDLED_DEX.includes(dexKey(mon))) fail(`${mon} has no Pokédex entry`)
+for (const mon of FETCHED) if (!NATIONAL_DEX.includes(dexKey(mon))) fail(`${mon} is in FETCHED but not in the Pokédex`)
+for (const mon of [...LEGENDARY, ...RARE]) if (!NATIONAL_DEX.includes(mon)) fail(`tier list names ${mon}, which isn't in the Pokédex`)
+// A drop family names Pokédex keys, and a mon favors at most one stone and holds at most one item
+for (const families of [STONE_FAMILIES, HELD_FAMILIES]) {
+  const seen = new Map()
+  for (const [item, family] of Object.entries(families)) {
+    if (!ITEMS.some((known) => known.key === item)) fail(`drop family for ${item}, which isn't an item`)
+    for (const mon of family) {
+      if (!NATIONAL_DEX.includes(mon)) fail(`${item} drop family names ${mon}, which isn't in the Pokédex`)
+      if (seen.has(mon)) fail(`${mon} drops both ${seen.get(mon)} and ${item}`)
+      seen.set(mon, item)
+    }
+  }
+}
+for (const mon of NATIONAL_DEX) if (!TIERS[tierOf(mon)]) fail(`${mon} has unknown tier ${tierOf(mon)}`)
 
 if (problems.length > 0) {
   for (const problem of problems) console.error(problem)
@@ -115,5 +161,6 @@ if (problems.length > 0) {
   process.exit(1)
 }
 const moves = Object.values(MOVES).flat().length
-const tiers = Object.keys(TIERS).map((tier) => `${DEX.filter((mon) => tierOf(mon) === tier).length} ${tier}`).join(', ')
-console.log(`${mons.length} mons, ${Object.keys(MOVE_FX).length} moves (${moves} in movesets), ${Object.keys(EVOLUTIONS).length} evolving mons, ${DEX.length} in the Pokédex (${tiers}): all consistent`)
+const tiersOf = (dex) => Object.keys(TIERS).map((tier) => `${dex.filter((mon) => tierOf(mon) === tier).length} ${tier}`).join(', ')
+const gens = GENS.map((gen) => `gen ${gen} ${GEN_DEX[gen].length} (${tiersOf(GEN_DEX[gen])})`).join(', ')
+console.log(`${mons.length} mons, ${Object.keys(MOVE_FX).length} moves (${moves} in movesets), ${Object.keys(EVOLUTIONS).length} evolving mons, Pokédex ${gens}: all consistent`)

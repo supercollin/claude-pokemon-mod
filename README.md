@@ -42,7 +42,7 @@ Then pick your starter, like `/pokemon charmander`. Bulbasaur, Charmander, Squir
 - 🎒 **You start with one starter.** Bulbasaur, Charmander, Squirtle, or Pikachu. Every other mon has to be caught.
 - 🌿 **Wild Pokémon show up, and they fight back.** Your work wears them down while they strike your mon with their own moves, and each strike costs it some happiness, more while you leave the foe alone. Once one is weak, `/pokemon catch` fills your Pokédex. Knock it out instead, and now and then it drops an item for your bag.
 - ⚡ **It fights.** 135 moves from gen 1, each with its own pixel animation.
-- 🎨 **All 151 gen 1 Pokémon**, each in default and shiny, and gen 2 to 5 with `/pokemon new`.
+- 🎨 **All 151 gen 1 Pokémon**, each in default and shiny, and gen 2 to 5 with `/pokemon new`. `/pokemon gen 2` brings gen 2 into the wild, and its mons evolve too, fetching the mon they become.
 
 ## See it
 
@@ -94,6 +94,7 @@ Then pick your starter, like `/pokemon charmander`. Bulbasaur, Charmander, Squir
 | `/pokemon catch` | Throw a Poké Ball at a wild mon |
 | `/pokemon trainer` | Turn trainer mode off to show any mon without catching it, or back on |
 | `/pokemon dex` | Every wild mon you've seen and caught |
+| `/pokemon gen 2` | Bring gen 2's mons into the wild, or take them out again |
 | `/pokemon new <mon>` | Fetch a mon from gen 2 to 5, like `/pokemon new mudkip`, or a random one with `/pokemon new gen3` |
 
 <details>
@@ -113,14 +114,15 @@ Then pick your starter, like `/pokemon charmander`. Bulbasaur, Charmander, Squir
 | `/pokemon attack <move>` | Use a named move, ignoring case, spaces, and dashes |
 | `/pokemon moves`, `/pokemon attack list` | List the active mon's moves |
 | `/pokemon moves <mon>` | List another mon's moves |
-| `/pokemon evolve` | Evolve with a stone or a trade, which takes that stone or a Link Cable from your bag. Also evolves a mon at its level with autoevolve off, and restarts an evolution you cancelled |
+| `/pokemon evolve` | Evolve with a stone or a trade, which takes that stone, a Link Cable, or the item the mon trades holding, like a Metal Coat for Onix, from your bag. Also evolves a mon at its level with autoevolve off, and restarts an evolution you cancelled |
 | `/pokemon evolve <mon>` | Pick what Eevee becomes, like `/pokemon evolve jolteon` |
 | `/pokemon stop` | Cancel an evolution. A stone or cable it needed stays in your bag |
 | `/pokemon bag` | List the items in your bag and how many of each, saved across sessions |
 | `/pokemon use <item> [mon]` | Use an item, named loosely, like `thunder stone`, `thunderstone`, or `candy`. A stone or Link Cable on the mon on show is the same as `/pokemon evolve`. Rare Candy raises the mon on show, or a box mon named, one level |
 | `/pokemon revive`, `/pokemon revive <mon>` | Take a fainted mon to a Pokémon Center. Nurse Joy heals it in 5 minutes, and it stands up at 50% food and 30% happiness |
 | `/pokemon nuzlocke` | Toggle nuzlocke (off by default, saved across sessions). On, a mon that faints is gone for good |
-| `/pokemon trainer` | Toggle trainer mode (on by default, saved across sessions). On, `/pokemon <mon>` shows only mons in your box, so the rest have to be caught in the wild. The mons already in your box stay. An empty box, or one whose mons are all gone, picks one starter: Bulbasaur, Charmander, Squirtle, or Pikachu. Mons fetched with `/pokemon new` stay free to show. Off, `/pokemon <mon>` shows any mon |
+| `/pokemon gen <N>` | Toggle a generation's mons in the wild (gen 1 always, saved across sessions). Only gen 2 can be turned on so far. `/pokemon gen` lists the ones on |
+| `/pokemon trainer` | Toggle trainer mode (on by default, saved across sessions). On, `/pokemon <mon>` shows only mons in your box, so the rest have to be caught in the wild. The mons already in your box stay. An empty box, or one whose mons are all gone, picks one starter: Bulbasaur, Charmander, Squirtle, or Pikachu. Mons fetched with `/pokemon new` stay free to show, except from a generation in the wild, which `/pokemon new` won't fetch then. Off, `/pokemon <mon>` shows any mon |
 | `/pokemon sleep` | Tuck the mon in, so its meters drain slower until Claude starts working in a session showing it. Run it again to wake it |
 | `/pokemon needs` | Toggle food and happiness (on by default). Off, the faint and runaway clocks stop too |
 | `/pokemon sync` | Toggle syncing the mon across sessions (off by default, saved across sessions). On, every open session switches to the mon picked last in any of them, fetched mons included. Off, each session keeps its own |
@@ -297,17 +299,43 @@ minutes or more and scaled by the meters. Levels follow the games' medium fast c
 level L takes L³ XP. A new mon starts at 5, or at the level it evolves at, so Charmeleon
 starts at 16. With 30 s turns and full meters, 5 to 16 takes about 75 turns.
 
-When the mon reaches its evolution level from Red and Blue, it evolves once idle. It glows,
+When the mon reaches its evolution level from Red and Blue, or Gold and Silver for gen 2,
+it evolves once idle. It glows,
 flickers between its two shapes, and flashes into its new form. `/pokemon stop` cancels,
 and the next level-up tries again. Level, XP, and meters carry over. With
 `/pokemon autoevolve` off, reaching the level only makes the mon ready, and it evolves when
 you run `/pokemon evolve`.
 
-The 19 mons that evolve with a stone or a trade, like Pikachu, Eevee, and Kadabra, need an
+Gen 2 mons aren't bundled, so a mon evolving into one, like Cyndaquil into Quilava,
+fetches it first, the way `/pokemon new` does, and every session can show it after. If the
+fetch fails, the mon doesn't evolve yet and says why, and the next level-up, showing it
+again, or `/pokemon evolve` tries again. Smoochum, Elekid, and Magby, fetched with
+`/pokemon new`, grow into Jynx, Electabuzz, and Magmar at 30. Tyrogue, which the games
+evolve at 20 by its Attack and Defense, goes by its meters here: a level-up from 20 on
+with more food icons than hearts makes it Hitmonlee, more hearts than food Hitmonchan,
+and as many of each a fetched Hitmontop. With needs off, the meters count as full, so
+it becomes Hitmontop.
+
+Some mons evolve on a level-up with all five hearts full, from a turn or a Rare Candy:
+Golbat into Crobat, Chansey into Blissey, and the fetched Pichu, Cleffa, Igglybuff, and
+Togepi into Pikachu, Clefairy, Jigglypuff, and Togetic. Eevee does too, into Espeon by day
+and Umbreon by night, on your computer's clock as in Gold and Silver: day runs from 4:00
+to 18:00. With needs off, every level-up counts as full hearts. A level-up that reaches
+one makes the mon ready the way its level would, and `/pokemon evolve` alone only
+explains the rule.
+
+The mons that evolve with a stone or a trade, like Pikachu, Eevee, and Kadabra, need an
 item from your bag. A stone mon needs its stone, like a Thunder Stone for Pikachu, and
-Kadabra, Machoke, Graveler, and Haunter need a Link Cable. `/pokemon evolve`, or
+Kadabra, Machoke, Graveler, and Haunter need a Link Cable. Six gen 1 mons trade into a
+fetched gen 2 mon while holding an item, which they need instead of a Link Cable:
+Poliwhirl into Politoed and Slowpoke into Slowking with a King's Rock, Onix into Steelix
+and Scyther into Scizor with a Metal Coat, Seadra into Kingdra with a Dragon Scale, and
+Porygon into Porygon2 with an Up-Grade. `/pokemon use metal coat` on Onix starts it. `/pokemon evolve`, or
 `/pokemon use thunder stone`, starts the evolution, and the item leaves the bag once it's
 done. Eevee needs a pick, like `/pokemon evolve jolteon`, which takes a Thunder Stone.
+Gloom needs one too: a Leaf Stone makes it Vileplume, and a Sun Stone a fetched
+Bellossom, and Poliwhirl one between Poliwrath and Politoed. Sunkern, from gen 2, also
+takes a Sun Stone.
 Without the item, it says which one is missing.
 
 Items come from wild mons you knock out, and `/pokemon bag` lists them. The first time
@@ -368,7 +396,18 @@ Smog. An unknown effect plays `impact`.
 About every 20 to 40 minutes of work, a wild mon walks in from the left. Open sessions
 share one timer, so running several brings no more, and the first one comes about 5
 minutes into your work. Base forms turn up most. Evolved mons, fossils, and the likes of
-Lapras and Snorlax are rarer, the five legendaries rarest, and 1 in 128 is shiny.
+Lapras and Snorlax are rarer, the legendaries rarest, and 1 in 128 is shiny.
+
+Gen 1 is always in the wild, and `/pokemon gen 2` brings gen 2 in, with its 100 mons in
+the same tiers: Raikou, Entei, Suicune, Lugia, Ho-Oh, and Celebi are legendary, and the
+babies, like Pichu and Togepi, rare, as the wild is the only place to catch them. Gen 2's
+mons aren't bundled. The first time one turns up, it's fetched from vscode-pokemon,
+without holding up Claude, and comes at the next check 30 s later. After that it's in the
+store, for every session. If it can't be fetched, offline or past GitHub's hourly limit, a
+gen 1 mon comes instead. Unown turns up as one of its 28 forms, each a Pokédex entry for
+Unown. With gen 2 on in trainer mode, its mons have to be caught: `/pokemon new` won't
+fetch them, and one fetched for the wild or an evolution isn't free to show. Turning
+gen 2 off keeps the mons in your box and the ones in your Pokédex.
 
 Your work does the fighting. Each tool call and each answered turn banks a move, two at
 most, and the mon spends one every 6 to 8 s on a random move aimed at the foe. Each hit
@@ -377,8 +416,15 @@ Once another hit could knock the foe out, it's weak, and the mon holds off. Only
 `/pokemon attack` lands the last hit. A foe at 0 HP faints and blinks away, and can't be
 caught, but 1 time in 5 an item pops out of it and goes into your bag. It's usually the
 stone for the foe's type, like a Fire Stone from a Vulpix or a Thunder Stone from a
-Voltorb. About 1 drop in 13 is a Link Cable instead, and 1 in 15 a Rare Candy. A foe with
-no stone type, like a Pidgey, only ever drops a Link Cable or Rare Candy.
+Voltorb. Gen 2's foes drop theirs too, like a Fire Stone from a Cyndaquil, and the Sun
+Stone comes from Sunkern, Sunflora, Bellossom, and Ho-Oh. About 1 drop in 13 is a Link
+Cable instead, and 1 in 15 a Rare Candy.
+A foe that holds an item in Gold and Silver drops it about 1 drop in 12: a Metal Coat from
+Magnemite and Magneton, a Dragon Scale from Horsea and Seadra, and a King's Rock from the
+Poliwag and Slowpoke lines. Porygon drops the Up-Grade, which no wild mon holds there.
+With gen 2 on, the mons those trades make hold their item too, and Skarmory and
+Forretress a Metal Coat. A foe with neither a stone type nor a held item, like a Pidgey,
+only ever drops a Link Cable or Rare Candy.
 Main turns of two minutes or more turn up a Rare Candy 1 time in 10 too.
 Every 10 to 15 s the foe plays one of its own moves at the mon, which flinches and puts
 its next move off.
@@ -405,10 +451,11 @@ The foe leaves after 4 minutes without a hit, 90 s after it turns weak, after 4 
 without a catch, when the mon falls asleep, or on `/pokemon roar`. `/pokemon feed` waits
 until it's gone, and so does an evolution that comes due.
 
-The Pokédex counts wild mons only, seen when one shows up and caught when you catch it. A
+The Pokédex counts wild mons only, seen when one shows up and caught when you catch it,
+out of 151, or 251 with gen 2 on. A
 caught species joins your box at its first level, unless it's there already, and
 its line in `/pokemon box` shows ◓. `/pokemon <mon>` still picks any mon, and a mon
-evolved from a caught one keeps its ◓. Releasing a mon keeps it in the dex, and raising that species again
+keeps its ◓ when it evolves, even one raised before its species was caught. Releasing a mon keeps it in the dex, and raising that species again
 shows ◓ too.
 
 The battle needs a wider strip than the mon alone. A band 80 columns wide fits every pair,
@@ -495,9 +542,24 @@ To try a mon without changing the repo, `/pokemon new <mon>` fetches it at runti
 1. Copy the four GIFs from `media/gen<N>/<mon>/` in [vscode-pokemon](https://github.com/jakobhoeg/vscode-pokemon/tree/main/media) into `sprites/<mon>/`: `default_idle_8fps.gif`, `default_walk_8fps.gif`, `shiny_idle_8fps.gif`, and `shiny_walk_8fps.gif`.
 2. Run `node scripts/build-frames.mjs`.
 3. Give it a moveset in `MOVES` in `hooks/moves.js`. Every mon needs at least one move.
-4. If it evolves, add it to `hooks/evolutions.js`. If its name isn't just the key capitalized, add it to `hooks/names.js`.
+4. If it evolves, add it to `hooks/evolutions.js`. A mon it evolves into that isn't bundled goes in `FETCHED` there, under its vscode-pokemon folder name. If its name isn't just the key capitalized, add it to `hooks/names.js`.
 5. Mark its eyes on every frame in `EYES` in `hooks/eyes.js`, and check them asleep with `node scripts/preview-sleep.mjs <mon>`.
 6. Run `node scripts/check-data.mjs`, then `/reload-plugins`.
+
+</details>
+
+<details>
+<summary>Add a generation to the wild</summary>
+
+A generation in the wild isn't bundled: its mons are fetched the first time one turns up.
+Bringing one in is data, in `hooks/dex.js` and `hooks/evolutions.js`:
+
+1. Add its Pokédex keys to `GEN_DEX`, in national order, named as the vscode-pokemon folders under `media/gen<N>/` are.
+2. Add its legendaries to `LEGENDARY` and its rare mons to `RARE`. The rest takes its tier from its place in its family.
+3. A mon with no folder of its own, only its forms', goes in `WILD_FORMS`, its forms in `BASE_FORM`, and their names in `hooks/names.js`.
+4. Add its evolutions to `EVOLUTIONS`, and every mon they name that isn't bundled to `FETCHED`.
+5. Add its mons to the drop tables in `hooks/items.js`: `STONE_FAMILIES` for the stone each favors, and `HELD_FAMILIES` for an item it holds.
+6. Run `node scripts/check-data.mjs`. `/pokemon gen <N>` turns it on from then on.
 
 </details>
 

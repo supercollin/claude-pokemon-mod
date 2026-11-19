@@ -85,6 +85,8 @@ export const S = {
   nuzlockeOn: false,
   // With /pokemon trainer on, you pick one starter and show only mons in your box
   trainerOn: true,
+  // The generations whose mons turn up in the wild, gen 1 always among them
+  wildGens: [1],
   // The party picked with /pokemon party add and remove, in order, or null for the box's
   // highest level mons
   partyPicks: null,

@@ -3,7 +3,9 @@ import { DOT_EYED, closedEyes, eyesOf, keptEyesOf, pupilsOf } from '../hooks/eye
 import { DIZZY_COLORS, faintedPalette, faintedRows } from '../hooks/faint.js'
 import { SPRITES } from '../hooks/frames.js'
 import { atCenter, CENTER_ROWS, centerPhase, centerSpan, centerStamps, JOY_COLORS, recallFlash, recallTint } from '../hooks/joy.js'
-import { dropOf, findItem, stoneOfType } from '../hooks/items.js'
+import { dropOf, findItem, heldItemOf, stoneOfType } from '../hooks/items.js'
+import { dexKey, dexNumber, genOf, pickWild, tierOf } from '../hooks/dex.js'
+import { startLevel } from '../hooks/evolutions.js'
 import { encodePng } from '../hooks/png.js'
 import { zoomedPixel } from '../hooks/zoom.js'
 
@@ -545,7 +547,7 @@ const HOUR = 3600 * 1000
 const GHOSTTY = { TERM_PROGRAM: 'ghostty' }
 
 // Fire session.start with a saved store and a clock set to a given time
-async function startedWith($, on, saved: Record<string, unknown>, now: number, env: Record<string, string> = GHOSTTY, answer: (e: any) => object = () => ({}), hooks: (clock) => void = () => {}) {
+async function startedWith($, on, saved: Record<string, unknown>, now: number, env: Record<string, string> = GHOSTTY, answer: (e: any) => object = () => ({}), hooks: (clock) => void = () => {}, lag = 0) {
   const clock = mock.clock(on, { now })
   const blits: string[] = []
   // Each blit's width in columns, and the blit itself, alongside blits
@@ -563,7 +565,8 @@ async function startedWith($, on, saved: Record<string, unknown>, now: number, e
   on('session.start', () => ({ cwd: '/work' }))
   on('env.get', ($, e) => ({ value: env[e.name] }))
   on('command.register', () => ({ value: undefined }))
-  on('store.get', ($, e) => ({ value: saved[e.key] }))
+  // lag ms of real time before a read of the records answers, as the engine's store can take
+  on('store.get', ($, e) => (lag && e.key === 'stats' ? new Promise((resolve) => setTimeout(() => resolve({ value: saved[e.key] }), lag)) : { value: saved[e.key] }))
   on('store.set', ($, e) => {
     saved[e.key] = e.value
     return { value: undefined }
@@ -984,7 +987,7 @@ function shutFrames() {
   return frames
 }
 
-test('shutting the eyes keeps every frame\'s size and palette', async () => {
+test('shutting the eyes keeps every frame\'s size and palette', { timeoutMs: 30000 }, async () => {
   for (const { rows, palette, shut } of shutFrames()) {
     expect(shut.length).toBe(rows.length)
     for (const [y, row] of shut.entries()) {
@@ -1356,8 +1359,8 @@ test('/pokemon evolve uses a stone or a trade, lists Eevee\'s choices, and says 
   expect(toasts).toEqual(['What? Pikachu is evolving!', 'Congratulations! Your Pikachu evolved into Raichu!'])
 
   await run('eevee')
-  const choices = 'Eevee can become Vaporeon with a Water Stone, Jolteon with a Thunder Stone, or Flareon with a Fire Stone.'
-  expect(await run('evolve')).toMatch(new RegExp('^' + choices.replace(/\./g, '\\.') + ' Try /pokemon evolve (vaporeon|jolteon|flareon)\\.$'))
+  const choices = 'Eevee can become Vaporeon with a Water Stone, Jolteon with a Thunder Stone, Flareon with a Fire Stone, Espeon at a level-up with full hearts by day, or Umbreon at a level-up with full hearts by night.'
+  expect(await run('evolve')).toMatch(new RegExp('^' + choices.replace(/\./g, '\\.') + ' Try /pokemon evolve (vaporeon|jolteon|flareon|espeon|umbreon)\\.$'))
   expect(await run('evolve jolteon')).toBe('You use a Thunder Stone on Eevee.')
   await clock.advance(7100)
   expect(saved.mon).toBe('jolteon')
@@ -1374,6 +1377,38 @@ test('/pokemon evolve uses a stone or a trade, lists Eevee\'s choices, and says 
   await run('charmander')
   expect(await run('evolve')).toBe('Charmander evolves into Charmeleon at Lv. 16. It\'s Lv. 9.')
 })
+
+// The evolved mon used to show its own first level, like Raichu at Lv 5, until the band was
+// drawn again, as the engine's store answered after the first frame
+test('an evolved mon shows its own level from the first frame, however slow the store', { timeoutMs: 30000 }, async ($, on) => {
+  const saved: Record<string, any> = { trainer: false, mon: 'pikachu', wander: false, bag: { thunderstone: 1 }, stats: { pikachu: { xp: 30 ** 3 } } }
+  const { clock } = await startedWith($, on, saved, 0, GHOSTTY, () => ({}), () => {}, 20)
+  const band = await $.ui.mount({ ...BAND, surface: 'terminal' })
+  const levels = new Set<string>()
+  expect(await run($, 'evolve')).toBe('You use a Thunder Stone on Pikachu.')
+  for (let t = 0; t < 120; t++) {
+    await clock.advance(100)
+    if (saved.mon === 'raichu' || t > 60) levels.add((await band.find({ type: 'Text', text: /^Lv/ }))?.text)
+    // Real time for the slow reads to answer once the evolution is done
+    if (t > 75) await new Promise((resolve) => setTimeout(resolve, 5))
+  }
+  expect(saved.mon).toBe('raichu')
+  expect([...levels]).toEqual(['Lv 30'])
+})
+
+for (const caught of [true, false]) {
+  test(`a raised mon whose species is ${caught ? '' : 'not '}caught evolves ${caught ? 'keeping' : 'without'} its ◓ in the box`, { timeoutMs: 30000 }, async ($, on) => {
+    const dex = caught ? { pikachu: { seen: 0, caught: 0 } } : {}
+    const saved: Record<string, any> = { trainer: false, mon: 'pikachu', wander: false, bag: { thunderstone: 1 }, dex, stats: { pikachu: { xp: 30 ** 3 } } }
+    const { clock } = await startedWith($, on, saved, 0)
+    expect(await run($, 'box')).toContain(caught ? 'Pikachu ◓, Lv. 30' : 'Pikachu, Lv. 30')
+    await run($, 'evolve')
+    await clock.advance(7200)
+    expect(saved.mon).toBe('raichu')
+    expect(Boolean(saved.stats.raichu.caught)).toBe(caught)
+    expect(await run($, 'box')).toContain(caught ? 'Raichu ◓, Lv. 30' : 'Raichu, Lv. 30')
+  })
+}
 
 test('/pokemon shows the level in its status and above the meters', async ($, on) => {
   // Lv. 12
@@ -2452,7 +2487,7 @@ test('/pokemon list names every mon, and the hint and status stay short', async 
   on('env.get', () => ({ value: undefined }))
   on('store.get', () => ({ value: undefined }))
   await $.session.start({ surface: 'terminal', isInteractive: true, cwd: '/work' })
-  expect(hint).toBe('[<mon>|default|shiny|new|list|pet|feed|sleep|revive|nickname|attack|moves|catch|roar|evolve|stop|bag|use|stats|box|party|dex|release|wander|needs|emoji|size|images|pane|sync|autoevolve|nuzlocke|trainer|help]')
+  expect(hint).toBe('[<mon>|default|shiny|new|list|pet|feed|sleep|revive|nickname|attack|moves|catch|roar|evolve|stop|bag|use|stats|box|party|dex|release|wander|needs|emoji|size|images|pane|sync|autoevolve|nuzlocke|trainer|gen|help]')
 
   const list = await $.command.run({ command: 'pokemon', args: 'list' })
   expect(list.text).toMatch(/^\d+ mons: abra, /)
@@ -3217,7 +3252,7 @@ test('a mon fetched in another session loads at session start', async ($, on) =>
   expect((await $.command.run({ command: 'pokemon', args: '' })).text).toMatch(/^Showing default Torchic Lv\. /)
   expect((await $.command.run({ command: 'pokemon', args: 'list' })).text).toMatch(/, torchic$/)
   expect((await $.command.run({ command: 'pokemon', args: 'moves' })).text).toBe('Torchic knows Ember, Tackle.')
-  expect((await $.command.run({ command: 'pokemon', args: 'dex torchic' })).text).toBe("Torchic isn't in the Pokédex. Only gen 1 mons appear in the wild.")
+  expect((await $.command.run({ command: 'pokemon', args: 'dex torchic' })).text).toBe("Torchic isn't in the Pokédex. Only gen 1 and 2 mons appear in the wild.")
 })
 
 test('/pokemon new gen3 picks a gen 3 mon you do not have yet', async ($, on) => {
@@ -3603,12 +3638,12 @@ test('/pokemon feed waits until the foe is gone', async ($, on) => {
 const WEAK = 'Wild Pidgey is weak! Throw a ball with /pokemon catch. Another hit could knock it out.'
 
 // Bank work until the foe in battle is weak
-async function weaken($, clock, toasts: string[]) {
-  for (let k = 0; k < 6 && !toasts.includes(WEAK); k++) {
+async function weaken($, clock, toasts: string[], weak = WEAK) {
+  for (let k = 0; k < 6 && !toasts.includes(weak); k++) {
     await $.tool.call({ tool: 'Read', file_path: '/work/a.ts' })
     await clock.advance(9000)
   }
-  expect(toasts).toContain(WEAK)
+  expect(toasts).toContain(weak)
 }
 
 // Throw balls at the foe until one holds
@@ -4374,6 +4409,7 @@ test('item names match loosely', () => {
   expect(['Thunder Stone', 'thunderstone', 'THUNDER', 'thunder-stone'].map(findItem)).toEqual(Array(4).fill('thunderstone'))
   expect(findItem('candy')).toBe('rarecandy')
   expect(findItem('link cable')).toBe('linkcable')
+  expect(['King\'s Rock', 'kings rock', 'metal coat', 'scale', 'Up-Grade', 'upgrade'].map(findItem)).toEqual(['kingsrock', 'kingsrock', 'metalcoat', 'dragonscale', 'upgrade', 'upgrade'])
   expect(findItem('stone')).toBeNull()
   expect(findItem('potion')).toBeNull()
 })
@@ -4416,13 +4452,309 @@ test('/pokemon use takes an item by a loose name, and a stone on a mon is the sa
   const saved: Record<string, any> = { trainer: false, mon: 'eevee', bag: { firestone: 1, waterstone: 1 } }
   const { clock } = await startedWith($, on, saved, 0)
   expect(await run($, 'use')).toBe('Name the item, like /pokemon use rare candy. /pokemon bag lists yours.')
-  expect(await run($, 'use potion')).toBe('Unknown item "potion". Items: Fire Stone, Water Stone, Thunder Stone, Leaf Stone, Moon Stone, Link Cable, Rare Candy.')
+  expect(await run($, 'use potion')).toBe('Unknown item "potion". Items: Fire Stone, Water Stone, Thunder Stone, Leaf Stone, Moon Stone, Sun Stone, King\'s Rock, Metal Coat, Dragon Scale, Up-Grade, Link Cable, Rare Candy.')
   expect(await run($, 'use leaf stone')).toBe('Eevee can\'t use a Leaf Stone.')
   expect(await run($, 'use fire stone growlithe')).toBe('Show Growlithe first with /pokemon growlithe, then use the Fire Stone.')
   expect(await run($, 'use FireStone eevee')).toBe('You use a Fire Stone on Eevee.')
   await clock.advance(7100)
   expect(saved.mon).toBe('flareon')
   expect(saved.bag).toEqual({ waterstone: 1 })
+})
+
+// Cyndaquil as /pokemon new saves it, one XP short of Lv. 14, where it evolves
+const fetchedCyndaquil = () => ({
+  mon: 'cyndaquil',
+  wander: false,
+  stats: { cyndaquil: { xp: 14 ** 3 - 1 } },
+  'custom:cyndaquil': { gen: 2, sprite: SPRITES.diglett, moves: ['Ember', 'Tackle'] },
+})
+
+test('a level-up evolves a fetched gen 2 mon, fetching the mon it becomes first', { timeoutMs: 30000 }, async ($, on) => {
+  const toasts = toastsOf(on)
+  on('turn.complete', () => ({ text: '' }))
+  const asked = serveMons(on, { 2: ['quilava'] }, { types: ['fire'] })
+  const saved: Record<string, any> = fetchedCyndaquil()
+  const { clock } = await startedWith($, on, saved, 0)
+  expect(await run($, 'stats')).toMatch(/ Can become Quilava at Lv\. 14\./)
+
+  await $.turn.complete(ANSWERED)
+  expect(toasts).toEqual(['Cyndaquil grew to Lv. 14!'])
+  expect(asked.some((url) => url.includes('/gen2/quilava/'))).toBe(true)
+  expect(saved['custom:quilava'].gen).toBe(2)
+  await clock.advance(50)
+  expect(toasts[1]).toBe('What? Cyndaquil is evolving!')
+  await clock.advance(7100)
+  expect(toasts[2]).toBe('Congratulations! Your Cyndaquil evolved into Quilava!')
+  expect(saved.mon).toBe('quilava')
+  expect(saved.stats.cyndaquil).toBeUndefined()
+  expect(saved.stats.quilava.xp).toBeGreaterThanOrEqual(14 ** 3)
+  expect(await run($, 'moves')).toBe('Quilava knows Ember, Flamethrower, Tackle.')
+})
+
+test('a gen 2 evolution that can\'t be fetched waits, and says why', { timeoutMs: 30000 }, async ($, on) => {
+  const toasts = toastsOf(on)
+  on('turn.complete', () => ({ text: '' }))
+  serveMons(on, {}, { status: 403 })
+  const saved: Record<string, any> = fetchedCyndaquil()
+  const { clock } = await startedWith($, on, saved, 0)
+  await $.turn.complete(ANSWERED)
+  const why = 'Cyndaquil can\'t evolve into Quilava yet: GitHub\'s hourly limit for anonymous requests is used up. Try again in a while.'
+  expect(toasts).toEqual(['Cyndaquil grew to Lv. 14!', why])
+  await clock.advance(1000)
+  expect(saved.mon).toBe('cyndaquil')
+  expect(saved['custom:quilava']).toBeUndefined()
+  expect(await run($, 'evolve')).toBe(why)
+})
+
+test('Gloom becomes Vileplume with a Leaf Stone, or a fetched Bellossom with a Sun Stone', { timeoutMs: 30000 }, async ($, on) => {
+  serveMons(on, { 2: ['bellossom'] }, { types: ['grass'] })
+  const saved: Record<string, any> = { trainer: false, mon: 'gloom', bag: { sunstone: 1 } }
+  const { clock } = await startedWith($, on, saved, 0)
+  expect(await run($, 'evolve')).toMatch(/^Gloom can become Vileplume with a Leaf Stone or Bellossom with a Sun Stone\. Try \/pokemon evolve (vileplume|bellossom)\.$/)
+  expect(await run($, 'use sun stone')).toBe('You use a Sun Stone on Gloom.')
+  await clock.advance(7100)
+  expect(saved.mon).toBe('bellossom')
+  expect(saved.bag).toEqual({})
+  expect(saved['custom:bellossom'].gen).toBe(2)
+})
+
+test('a foe that holds a trade item drops it now and then, and the same foe always drops the same', () => {
+  const count = (key: string) => {
+    const drops: Record<string, number> = {}
+    for (let seed = 0; seed < 18000; seed++) {
+      const item = dropOf(key, seed)
+      if (item) drops[item] = (drops[item] ?? 0) + 1
+    }
+    return drops
+  }
+  const magnemite = count('magnemite')
+  const dropped = Object.values(magnemite).reduce((sum, n) => sum + n, 0)
+  expect(Object.keys(magnemite).sort()).toEqual(['linkcable', 'metalcoat', 'rarecandy', 'thunderstone'])
+  // About 1 drop in 12 is the held item
+  expect(magnemite.metalcoat / dropped).toBeGreaterThan(0.05)
+  expect(magnemite.metalcoat / dropped).toBeLessThan(0.12)
+  expect(Object.keys(count('porygon'))).toContain('upgrade')
+  expect(Object.keys(count('horsea'))).toContain('dragonscale')
+  expect(Object.keys(count('slowpoke'))).toContain('kingsrock')
+  expect(heldItemOf('pidgey')).toBeNull()
+  expect(Object.keys(count('pidgey')).some((item) => ['kingsrock', 'metalcoat', 'dragonscale', 'upgrade'].includes(item))).toBe(false)
+  expect(dropOf('magnemite', 42)).toBe(dropOf('magnemite', 42))
+})
+
+test('gen 2 foes drop their own type\'s stone, Sun Stone included, and the items their line holds, and no other stone', () => {
+  const kinds = (key: string) => {
+    const drops = new Set<string>()
+    for (let seed = 0; seed < 6000; seed++) {
+      const item = dropOf(key, seed)
+      if (item) drops.add(item)
+    }
+    return [...drops].sort()
+  }
+  expect(kinds('cyndaquil')).toEqual(['firestone', 'linkcable', 'rarecandy'])
+  expect(kinds('sunkern')).toEqual(['linkcable', 'rarecandy', 'sunstone'])
+  expect(kinds('togepi')).toEqual(['linkcable', 'moonstone', 'rarecandy'])
+  expect(kinds('steelix')).toContain('metalcoat')
+  expect(kinds('kingdra')).toEqual(['dragonscale', 'linkcable', 'rarecandy', 'waterstone'])
+  expect(stoneOfType('hooh')).toBe('sunstone')
+  expect(heldItemOf('porygon2')).toBe('upgrade')
+  // A gen 2 foe with no stone type drops no stone, as gen 1's don't
+  expect(kinds('aipom')).toEqual(['linkcable', 'rarecandy'])
+  expect(kinds('porygon')).toEqual(['linkcable', 'rarecandy', 'upgrade'])
+})
+
+test('Onix trades into a fetched Steelix holding a Metal Coat, which it spends, and a Link Cable alone won\'t do', { timeoutMs: 30000 }, async ($, on) => {
+  serveMons(on, { 2: ['steelix'] }, { types: ['steel', 'ground'] })
+  const saved: Record<string, any> = { trainer: false, mon: 'onix', bag: { linkcable: 1 } }
+  const { clock } = await startedWith($, on, saved, 0)
+  expect(await run($, 'stats')).toMatch(/ Can become Steelix by trade holding a Metal Coat\./)
+  expect(await run($, 'evolve')).toBe('Onix needs a Metal Coat to evolve into Steelix. Wild mons you knock out drop items now and then, and /pokemon bag lists yours.')
+  expect(await run($, 'use link cable')).toBe('Onix can\'t use a Link Cable.')
+  expect(await run($, 'use upgrade')).toBe('Onix can\'t use an Up-Grade.')
+
+  saved.bag = { metalcoat: 1, linkcable: 1 }
+  expect(await run($, 'use metal coat')).toBe('You trade Onix holding a Metal Coat to a friend, and they trade it right back.')
+  await clock.advance(7100)
+  expect(saved.mon).toBe('steelix')
+  expect(saved.bag).toEqual({ linkcable: 1 })
+  expect(saved['custom:steelix'].gen).toBe(2)
+})
+
+test('Poliwhirl becomes Poliwrath with a Water Stone, or a fetched Politoed by trade holding a King\'s Rock', { timeoutMs: 30000 }, async ($, on) => {
+  serveMons(on, { 2: ['politoed'] }, { types: ['water'] })
+  const saved: Record<string, any> = { trainer: false, mon: 'poliwhirl', bag: { kingsrock: 1 } }
+  const { clock } = await startedWith($, on, saved, 0)
+  expect(await run($, 'evolve')).toMatch(/^Poliwhirl can become Poliwrath with a Water Stone or Politoed by trade holding a King's Rock\. Try \/pokemon evolve (poliwrath|politoed)\.$/)
+  expect(await run($, 'evolve politoed')).toBe('You trade Poliwhirl holding a King\'s Rock to a friend, and they trade it right back.')
+  await clock.advance(7100)
+  expect(saved.mon).toBe('politoed')
+  expect(saved.bag).toEqual({})
+})
+
+test('a fetched Magby evolves into the bundled Magmar at Lv. 30', { timeoutMs: 30000 }, async ($, on) => {
+  const toasts = toastsOf(on)
+  on('turn.complete', () => ({ text: '' }))
+  const saved: Record<string, any> = {
+    mon: 'magby',
+    wander: false,
+    stats: { magby: { xp: 30 ** 3 - 1 } },
+    'custom:magby': { gen: 2, sprite: SPRITES.diglett, moves: ['Ember', 'Tackle'] },
+  }
+  const { clock } = await startedWith($, on, saved, 0)
+  await $.turn.complete(ANSWERED)
+  expect(toasts[0]).toBe('Magby grew to Lv. 30!')
+  await clock.advance(7200)
+  expect(toasts.at(-1)).toBe('Congratulations! Your Magby evolved into Magmar!')
+  expect(saved.mon).toBe('magmar')
+})
+
+// Golbat one XP short of Lv. 30, with its hearts at happiness
+const golbatAt = (happiness: number, more: Record<string, unknown> = {}) => ({
+  mon: 'golbat',
+  wander: false,
+  stats: { golbat: { xp: 30 ** 3 - 1, happiness: { value: happiness, at: 0 }, food: { value: 100, at: 0 } } },
+  ...more,
+})
+
+test('Golbat levels up with full hearts into a fetched Crobat, and not with fewer', { timeoutMs: 30000 }, async ($, on) => {
+  const toasts = toastsOf(on)
+  on('turn.complete', () => ({ text: '' }))
+  serveMons(on, { 2: ['crobat'] }, { types: ['poison', 'flying'] })
+  const saved: Record<string, any> = golbatAt(100)
+  const { clock } = await startedWith($, on, saved, 0)
+  expect(await run($, 'stats')).toMatch(/ Can become Crobat at a level-up with full hearts\./)
+  expect(await run($, 'evolve')).toBe('Golbat can become Crobat at a level-up with full hearts.')
+  await $.turn.complete(ANSWERED)
+  expect(toasts[0]).toBe('Golbat grew to Lv. 30!')
+  await clock.advance(7200)
+  expect(toasts.at(-1)).toBe('Congratulations! Your Golbat evolved into Crobat!')
+  expect(saved.mon).toBe('crobat')
+  expect(saved.stats.crobat.readyFor).toBeUndefined()
+})
+
+test('Golbat with fewer than full hearts levels up and stays Golbat', { timeoutMs: 30000 }, async ($, on) => {
+  on('turn.complete', () => ({ text: '' }))
+  const asked = serveMons(on, { 2: ['crobat'] }, { types: ['poison', 'flying'] })
+  const saved: Record<string, any> = golbatAt(60)
+  const { clock } = await startedWith($, on, saved, 0)
+  await $.turn.complete(ANSWERED)
+  await clock.advance(7200)
+  expect(saved.mon).toBe('golbat')
+  expect(asked).toEqual([])
+  expect(await run($, 'evolve')).toBe('Golbat can become Crobat at a level-up with full hearts.')
+})
+
+test('with needs off, a level-up counts as full hearts', { timeoutMs: 30000 }, async ($, on) => {
+  on('turn.complete', () => ({ text: '' }))
+  serveMons(on, { 2: ['crobat'] }, { types: ['poison', 'flying'] })
+  const saved: Record<string, any> = golbatAt(0, { needs: false })
+  const { clock } = await startedWith($, on, saved, 0)
+  await $.turn.complete(ANSWERED)
+  await clock.advance(7200)
+  expect(saved.mon).toBe('crobat')
+})
+
+test('with autoevolve off, a level-up with full hearts makes Golbat ready, and /pokemon evolve lets it', { timeoutMs: 30000 }, async ($, on) => {
+  const toasts = toastsOf(on)
+  on('turn.complete', () => ({ text: '' }))
+  serveMons(on, { 2: ['crobat'] }, { types: ['poison', 'flying'] })
+  const saved: Record<string, any> = golbatAt(100, { autoEvolve: false })
+  const { clock } = await startedWith($, on, saved, 0)
+  await $.turn.complete(ANSWERED)
+  expect(toasts).toEqual(['Golbat grew to Lv. 30!', 'Golbat is ready to evolve into Crobat! /pokemon evolve lets it.'])
+  expect(saved.stats.golbat.readyFor).toBe('crobat')
+  expect(await run($, 'stats')).toMatch(/ Ready to evolve into Crobat\. \/pokemon evolve lets it\./)
+  expect(await run($, 'evolve')).toBe('You let Golbat evolve.')
+  await clock.advance(7200)
+  expect(saved.mon).toBe('crobat')
+})
+
+for (const [hour, into, other] of [[12, 'espeon', 'umbreon'], [22, 'umbreon', 'espeon']] as const) {
+  test(`Eevee levels up with full hearts at ${hour}:00 into a fetched ${into}`, { timeoutMs: 30000 }, async ($, on) => {
+    on('turn.complete', () => ({ text: '' }))
+    const asked = serveMons(on, { 2: ['espeon', 'umbreon'] }, { types: ['psychic'] })
+    const saved: Record<string, any> = {
+      mon: 'eevee',
+      wander: false,
+      stats: { eevee: { xp: 20 ** 3 - 1, happiness: { value: 100, at: 0 }, food: { value: 100, at: 0 } } },
+    }
+    const noon = new Date(2026, 10, 17, hour).getTime()
+    saved.stats.eevee.happiness.at = noon
+    saved.stats.eevee.food.at = noon
+    const { clock } = await startedWith($, on, saved, noon)
+    await $.turn.complete(ANSWERED)
+    await clock.advance(7200)
+    expect(saved.mon).toBe(into)
+    expect(asked.some((url) => url.includes('/gen2/' + other + '/'))).toBe(false)
+  })
+}
+
+test('a Rare Candy with full hearts grows a fetched Pichu into Pikachu', { timeoutMs: 30000 }, async ($, on) => {
+  const saved: Record<string, any> = {
+    mon: 'pichu',
+    wander: false,
+    bag: { rarecandy: 1 },
+    stats: { pichu: { xp: 10 ** 3, happiness: { value: 100, at: 0 }, food: { value: 100, at: 0 } } },
+    'custom:pichu': { gen: 2, sprite: SPRITES.diglett, moves: ['Thunder Shock', 'Tackle'] },
+  }
+  const { clock } = await startedWith($, on, saved, 0)
+  expect(await run($, 'use rare candy')).toBe('You give Pichu a Rare Candy. It grew to Lv. 11!')
+  await clock.advance(7200)
+  expect(saved.mon).toBe('pikachu')
+})
+
+// A fetched Tyrogue one XP short of Lv. 20, with its meters at food and happiness
+const tyrogueAt = (food: number, happiness: number, more: Record<string, unknown> = {}) => ({
+  mon: 'tyrogue',
+  wander: false,
+  stats: { tyrogue: { xp: 20 ** 3 - 1, food: { value: food, at: 0 }, happiness: { value: happiness, at: 0 } } },
+  'custom:tyrogue': { gen: 2, sprite: SPRITES.diglett, moves: ['Karate Chop', 'Tackle'] },
+  ...more,
+})
+
+for (const [food, happiness, into] of [[100, 40, 'hitmonlee'], [40, 100, 'hitmonchan'], [100, 90, 'hitmontop']] as const) {
+  test(`Tyrogue at Lv. 20 with food ${food}% and happiness ${happiness}% becomes ${into}`, { timeoutMs: 30000 }, async ($, on) => {
+    on('turn.complete', () => ({ text: '' }))
+    serveMons(on, { 2: ['hitmontop'] }, { types: ['fighting'] })
+    const saved: Record<string, any> = tyrogueAt(food, happiness)
+    const { clock } = await startedWith($, on, saved, 0)
+    await $.turn.complete(ANSWERED)
+    await clock.advance(7200)
+    expect(saved.mon).toBe(into)
+  })
+}
+
+test('Tyrogue says how it evolves, and with needs off becomes Hitmontop', { timeoutMs: 30000 }, async ($, on) => {
+  on('turn.complete', () => ({ text: '' }))
+  serveMons(on, { 2: ['hitmontop'] }, { types: ['fighting'] })
+  const saved: Record<string, any> = tyrogueAt(100, 20, { needs: false })
+  const { clock } = await startedWith($, on, saved, 0)
+  const ways = 'Hitmonlee at Lv. 20 with more food than hearts, Hitmonchan at Lv. 20 with more hearts than food, or Hitmontop at Lv. 20 with as much food as hearts'
+  expect(await run($, 'stats')).toContain(' Can become ' + ways + '.')
+  expect(await run($, 'evolve hitmonlee')).toBe('Tyrogue can become Hitmonlee at Lv. 20 with more food than hearts.')
+  await $.turn.complete(ANSWERED)
+  await clock.advance(7200)
+  expect(saved.mon).toBe('hitmontop')
+  expect(saved['custom:hitmontop'].gen).toBe(2)
+})
+
+test('a gen 1 mon with a gen 2 baby or a gen 2 evolution keeps its wild tier and start level', () => {
+  for (const mon of ['pikachu', 'clefairy', 'jigglypuff']) {
+    expect(tierOf(mon)).toBe('common')
+    expect(startLevel(mon)).toBe(startLevel('pidgey'))
+  }
+  for (const mon of ['jynx', 'electabuzz', 'magmar', 'onix']) {
+    expect(tierOf(mon)).toBe('uncommon')
+    expect(startLevel(mon)).toBe(startLevel('pidgey'))
+  }
+  expect(tierOf('scyther')).toBe('rare')
+  for (const mon of ['hitmonlee', 'hitmonchan']) {
+    expect(tierOf(mon)).toBe('rare')
+    expect(startLevel(mon)).toBe(startLevel('pidgey'))
+  }
+  expect(tierOf('seadra')).toBe('uncommon')
+  expect(startLevel('seadra')).toBe(32)
+  expect(startLevel('steelix')).toBe(startLevel('onix'))
+  expect(startLevel('kingdra')).toBe(32)
 })
 
 test('Rare Candy raises a level, evolves the shown mon at its level, and a box mon once it\'s shown', { timeoutMs: 30000 }, async ($, on) => {
@@ -4506,4 +4838,109 @@ test('a party mon earns half XP for its own subagent\'s answered turns, and evol
   await run($, 'charmander')
   await clock.advance(9000)
   expect(saved.mon).toBe('charmeleon')
+})
+
+// A gen 2 mon saved as fetched, by 'new', 'wild', or 'evolution', or with no by as saved
+// before by existed
+const fetchedAs = (by?: string) => ({ gen: 2, sprite: SPRITES.diglett, moves: ['Tackle'], ...(by ? { by } : {}) })
+
+test('a generation stays out of the wild until it\'s turned on, and every form of a mon is one Pokédex entry', () => {
+  let seed = 1
+  const random = () => {
+    seed = (seed * 16807) % 2147483647
+    return (seed - 1) / 2147483646
+  }
+  const gen1 = Array.from({ length: 4000 }, () => pickWild(random))
+  expect(gen1.every((pick) => genOf(pick.mon) === 1)).toBe(true)
+  const both = Array.from({ length: 4000 }, () => pickWild(random, [1, 2]))
+  expect(both.filter((pick) => genOf(pick.mon) === 2).length).toBeGreaterThan(1000)
+  for (const pick of both) expect(pick.key).toBe(dexKey(pick.mon))
+  expect(both.some((pick) => pick.mon.startsWith('unown_'))).toBe(true)
+  expect(both.some((pick) => pick.mon === 'unown')).toBe(false)
+  expect(dexNumber('chikorita')).toBe(152)
+  expect(dexNumber('unown_question')).toBe(201)
+  expect(dexNumber('hooh')).toBe(250)
+  expect(tierOf('celebi')).toBe('legendary')
+  expect(tierOf('pichu')).toBe('rare')
+  expect(tierOf('chikorita')).toBe('common')
+  expect(tierOf('bayleef')).toBe('uncommon')
+})
+
+test('/pokemon gen <N> turns a generation on and off, saved across sessions, and the Pokédex counts it', async ($, on) => {
+  const saved: Record<string, any> = { mon: 'pidgey', trainer: false }
+  await startedWith($, on, saved, 0)
+  const how = '/pokemon gen <N> turns gen 2 on or off.'
+  expect(await run($, 'gen')).toBe('In the wild: gen 1. ' + how)
+  expect(await run($, 'dex')).toBe('Pokédex: seen 0, caught 0 of 151. No wild mons met yet.')
+  expect(await run($, 'dex chikorita')).toBe('#152 Chikorita, common. It turns up in the wild once gen 2 is on: /pokemon gen 2 turns it on.')
+  expect(await run($, 'gen 2')).toBe('Gen 2 is on. Its mons turn up in the wild too, each fetched from GitHub the first time you meet one.')
+  expect(saved.gens).toEqual([2])
+  expect(await run($, 'gen')).toBe('In the wild: gen 1 and 2. ' + how)
+  expect(await run($, 'dex')).toBe('Pokédex: seen 0, caught 0 of 251. No wild mons met yet.')
+  expect(await run($, 'dex chikorita')).toBe('#152 Chikorita, common. Not seen yet.')
+  expect(await run($, 'help')).toContain('gen <N>')
+  expect(await run($, 'gen 1')).toBe('Gen 1 is always in the wild. ' + how)
+  expect(await run($, 'gen 3')).toBe('Gen 3 isn\'t in the wild yet. ' + how)
+  expect(await run($, 'gen two')).toBe('Unknown generation "two". ' + how)
+  expect(await run($, 'gen2')).toBe('Gen 2 is off. Its mons no longer turn up in the wild. The ones in your box stay.')
+  expect(saved.gens).toEqual([])
+  // A mon named like gen isn't the command
+  expect(await run($, 'gengar')).toBe('Now showing default Gengar.')
+})
+
+test('a gen 2 mon met for the first time is fetched from gen 2 and saved as a wild fetch', { timeoutMs: 30000 }, async ($, on) => {
+  const asked = serveMons(on, { 2: ['celebi'] }, { types: ['psychic', 'grass'] })
+  const saved: Record<string, any> = { gens: [2] }
+  const { toasts } = await inBattle($, on, saved, 'celebi')
+  expect(asked.some((url) => url.includes('/gen2/celebi/'))).toBe(true)
+  expect(asked.some((url) => url.includes('/gen1/'))).toBe(false)
+  expect(saved['custom:celebi'].by).toBe('wild')
+  expect(toasts.filter((text) => APPEARED.test(text))).toEqual(['A wild Celebi (Lv. 5) appeared!'])
+})
+
+test('a gen 2 mon that can\'t be fetched gives way to a gen 1 one', { timeoutMs: 30000 }, async ($, on) => {
+  serveMons(on, {}, { status: 403 })
+  const saved: Record<string, any> = { gens: [2] }
+  const { toasts } = await inBattle($, on, saved, 'celebi')
+  const appeared = toasts.filter((text) => APPEARED.test(text))
+  expect(appeared.length).toBe(1)
+  expect(appeared[0]).not.toContain('Celebi')
+  expect(saved['custom:celebi']).toBeUndefined()
+})
+
+test('a caught Unown of any form is the one Unown entry, listed with gen 2 off too', { timeoutMs: 30000 }, async ($, on) => {
+  const saved: Record<string, any> = { gens: [2], 'custom:unown_b': fetchedAs('wild') }
+  const { clock, toasts } = await inBattle($, on, saved, 'unown_b')
+  await weaken($, clock, toasts, WEAK.replace('Pidgey', 'Unown B'))
+  await catchFoe($, clock, toasts)
+  expect(toasts).toContain('Gotcha! Unown B was caught! It joined your box.')
+  expect(saved.dex.unown.caught).toEqual(expect.any(Number))
+  expect(await run($, 'dex')).toBe('Pokédex: seen 1, caught 1 of 251.\n#201 Unown ◓')
+  await run($, 'gen 2')
+  expect(await run($, 'dex')).toBe('Pokédex: seen 1, caught 1 of 151.\n#201 Unown ◓')
+})
+
+test('in trainer mode only a mon fetched with /pokemon new is free to show, and a generation on keeps its mons to the wild', { timeoutMs: 30000 }, async ($, on) => {
+  const saved: Record<string, any> = {
+    mon: 'pidgey',
+    stats: { pidgey: { xp: 5 ** 3 } },
+    'custom:mudkip': { ...fetchedAs(), gen: 3 },
+    'custom:chikorita': fetchedAs('wild'),
+    'custom:quilava': fetchedAs('evolution'),
+  }
+  await startedWith($, on, saved, 0)
+  expect(await run($, 'mudkip')).toBe('Now showing default Mudkip.')
+  expect(await run($, 'chikorita')).toMatch(/^Trainer mode is on, so you can only switch to mons in your box\. Catch a wild Chikorita/)
+  expect(await run($, 'quilava')).toMatch(/^Trainer mode is on, so you can only switch to mons in your box\. Catch a wild Quilava/)
+
+  await run($, 'gen 2')
+  expect(await run($, 'new chikorita')).toBe('Gen 2 is on, so catch Chikorita in the wild, or turn gen 2 off with /pokemon gen 2.')
+  expect(await run($, 'new gen2')).toBe('Gen 2 is on, so catch gen 2 mons in the wild, or turn gen 2 off with /pokemon gen 2.')
+  expect(saved['custom:chikorita'].by).toBe('wild')
+
+  // Off again, /pokemon new makes it free to show without fetching it again
+  await run($, 'gen 2')
+  expect(await run($, 'new chikorita')).toBe('Chikorita is already here. /pokemon chikorita shows it.')
+  expect(saved['custom:chikorita'].by).toBe('new')
+  expect(await run($, 'chikorita')).toBe('Now showing default Chikorita.')
 })

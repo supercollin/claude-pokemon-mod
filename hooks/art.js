@@ -112,7 +112,10 @@ export function stampPixel(s, cx, py) {
 
 // The items a knocked out foe drops. A stone is one gem recolored: o rim, b body, h shine,
 // and m its mark, like the Thunder Stone's bolt. Rare Candy is a wrapped sweet (w wrapper,
-// c candy, h shine), and the Link Cable two plugs (k) on a cable (c).
+// c candy, h shine), and the Link Cable two plugs (k) on a cable (c). King's Rock is a
+// gold crown (y) set with red gems (r), the Metal Coat a steel shield (s, h shine), the
+// Dragon Scale a blue scale (d, h shine), and the Up-Grade a box (p) with a screen (w) and
+// keys (k).
 const STONE = ['.ooo.', 'obhbo', 'obmbo', 'obbbo', '.ooo.']
 const stoneOf = (o, b, m) => ({ rows: STONE, colors: { o, b, m, h: 0xffffff } })
 export const ITEM_ART = {
@@ -121,8 +124,13 @@ export const ITEM_ART = {
   thunderstone: stoneOf(0x2a7a30, 0x58b848, 0xffe040),
   leafstone: stoneOf(0x5a6a20, 0x98b040, 0x2a7a30),
   moonstone: stoneOf(0x30304a, 0x60607e, 0xd8d8f0),
+  sunstone: stoneOf(0xa02818, 0xe85020, 0xffc830),
   rarecandy: { rows: ['w.ccc.w', 'wwchcww', 'w.ccc.w'], colors: { w: 0xf0f0f8, c: 0x6a50d8, h: 0xd0c8ff } },
   linkcable: { rows: ['kk.kk', 'k...k', 'c...c', 'c...c', '.ccc.'], colors: { k: 0x9898a8, c: 0x8a50c0 } },
+  kingsrock: { rows: ['y.y.y', 'yyyyy', 'yryry', 'yyyyy'], colors: { y: 0xe0b020, r: 0xe03030 } },
+  metalcoat: { rows: ['sssss', 'shsss', 'sssss', '.sss.', '..s..'], colors: { s: 0x9aa4b4, h: 0xffffff } },
+  dragonscale: { rows: ['..d..', '.dhd.', 'ddhdd', '.ddd.', '..d..'], colors: { d: 0x3068d0, h: 0xa8d8ff } },
+  upgrade: { rows: ['ppppp', 'pwwwp', 'ppppp', 'pkpkp', 'ppppp'], colors: { p: 0x5060c8, w: 0xd8f0ff, k: 0x202838 } },
 }
 
 export const SPARKLE = { s: 0xfff2a0, w: 0xffffff }

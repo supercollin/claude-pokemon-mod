@@ -1,4 +1,4 @@
-import { DEX, dexKey, dexNumber, isCaught, tierOf } from './dex.js'
+import { BUNDLED_GENS, dexKey, dexNumber, dexOf, GENS, genOf, isCaught, NATIONAL_DEX, tierOf } from './dex.js'
 import { evolutionsOf } from './evolutions.js'
 import { MAX_LEVEL, xpAt } from './levels.js'
 import { iconsFor, statNow } from './meters.js'
@@ -13,10 +13,23 @@ import { hasRunAway, isDead, isFainted, isGone } from './status.js'
 // Joins items as "A", "A or B", or "A, B, or C"
 export const orList = (items) => (items.length < 3 ? items.join(' or ') : items.slice(0, -1).join(', ') + ', or ' + items.at(-1))
 
-// How one entry evolves the mon, like "Jolteon with a Thunder Stone"
+// A name after "a" or "an", like "a Fire Stone" or "an Up-Grade"
+export const withArticle = (name) => (/^[aeiou]/i.test(name) ? 'an ' : 'a ') + name
+
+const MORE_TEXTS = {
+  food: ' with more food than hearts',
+  happiness: ' with more hearts than food',
+  neither: ' with as much food as hearts',
+}
+
+// How one entry evolves the mon, like "Jolteon with a Thunder Stone" or "Steelix by trade
+// holding a Metal Coat"
 export function evolutionText(entry) {
   const into = displayName(entry.into)
-  if (entry.item) return into + ' with a ' + entry.item
+  if (entry.happy) return into + ' at a level-up with full hearts' + (entry.time ? ' by ' + entry.time : '')
+  if (entry.more) return into + ' at Lv. ' + entry.level + MORE_TEXTS[entry.more]
+  if (entry.trade && entry.item) return into + ' by trade holding ' + withArticle(entry.item)
+  if (entry.item) return into + ' with ' + withArticle(entry.item)
   return entry.trade ? into + ' by trade' : into + ' at Lv. ' + entry.level
 }
 
@@ -76,14 +89,17 @@ function graveyardText(graveyard) {
 
 // The Pokédex as saved, { [dexKey]: { seen, caught?, shiny? } }, where shiny marks a shiny
 // catch. The whole dex is a count, the caught mons in dex order, and the ones only seen.
-// One mon is its number, tier, and status.
-export function dexText(dex, wanted, graveyard) {
-  const entries = DEX.filter((key) => dex[key] && typeof dex[key] === 'object')
+// One mon is its number, tier, and status. The count is of the generations in the wild,
+// gens, and mons met stay listed once their generation is off.
+export function dexText(dex, wanted, graveyard, gens = BUNDLED_GENS) {
+  const entries = NATIONAL_DEX.filter((key) => dex[key] && typeof dex[key] === 'object')
   if (wanted) {
-    if (!MONS.includes(wanted)) return 'Unknown mon "' + wanted + '". See /pokemon list for every mon.'
+    if (!MONS.includes(wanted) && !NATIONAL_DEX.includes(wanted)) return 'Unknown mon "' + wanted + '". See /pokemon list for every mon.'
     const key = dexKey(wanted)
-    if (!DEX.includes(key)) return displayName(wanted) + " isn't in the Pokédex. Only gen 1 mons appear in the wild."
+    if (!NATIONAL_DEX.includes(key)) return displayName(wanted) + " isn't in the Pokédex. Only gen " + andList(GENS.map(String)) + ' mons appear in the wild.'
     const entry = entries.includes(key) ? dex[key] : null
+    const gen = genOf(key)
+    if (!entry && !gens.includes(gen)) return dexLabel(key) + ', ' + tierOf(key) + '. It turns up in the wild once gen ' + gen + ' is on: /pokemon gen ' + gen + ' turns it on.'
     const status = isCaught(entry) ? 'Caught ◓' + (entry.shiny ? ' ✦' : '') + '.' : entry ? 'Seen, not caught yet.' : 'Not seen yet.'
     const mark = dexMark(key)
     const lost = mark === LOST_MARK ? ' Gone for good †. Catch a new one to raise it again.' : mark ? ' Ran away. It may turn up in the wild.' : ''
@@ -92,7 +108,7 @@ export function dexText(dex, wanted, graveyard) {
   const caught = entries.filter((key) => isCaught(dex[key]))
   const seen = entries.filter((key) => !isCaught(dex[key]))
   const shiny = caught.filter((key) => dex[key].shiny).length
-  const head = 'Pokédex: seen ' + entries.length + ', caught ' + caught.length + ' of ' + DEX.length + (shiny ? ' (' + shiny + ' shiny)' : '') + '.'
+  const head = 'Pokédex: seen ' + entries.length + ', caught ' + caught.length + ' of ' + dexOf(gens).length + (shiny ? ' (' + shiny + ' shiny)' : '') + '.'
   const rest = graveyardText(graveyard)
   if (entries.length === 0) return head + ' No wild mons met yet.' + rest
   const lines = caught.map((key) => dexLabel(key) + ' ◓' + (dex[key].shiny ? ' ✦' : '') + dexMark(key))
@@ -125,7 +141,7 @@ export const HELP = [
     ['roar', 'Roar to send the wild mon away'],
   ]],
   ['Evolve', [
-    ['evolve [mon]', 'Evolve with a stone or a Link Cable from your bag, or pick what Eevee becomes'],
+    ['evolve [mon]', 'Evolve with a stone, a Link Cable, or a held item from your bag, or pick what Eevee becomes'],
     ['stop', 'Cancel an evolution'],
   ]],
   ['Items', [
@@ -150,6 +166,7 @@ export const HELP = [
     ['autoevolve', 'Evolve on its own at its level', () => onOff(S.autoEvolve)],
     ['nuzlocke', 'A fainted mon is lost for good', () => onOff(S.nuzlockeOn)],
     ['trainer', 'Switch only to mons in your box', () => onOff(S.trainerOn)],
+    ['gen <N>', 'Turn a generation\'s mons in the wild on or off, each fetched the first time you meet one', () => 'gen ' + andList(S.wildGens.map(String))],
   ]],
 ]
 // The hidden debug options, at the top of /pokemon help only while debug is on

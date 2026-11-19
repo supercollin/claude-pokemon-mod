@@ -1,13 +1,32 @@
 // The gen 1 evolutions follow the Red and Blue rules and are keyed by sprite key, in
-// Pokédex order. Each entry is one thing the mon can become: { into, level } on level-up,
-// { into, item } with an evolution stone, or { into, trade: true }. A mon that doesn't
-// evolve has no entry.
+// Pokédex order, followed by gen 2's. Each entry is one thing the mon can become: { into, level } on level-up,
+// { into, item } with an evolution stone, { into, trade: true }, { into, trade: true,
+// item } for a trade holding an item, which takes that item and no Link Cable, or
+// { into, happy: true } on a level-up with full hearts, with time: 'day' or 'night' when
+// only then. { into, level, more } stands in for Tyrogue's stats: at that level, more food
+// icons than hearts, more hearts than food, or as many of each. A mon that doesn't evolve
+// has no entry.
 
 const FIRST_LEVEL = 5
 
-// Female sprites take their base form's place in the family, so raichu comes from
-// pikachu and venusaur_female from ivysaur
-export const BASE_FORM = { pikachu_female: 'pikachu', venusaur_female: 'venusaur' }
+// The letters and marks each of Unown's forms is a folder for, like unown_a
+export const UNOWN_FORMS = [...'abcdefghijklmnopqrstuvwxyz', 'exclamation', 'question']
+
+// Female sprites and other forms take their base form's place in the family, so raichu
+// comes from pikachu and venusaur_female from ivysaur. Heracross, Wobbuffet, and Unown
+// have no folder of their own, only their forms'.
+export const BASE_FORM = {
+  pikachu_female: 'pikachu',
+  venusaur_female: 'venusaur',
+  meganium_female: 'meganium',
+  pichu_spiky_eared: 'pichu',
+  steelix_female: 'steelix',
+  heracross_male: 'heracross',
+  heracross_female: 'heracross',
+  wobbuffet_male: 'wobbuffet',
+  wobbuffet_female: 'wobbuffet',
+  ...Object.fromEntries(UNOWN_FORMS.map((form) => ['unown_' + form, 'unown'])),
+}
 
 export const EVOLUTIONS = {
   bulbasaur: [{ into: 'ivysaur', level: 16 }],
@@ -36,8 +55,12 @@ export const EVOLUTIONS = {
   vulpix: [{ into: 'ninetales', item: 'Fire Stone' }],
   jigglypuff: [{ into: 'wigglytuff', item: 'Moon Stone' }],
   zubat: [{ into: 'golbat', level: 22 }],
+  golbat: [{ into: 'crobat', happy: true }],
   oddish: [{ into: 'gloom', level: 21 }],
-  gloom: [{ into: 'vileplume', item: 'Leaf Stone' }],
+  gloom: [
+    { into: 'vileplume', item: 'Leaf Stone' },
+    { into: 'bellossom', item: 'Sun Stone' },
+  ],
   paras: [{ into: 'parasect', level: 24 }],
   venonat: [{ into: 'venomoth', level: 31 }],
   diglett: [{ into: 'dugtrio', level: 26 }],
@@ -46,7 +69,10 @@ export const EVOLUTIONS = {
   mankey: [{ into: 'primeape', level: 28 }],
   growlithe: [{ into: 'arcanine', item: 'Fire Stone' }],
   poliwag: [{ into: 'poliwhirl', level: 25 }],
-  poliwhirl: [{ into: 'poliwrath', item: 'Water Stone' }],
+  poliwhirl: [
+    { into: 'poliwrath', item: 'Water Stone' },
+    { into: 'politoed', trade: true, item: "King's Rock" },
+  ],
   abra: [{ into: 'kadabra', level: 16 }],
   kadabra: [{ into: 'alakazam', trade: true }],
   machop: [{ into: 'machoke', level: 28 }],
@@ -57,7 +83,10 @@ export const EVOLUTIONS = {
   geodude: [{ into: 'graveler', level: 25 }],
   graveler: [{ into: 'golem', trade: true }],
   ponyta: [{ into: 'rapidash', level: 40 }],
-  slowpoke: [{ into: 'slowbro', level: 37 }],
+  slowpoke: [
+    { into: 'slowbro', level: 37 },
+    { into: 'slowking', trade: true, item: "King's Rock" },
+  ],
   magnemite: [{ into: 'magneton', level: 30 }],
   doduo: [{ into: 'dodrio', level: 31 }],
   seel: [{ into: 'dewgong', level: 34 }],
@@ -65,40 +94,136 @@ export const EVOLUTIONS = {
   shellder: [{ into: 'cloyster', item: 'Water Stone' }],
   gastly: [{ into: 'haunter', level: 25 }],
   haunter: [{ into: 'gengar', trade: true }],
+  onix: [{ into: 'steelix', trade: true, item: 'Metal Coat' }],
   drowzee: [{ into: 'hypno', level: 26 }],
   krabby: [{ into: 'kingler', level: 28 }],
   voltorb: [{ into: 'electrode', level: 30 }],
   exeggcute: [{ into: 'exeggutor', item: 'Leaf Stone' }],
+  chansey: [{ into: 'blissey', happy: true }],
   cubone: [{ into: 'marowak', level: 28 }],
   koffing: [{ into: 'weezing', level: 35 }],
   rhyhorn: [{ into: 'rhydon', level: 42 }],
   horsea: [{ into: 'seadra', level: 32 }],
+  seadra: [{ into: 'kingdra', trade: true, item: 'Dragon Scale' }],
   goldeen: [{ into: 'seaking', level: 33 }],
   staryu: [{ into: 'starmie', item: 'Water Stone' }],
+  scyther: [{ into: 'scizor', trade: true, item: 'Metal Coat' }],
   magikarp: [{ into: 'gyarados', level: 20 }],
   eevee: [
     { into: 'vaporeon', item: 'Water Stone' },
     { into: 'jolteon', item: 'Thunder Stone' },
     { into: 'flareon', item: 'Fire Stone' },
+    { into: 'espeon', happy: true, time: 'day' },
+    { into: 'umbreon', happy: true, time: 'night' },
   ],
+  porygon: [{ into: 'porygon2', trade: true, item: 'Up-Grade' }],
   omanyte: [{ into: 'omastar', level: 40 }],
   kabuto: [{ into: 'kabutops', level: 40 }],
   dratini: [{ into: 'dragonair', level: 30 }],
   dragonair: [{ into: 'dragonite', level: 55 }],
+
+  // Gen 2, by Gold and Silver rules. These mons aren't bundled: /pokemon new fetches
+  // them, and a mon evolving into one fetches it first.
+  chikorita: [{ into: 'bayleef', level: 16 }],
+  bayleef: [{ into: 'meganium', level: 32 }],
+  cyndaquil: [{ into: 'quilava', level: 14 }],
+  quilava: [{ into: 'typhlosion', level: 36 }],
+  totodile: [{ into: 'croconaw', level: 18 }],
+  croconaw: [{ into: 'feraligatr', level: 30 }],
+  sentret: [{ into: 'furret', level: 15 }],
+  hoothoot: [{ into: 'noctowl', level: 20 }],
+  ledyba: [{ into: 'ledian', level: 18 }],
+  spinarak: [{ into: 'ariados', level: 22 }],
+  chinchou: [{ into: 'lanturn', level: 27 }],
+  pichu: [{ into: 'pikachu', happy: true }],
+  cleffa: [{ into: 'clefairy', happy: true }],
+  igglybuff: [{ into: 'jigglypuff', happy: true }],
+  togepi: [{ into: 'togetic', happy: true }],
+  natu: [{ into: 'xatu', level: 25 }],
+  mareep: [{ into: 'flaaffy', level: 15 }],
+  flaaffy: [{ into: 'ampharos', level: 30 }],
+  marill: [{ into: 'azumarill', level: 18 }],
+  hoppip: [{ into: 'skiploom', level: 18 }],
+  skiploom: [{ into: 'jumpluff', level: 27 }],
+  sunkern: [{ into: 'sunflora', item: 'Sun Stone' }],
+  wooper: [{ into: 'quagsire', level: 20 }],
+  pineco: [{ into: 'forretress', level: 31 }],
+  snubbull: [{ into: 'granbull', level: 23 }],
+  teddiursa: [{ into: 'ursaring', level: 30 }],
+  slugma: [{ into: 'magcargo', level: 38 }],
+  swinub: [{ into: 'piloswine', level: 33 }],
+  remoraid: [{ into: 'octillery', level: 25 }],
+  houndour: [{ into: 'houndoom', level: 24 }],
+  phanpy: [{ into: 'donphan', level: 25 }],
+  tyrogue: [
+    { into: 'hitmonlee', level: 20, more: 'food' },
+    { into: 'hitmonchan', level: 20, more: 'happiness' },
+    { into: 'hitmontop', level: 20, more: 'neither' },
+  ],
+  smoochum: [{ into: 'jynx', level: 30 }],
+  elekid: [{ into: 'electabuzz', level: 30 }],
+  magby: [{ into: 'magmar', level: 30 }],
+  larvitar: [{ into: 'pupitar', level: 30 }],
+  pupitar: [{ into: 'tyranitar', level: 55 }],
 }
 
-// PARENTS maps each evolved mon to the mon it comes from and the entry that takes it there
+// The mons EVOLUTIONS names that aren't bundled, as vscode-pokemon names their folders
+// under media/gen<N>. scripts/check-data.mjs holds every unbundled name to this list.
+export const FETCHED = [
+  'ampharos', 'ariados', 'azumarill', 'bayleef', 'bellossom', 'blissey', 'chikorita', 'chinchou', 'cleffa', 'crobat',
+  'croconaw', 'cyndaquil', 'donphan', 'elekid', 'espeon', 'feraligatr', 'flaaffy', 'forretress', 'furret', 'granbull',
+  'hitmontop', 'hoothoot', 'hoppip', 'houndoom', 'houndour', 'igglybuff', 'jumpluff', 'kingdra', 'lanturn', 'larvitar',
+  'ledian', 'ledyba', 'magby', 'magcargo', 'mareep', 'marill', 'meganium', 'natu', 'noctowl', 'octillery',
+  'phanpy', 'pichu', 'piloswine', 'pineco', 'politoed', 'porygon2', 'pupitar', 'quagsire', 'quilava', 'remoraid',
+  'scizor', 'sentret', 'skiploom', 'slowking', 'slugma', 'smoochum', 'snubbull', 'spinarak', 'steelix', 'sunflora',
+  'sunkern', 'swinub', 'teddiursa', 'togepi', 'togetic', 'totodile', 'typhlosion', 'tyranitar', 'tyrogue', 'umbreon',
+  'ursaring', 'wooper', 'xatu',
+]
+
+// PARENTS maps each evolved mon to the mon it comes from and the entry that takes it there.
+// A bundled mon keeps no fetched parent, like Jynx from Smoochum, so its start level and
+// wild tier stay as in gen 1.
 const PARENTS = new Map()
 for (const [from, entries] of Object.entries(EVOLUTIONS)) {
   if (BASE_FORM[from]) continue
-  for (const entry of entries) PARENTS.set(entry.into, { from, entry })
+  for (const entry of entries) {
+    if (FETCHED.includes(from) && !FETCHED.includes(entry.into)) continue
+    PARENTS.set(entry.into, { from, entry })
+  }
 }
 
 const parentOf = (mon) => PARENTS.get(BASE_FORM[mon] ?? mon)
 
 export const evolutionsOf = (mon) => EVOLUTIONS[mon] ?? []
 
-export const levelEvolutionOf = (mon) => evolutionsOf(mon).find((entry) => entry.level) ?? null
+// The evolution a level alone reaches, leaving out Tyrogue's that also weigh the meters
+export const levelEvolutionOf = (mon) => evolutionsOf(mon).find((entry) => entry.level && !entry.more) ?? null
+
+// An evolution a level-up reaches by the meters or the clock, kept on the record as readyFor
+export const isLevelUpOnly = (entry) => Boolean(entry.happy || entry.more)
+
+// Which meter has more icons, as a Tyrogue entry's more names it
+export function moreOf(food, hearts) {
+  if (food > hearts) return 'food'
+  if (hearts > food) return 'happiness'
+  return 'neither'
+}
+
+// Gold and Silver's day runs from 4:00 to 18:00 on the local clock, and night the rest
+export function timeOfDay(ms) {
+  const hour = new Date(ms).getHours()
+  return hour >= 4 && hour < 18 ? 'day' : 'night'
+}
+
+// The evolution a level-up reaches by the meters or the clock, or null: one by friendship
+// with full hearts at this time of day, or Tyrogue's at its level by which meter has more
+export function levelUpEvolutionOf(mon, { level, food, hearts, full, time }) {
+  const reached = (entry) => {
+    if (entry.happy) return hearts === full && (!entry.time || entry.time === time)
+    return Boolean(entry.more) && level >= entry.level && entry.more === moreOf(food, hearts)
+  }
+  return evolutionsOf(mon).find(reached) ?? null
+}
 
 export const preEvolutionOf = (mon) => parentOf(mon)?.from ?? null
 

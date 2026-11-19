@@ -1,5 +1,5 @@
 import { TICK_MS } from './constants.js'
-import { levelEvolutionOf, startLevel } from './evolutions.js'
+import { evolutionsOf, isLevelUpOnly, levelEvolutionOf, startLevel } from './evolutions.js'
 import { levelAt, MAX_LEVEL, xpAt } from './levels.js'
 import { displayName } from './names.js'
 import { S } from './state.js'
@@ -21,10 +21,14 @@ export const levelOf = (name) => levelAt(xpOf(name))
 // The level line above the meters, at most five columns wide
 export const levelLine = () => (levelOf(S.mon) < MAX_LEVEL ? 'Lv ' : 'Lv') + levelOf(S.mon)
 
-// The mon its level lets it become, while it isn't evolving already
+// The mon its level lets it become, or a level-up by the meters or the clock did, while it
+// isn't evolving already
 export function readyToEvolve() {
+  if (S.evolving || isDown()) return null
   const evolution = levelEvolutionOf(S.mon)
-  return evolution && levelOf(S.mon) >= evolution.level && !S.evolving && !isDown() ? evolution.into : null
+  if (evolution && levelOf(S.mon) >= evolution.level) return evolution.into
+  const reached = S.stats[S.mon]?.readyFor
+  return evolutionsOf(S.mon).some((entry) => isLevelUpOnly(entry) && entry.into === reached) ? reached : null
 }
 
 export const HEAL_MS = 5 * 60 * 1000

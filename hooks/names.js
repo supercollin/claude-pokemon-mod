@@ -6,6 +6,16 @@ const DISPLAY_NAMES = {
   farfetchd: "Farfetch'd",
   pikachu_female: 'Pikachu',
   venusaur_female: 'Venusaur',
+  hooh: 'Ho-Oh',
+  meganium_female: 'Meganium',
+  steelix_female: 'Steelix',
+  pichu_spiky_eared: 'Pichu',
+  heracross_male: 'Heracross',
+  heracross_female: 'Heracross',
+  wobbuffet_male: 'Wobbuffet',
+  wobbuffet_female: 'Wobbuffet',
+  unown_exclamation: 'Unown !',
+  unown_question: 'Unown ?',
 }
 
 export function displayName(mon) {
