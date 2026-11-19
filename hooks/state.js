@@ -38,6 +38,8 @@ export const S = {
   // a band shrunk to fit instead. The scene runs on under them, so a bubble, hearts, and Zs
   // can float over the meters, but the mon stays in the strip.
   panel: 0,
+  // Whether the panel has a row over the level for the mon's sex
+  sexRow: false,
   // Empty columns drawn left of the strip, so a bubble always fits on the left of the head.
   // They take only band width that's free, and none in a band shrunk to fit.
   margin: 0,

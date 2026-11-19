@@ -239,9 +239,9 @@ export function quickTools(on) {
   on('tool.call', () => ({ result: { stdout: 'ok', stderr: '', interrupted: false } }))
 }
 
-// Start a session with a wild foe standing in battle. saved is the store itself, so the
-// test reads what the session writes.
-export async function inBattle($, on, saved: Record<string, any>, foe = 'pidgey') {
+// Start a session with a wild foe standing in battle, a male Pidgey unless foe says
+// otherwise. saved is the store itself, so the test reads what the session writes.
+export async function inBattle($, on, saved: Record<string, any>, foe = 'pidgey male') {
   const toasts = toastsOf(on)
   quickTools(on)
   Object.assign(saved, { wander: false, debug: true, ...saved })

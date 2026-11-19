@@ -13,6 +13,7 @@ import { BUNDLED_GENS, dexKey, GENS, genOf, isCaught, mergedDexEntry, pickWild, 
 import { catchCommand, foeMoves, roarCommand, runawayFoe, wildMoves, wildName } from './encounter.js'
 import { evolutionsOf, isLevelUpOnly, levelEvolutionOf, levelUpEvolutionOf, startLevel, timeOfDay } from './evolutions.js'
 import { SPRITES } from './frames.js'
+import { femaleEighthsOf, SEXES, sexedSprite, sexFor } from './genders.js'
 import {
   addedTo, bagOf, bagText, dropOf, findItem, itemFor, itemName, ITEMS, LONG_TURN_CANDY_ODDS, migratedBag, RARE_CANDY, takenFrom,
 } from './items.js'
@@ -27,7 +28,7 @@ import {
 import { joinParty } from './party.js'
 import {
   conditionOf, downReply, fullNameOf, goneLine, HEAL_MS, healingReply, levelOf, nameOf, readyToEvolve, revivedMeters,
-  settleHeal, xpOf,
+  lacksSex, settleHeal, sexedRecord, sexOf, xpOf,
 } from './records.js'
 import { addCustom, MONS, VARIANTS } from './sprites.js'
 import { S } from './state.js'
@@ -120,8 +121,9 @@ const freeToShow = (entry) => Boolean(entry?.sprite) && (entry.by ?? 'new') === 
 // A level evolution about to fall due, once the mon it becomes is here. One that can't be
 // fetched now, or whose mon was switched away meanwhile, isn't due: the next level-up,
 // showing the mon again, or /pokemon evolve tries again.
-async function dueEvolution($, into) {
+async function dueEvolution($, entryInto) {
   const mon = S.mon
+  const into = evolvedSprite(entryInto)
   try {
     await ensureMon($, into)
   } catch (err) {
@@ -130,6 +132,10 @@ async function dueEvolution($, into) {
   }
   return S.mon === mon ? into : null
 }
+
+// The sprite an evolution entry's mon shows for the shown mon's sex, which carries over,
+// like a female Bayleef's Meganium as meganium_female
+const evolvedSprite = (into) => sexedSprite(into, sexOf(S.mon))
 
 // Play the evolve effect with the evolved mon swapped in, in a band grown to fit both.
 // The item it needs, if any, leaves the bag once the evolution is done.
@@ -251,14 +257,15 @@ async function evolveCommand($, wanted) {
     return { text: name + ' needs ' + withArticle(itemName(item)) + ' to evolve into ' + displayName(entry.into) + '. Wild mons you knock out drop items now and then, and /pokemon bag lists yours.' }
   }
   const mon = S.mon
+  const into = evolvedSprite(entry.into)
   try {
-    await ensureMon($, entry.into)
+    await ensureMon($, into)
   } catch (err) {
-    return { text: name + ' can\'t evolve into ' + displayName(entry.into) + ' yet: ' + (err?.message ?? String(err)) }
+    return { text: name + ' can\'t evolve into ' + displayName(into) + ' yet: ' + (err?.message ?? String(err)) }
   }
   if (S.mon !== mon) return { text: name + ' isn\'t on show anymore, so it didn\'t evolve.' }
   if (S.attack || S.food) return { text: name + ' is busy right now.' }
-  startEvolution($, entry.into, item)
+  startEvolution($, into, item)
   if (entry.trade && entry.item) return { text: 'You trade ' + name + ' holding ' + withArticle(entry.item) + ' to a friend, and they trade it right back.' }
   if (entry.item) return { text: 'You use ' + withArticle(entry.item) + ' on ' + name + '.' }
   if (entry.trade) return { text: 'You trade ' + name + ' to a friend, and they trade it right back.' }
@@ -358,7 +365,8 @@ async function caughtFoe($, caught) {
     $.ui.toast('Gotcha! ' + name + ' was caught! ' + name + ' is already in your box, so it\'s marked in your Pokédex.')
     return
   }
-  S.stats[species] = { xp: xpAt(startLevel(species)), caught: true, ...(species === S.mon ? {} : { parked: true }) }
+  const sex = caught.sex ?? sexFor(species)
+  S.stats[species] = { xp: xpAt(startLevel(species)), caught: true, ...(sex ? { sex } : {}), ...(species === S.mon ? {} : { parked: true }) }
   await saveRecords($, [species])
   $.ui.toast('Gotcha! ' + name + ' was caught! It joined your box.')
 }
@@ -533,25 +541,36 @@ async function metRunaway($, name) {
   await saveRecords($, [name])
 }
 
-// The hidden debug spawn, /pokemon wild [<mon>] [shiny]. Null when debug is off, so it
-// reads as an unknown option. A mon that ran away comes as itself.
+// The hidden debug spawn, /pokemon wild [<mon>] [shiny] [male|female]. Null when debug is
+// off, so it reads as an unknown option. A mon that ran away comes as itself, and a sex
+// its species can't have is left out.
 async function wildCommand($, rest) {
   if ((await $.store.get('debug')) !== true) return null
   const words = rest.split(/\s+/).filter(Boolean)
-  const name = words.find((word) => word !== 'shiny')
+  const name = words.find((word) => word !== 'shiny' && !SEXES.includes(word))
   if (name && !MONS.includes(name) && genOf(name) === null) return { text: 'Unknown mon "' + name + '". See /pokemon list for every mon.' }
   if (S.wild) return { text: 'A wild ' + displayName(S.wild.mon) + ' is already here.' }
   if (isTuckedIn()) return { text: nameOf(S.mon) + ' is asleep.' }
   if (isDown()) return downReply()
   if (name) await freshen($, [name])
   const own = name && hasRunAway(name) ? runawayFoe(name) : null
-  const asked = name ? { mon: name, variant: 'default', key: dexKey(name), tier: tierOf(name), level: startLevel(name) } : pickWild(Math.random, S.wildGens)
+  const asked = name ? askedWild(name, words.find((word) => SEXES.includes(word))) : pickWild(Math.random, S.wildGens)
   const pick = own ?? (await arrivingPick($, asked))
   if (words.includes('shiny')) pick.variant = 'shiny'
   if (!battleFits(pick.mon, pick.variant)) return { text: 'The band is too narrow for a wild ' + displayName(pick.mon) + '. Widen the pane and try again.' }
   S.wild = newWild(pick, Math.floor(Math.random() * 0x7fffffff))
   S.wanderTarget = null
   return { text: 'A wild ' + displayName(pick.mon) + ' is on its way.' }
+}
+
+// The debug spawn's mon, in the sex asked for when its species has it, shown as its
+// sprite for that sex
+function askedWild(name, wanted) {
+  const eighths = femaleEighthsOf(name)
+  const possible = { male: eighths !== null && eighths < 8, female: eighths !== null && eighths > 0 }
+  const sex = possible[wanted] ? wanted : sexFor(name)
+  const mon = sexedSprite(name, sex)
+  return { mon, sex, variant: 'default', key: dexKey(mon), tier: tierOf(mon), level: startLevel(mon) }
 }
 
 // The hidden debug faint, /pokemon kill. It faints the shown mon as neglect would, or
@@ -635,6 +654,7 @@ async function saveRecords($, names) {
     const merged = saved && typeof saved === 'object' ? { ...saved } : {}
     const started = names.filter((name) => S.stats[name] && !merged[name])
     for (const name of names) {
+      if (S.stats[name]) S.stats[name] = sexedRecord(name, S.stats[name])
       if (S.stats[name]) merged[name] = S.stats[name]
       else delete merged[name]
     }
@@ -652,6 +672,13 @@ async function saveRecords($, names) {
   } finally {
     statSaving -= 1
   }
+}
+
+// Records saved before mons had a sex get one now, for good: the one the sprite pins down,
+// like a female Pikachu's, or one drawn by the species' share of females
+async function sexRecords($) {
+  const unsexed = Object.keys(S.stats).filter((name) => lacksSex(name, S.stats[name]))
+  if (unsexed.length > 0) await saveRecords($, unsexed)
 }
 
 // 'mon' is the last one picked in any session, and a new session starts with it. A mon
@@ -1812,6 +1839,7 @@ export function register(on) {
     if (S.paneOn) openPane($, await $.store.get('paneColumns')).catch((err) => logOnce($, err))
     const savedStats = await $.store.get('stats')
     if (savedStats && typeof savedStats === 'object') S.stats = savedStats
+    await sexRecords($).catch((err) => logOnce($, err))
     S.nowMs = await $.clock.now()
     S.firstShown.set(S.mon, S.nowMs)
     S.ink = await themeInk($)

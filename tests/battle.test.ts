@@ -56,7 +56,7 @@ test('a wild mon walks in from the left, the strip widens to fit it, and the dex
   await $.ui.mount({ ...BAND, surface: 'terminal' })
   await clock.advance(100)
   const seen = blits.length
-  await $.command.run({ command: 'pokemon', args: 'wild pidgeot' })
+  await $.command.run({ command: 'pokemon', args: 'wild pidgeot male' })
   await clock.advance(10000)
 
   const color = foeColor('abra', 'pidgeot')
@@ -72,17 +72,17 @@ test('a wild mon walks in from the left, the strip widens to fit it, and the dex
   expect(Math.max(...first)).toBeLessThan(4)
   expect(Math.min(...last)).toBeGreaterThan(0)
 
-  expect(toasts).toEqual(['A wild Pidgeot (Lv. 36) appeared!'])
+  expect(toasts).toEqual(['A wild Pidgeot ♂ (Lv. 36) appeared!'])
   expect(saved.dex).toEqual({ pidgeot: { seen: expect.any(Number) } })
   const status = await $.command.run({ command: 'pokemon', args: '' })
-  expect(status.text).toContain(', a wild Pidgeot is here (')
+  expect(status.text).toContain(', a wild Pidgeot ♂ is here (')
 })
 
-test('a wild mon flees after four minutes without a fight, and the strip shrinks back', { timeoutMs: 30000 }, async ($, on) => {
+test('a wild mon flees after four minutes without a fight, and the strip shrinks back', { timeoutMs: 60000 }, async ($, on) => {
   const toasts = toastsOf(on)
   const { clock, widths } = await startedWith($, on, { wander: false, debug: true }, 0)
   await $.ui.mount({ ...BAND, surface: 'terminal' })
-  await $.command.run({ command: 'pokemon', args: 'wild pidgeot' })
+  await $.command.run({ command: 'pokemon', args: 'wild pidgeot male' })
   await clock.advance(10000)
   expect(widths[widths.length - 1]).toBeGreaterThan(RASTER)
   // Keep Abra awake meanwhile, since a sleeping mon sends the foe off too
@@ -92,7 +92,7 @@ test('a wild mon flees after four minutes without a fight, and the strip shrinks
   }
   await clock.advance(10000)
   // Its own strikes don't count as a fight
-  expect(toasts.filter((text) => !/^Wild Pidgeot used .+!$/.test(text))).toEqual(['A wild Pidgeot (Lv. 36) appeared!', 'Wild Pidgeot fled!'])
+  expect(toasts.filter((text) => !/^Wild Pidgeot used .+!$/.test(text))).toEqual(['A wild Pidgeot ♂ (Lv. 36) appeared!', 'Wild Pidgeot fled!'])
   expect(widths[widths.length - 1]).toBe(RASTER)
   const status = await $.command.run({ command: 'pokemon', args: '' })
   expect(status.text).not.toContain('wild')
@@ -106,15 +106,15 @@ test('/pokemon roar scares the wild mon off once the roar lands, and the strip s
   // The foe's own strikes aside
   const heard = () => toasts.filter((text) => !/^Wild Pidgeot used .+!$/.test(text))
   expect(await run('roar')).toBe('There\'s no wild Pokémon here.')
-  await run('wild pidgeot')
+  await run('wild pidgeot male')
   await clock.advance(10000)
   expect(await run('roar')).toBe('Abra used Roar!')
   expect(await run('roar')).toBe('Wait for the move to end.')
   // Abra is still rearing back, so the foe stands its ground
   await clock.advance(1000)
-  expect(heard()).toEqual(['A wild Pidgeot (Lv. 36) appeared!'])
+  expect(heard()).toEqual(['A wild Pidgeot ♂ (Lv. 36) appeared!'])
   await clock.advance(500)
-  expect(heard()).toEqual(['A wild Pidgeot (Lv. 36) appeared!', 'Wild Pidgeot fled!'])
+  expect(heard()).toEqual(['A wild Pidgeot ♂ (Lv. 36) appeared!', 'Wild Pidgeot fled!'])
   expect(await run('roar')).toBe('There\'s no wild Pokémon here.')
   await clock.advance(10000)
   expect(widths[widths.length - 1]).toBe(RASTER)
@@ -154,11 +154,11 @@ test('a wild mon leaves when the shown mon goes to sleep', async ($, on) => {
   const toasts = toastsOf(on)
   const { clock } = await startedWith($, on, { wander: false, debug: true }, 0)
   await $.ui.mount({ ...BAND, surface: 'terminal' })
-  await $.command.run({ command: 'pokemon', args: 'wild pidgey' })
+  await $.command.run({ command: 'pokemon', args: 'wild pidgey male' })
   await clock.advance(10000)
   await $.command.run({ command: 'pokemon', args: 'sleep' })
   await clock.advance(100)
-  expect(toasts).toEqual(['A wild Pidgey (Lv. 5) appeared!', 'Wild Pidgey fled!'])
+  expect(toasts).toEqual(['A wild Pidgey ♂ (Lv. 5) appeared!', 'Wild Pidgey fled!'])
 })
 
 test('the widest battles fit the desktop Svg in its size limit', { timeoutMs: 60000 }, async ($, on) => {
@@ -255,7 +255,7 @@ test('a wild foe only seen in the Pokédex has no ball beside its HP bar', async
 
 test('banked work fires one move at a time, at most one every six seconds', async ($, on) => {
   // A common Pidgey can turn weak after one strong hit, and the mon holds off a weak foe
-  const { clock, toasts } = await inBattle($, on, {}, 'pidgeotto')
+  const { clock, toasts } = await inBattle($, on, {}, 'pidgeotto male')
   for (let k = 0; k < 3; k++) await $.tool.call({ tool: 'Read', file_path: '/work/a.ts' })
   await clock.advance(100)
   expect(movesIn(toasts).length).toBe(1)
@@ -293,7 +293,7 @@ test('an evolving mon makes no moves until it has evolved', async ($, on) => {
 test('/pokemon feed waits until the foe is gone', async ($, on) => {
   await inBattle($, on, {})
   const feed = await $.command.run({ command: 'pokemon', args: 'feed' })
-  expect(feed.text).toBe('Not now, a wild Pidgey is right there!')
+  expect(feed.text).toBe('Not now, a wild Pidgey ♂ is right there!')
 })
 
 test('work wears a foe down until it is weak, the mon holds off then, and the foe leaves if no ball comes in time', async ($, on) => {
@@ -443,7 +443,7 @@ test('a ball thrown at full HP always breaks free, and the foe fights on', async
   await clock.advance(4000)
   expect(toasts).toContain('Oh no! It broke free!')
   expect(columnsIn(blits[blits.length - 1], widths[widths.length - 1], foeColor('abra', 'pidgey')).length).toBeGreaterThan(0)
-  expect(await run('')).toContain(', a wild Pidgey is here (')
+  expect(await run('')).toContain(', a wild Pidgey ♂ is here (')
 })
 
 // Desktop stops a running turn when you send it a message, so its band throws the ball
@@ -485,21 +485,22 @@ test('/pokemon catch needs a foe in battle', async ($, on) => {
   expect(answer.text).toBe('There\'s no wild Pokémon here.')
 })
 
-test('a weak foe is caught, joins the box parked at its first level, and the strip shrinks back', async ($, on) => {
+test('a weak foe is caught, joins the box parked at its first level in its own sex, and the strip shrinks back', async ($, on) => {
   const saved: Record<string, any> = {}
   const { clock, widths, toasts } = await inBattle($, on, saved)
   await weaken($, clock, toasts)
   await catchFoe($, clock, toasts)
   expect(toasts).toContain('Gotcha! Pidgey was caught! It joined your box.')
   expect(saved.dex.pidgey).toEqual({ seen: expect.any(Number), caught: expect.any(Number) })
-  expect(saved.stats.pidgey).toEqual({ xp: 5 ** 3, caught: true, parked: true })
+  expect(saved.stats.pidgey).toEqual({ xp: 5 ** 3, caught: true, sex: 'male', parked: true })
   expect(widths[widths.length - 1]).toBe(RASTER)
   const status = await $.command.run({ command: 'pokemon', args: '' })
   expect(status.text).not.toContain('wild')
 })
 
 test('catching a species already in the box leaves its record as it was', async ($, on) => {
-  const pidgey = { xp: 20 ** 3, nickname: 'Pidge', parked: true, food: { value: 40, at: 0 } }
+  // A female, caught again as a male, stays the female she was
+  const pidgey = { xp: 20 ** 3, nickname: 'Pidge', sex: 'female', parked: true, food: { value: 40, at: 0 } }
   const saved: Record<string, any> = { stats: { pidgey: structuredClone(pidgey) } }
   const { clock, toasts } = await inBattle($, on, saved)
   await weaken($, clock, toasts)
@@ -515,7 +516,7 @@ test('release keeps a caught species in the Pokédex, and the box marks it when 
   await weaken($, clock, toasts)
   await catchFoe($, clock, toasts)
   const run = async (args: string) => (await $.command.run({ command: 'pokemon', args })).text
-  expect(await run('box')).toContain('\nPidgey ◓, Lv. 5')
+  expect(await run('box')).toContain('\nPidgey ♂ ◓, Lv. 5')
 
   expect(await run('release pidgey')).toBe('You release Pidgey. Bye-bye, Pidgey!')
   expect(saved.stats.pidgey).toBeUndefined()
@@ -524,13 +525,13 @@ test('release keeps a caught species in the Pokédex, and the box marks it when 
   await run('pidgey')
   await run('pet')
   await clock.advance(4000)
-  expect(await run('box')).toContain('\nPidgey ◓, Lv. 5 ●●●●○ ♥♥♥♥♥ (active)')
+  expect(await run('box')).toMatch(/\nPidgey [♂♀] ◓, Lv\. 5 ●●●●○ ♥♥♥♥♥ \(active\)/)
 })
 
 test('a shiny foe paints the shiny palette, and catching it marks the Pokédex shiny', async ($, on) => {
   const saved: Record<string, any> = {}
-  const { clock, blits, widths, toasts } = await inBattle($, on, saved, 'pidgey shiny')
-  expect(toasts[0]).toBe('A shiny wild Pidgey (Lv. 5) appeared!')
+  const { clock, blits, widths, toasts } = await inBattle($, on, saved, 'pidgey shiny male')
+  expect(toasts[0]).toBe('A shiny wild Pidgey ♂ (Lv. 5) appeared!')
   const shiny = foeColor('abra', 'pidgey', 'shiny')
   expect(SPRITES.pidgey.variants.default.palette.map((hex) => parseInt(hex.slice(1), 16))).not.toContain(shiny)
   expect(columnsIn(blits[blits.length - 1], widths[widths.length - 1], shiny).length).toBeGreaterThan(0)

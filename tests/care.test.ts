@@ -219,17 +219,17 @@ test('/pokemon needs off stops the faint clock, and turning it back on doesn\'t 
 
 test('a mon left fainted for a day of open time runs away, and the band shows the next mon in the box', { timeoutMs: 60000 }, async ($, on) => {
   const toasts = toastsOf(on)
-  const abra = { xp: 35 ** 3, nickname: 'Spoon', food: EMPTY, happiness: EMPTY, fainted: { ms: 24 * HOUR - MINUTE, at: 0 } }
+  const abra = { xp: 35 ** 3, nickname: 'Spoon', sex: 'female', food: EMPTY, happiness: EMPTY, fainted: { ms: 24 * HOUR - MINUTE, at: 0 } }
   const saved: Record<string, any> = { stats: { abra, pikachu: { xp: 10 ** 3, parked: true } }, seenAt: 0 }
   const { clock } = await startedWith($, on, saved, 4 * HOUR)
   await advanceMinutes(clock, 12)
   expect(toasts).toContain('Spoon ran away! It may turn up in the wild. Pikachu takes its place.')
   expect(saved.mon).toBe('pikachu')
   expect(saved.stats.abra).toEqual({
-    xp: 35 ** 3, nickname: 'Spoon', food: expect.any(Object), happiness: expect.any(Object), ranAway: { at: expect.any(Number), variant: 'default' }, parked: true,
+    xp: 35 ** 3, nickname: 'Spoon', sex: 'female', food: expect.any(Object), happiness: expect.any(Object), ranAway: { at: expect.any(Number), variant: 'default' }, parked: true,
   })
   expect(await run($, 'abra')).toBe('Spoon ran away. It may turn up in the wild.')
-  expect(await run($, 'box')).toBe('2 mons in your box:\nSpoon (Abra), Lv. 35 (ran away)\nPikachu, Lv. 10 ●●●●○ ♥♥♥♥♡ (active)')
+  expect(await run($, 'box')).toBe('2 mons in your box:\nSpoon (Abra ♀), Lv. 35 (ran away)\nPikachu ♂, Lv. 10 ●●●●○ ♥♥♥♥♡ (active)')
 })
 
 test('with no other mon in the box, the band says the mon ran away', async ($, on) => {
@@ -249,14 +249,14 @@ test('a mon that ran away in another session leaves this band too', async ($, on
 })
 
 test('a mon that ran away is the first wild mon half an hour on, and catching it brings its record back', { timeoutMs: 120000 }, async ($, on) => {
-  const abra = { xp: 35 ** 3, nickname: 'Spoon', parked: true, ranAway: { at: HOUR - 31 * MINUTE, variant: 'default' } }
+  const abra = { xp: 35 ** 3, nickname: 'Spoon', sex: 'female', parked: true, ranAway: { at: HOUR - 31 * MINUTE, variant: 'default' } }
   const saved: Record<string, any> = { mon: 'pikachu', wildAt: { at: HOUR - MINUTE, by: 'other' }, stats: { pikachu: { xp: 10 ** 3 }, abra } }
   const { clock, toasts, read } = await working($, on, saved)
   await read()
   await clock.advance(30000)
   await read()
   await clock.advance(10000)
-  expect(toasts).toContain('A wild Abra (Lv. 35) appeared! It looks a lot like Spoon.')
+  expect(toasts).toContain('A wild Abra ♀ (Lv. 35) appeared! It looks a lot like Spoon.')
   expect(saved.stats.abra.ranAway.met).toBe(true)
   const weak = 'Wild Abra is weak! Throw a ball with /pokemon catch. Another hit could knock it out.'
   for (let k = 0; k < 12 && !toasts.includes(weak); k++) {
@@ -267,7 +267,7 @@ test('a mon that ran away is the first wild mon half an hour on, and catching it
   // Weak, it still breaks free most of the time
   await catchFoe($, clock, toasts, 40)
   expect(toasts).toContain('Gotcha! Spoon came back to you.')
-  expect(saved.stats.abra).toEqual({ xp: 35 ** 3, nickname: 'Spoon', parked: true, food: { value: 50, at: expect.any(Number) }, happiness: { value: 30, at: expect.any(Number) } })
+  expect(saved.stats.abra).toEqual({ xp: 35 ** 3, nickname: 'Spoon', sex: 'female', parked: true, food: { value: 50, at: expect.any(Number) }, happiness: { value: 30, at: expect.any(Number) } })
   expect(saved.dex.abra.caught).toEqual(expect.any(Number))
 })
 
@@ -303,7 +303,7 @@ test('with nuzlocke on, a mon is lost where it would faint, and the band shows t
   expect(toasts).toContain('Abra fainted for good. Rest well. Pikachu takes its place.')
   expect(saved.stats.abra).toEqual({ dead: { at: expect.any(Number) } })
   expect(saved.mon).toBe('pikachu')
-  expect(await run($, 'box')).toBe('1 mon in your box:\nPikachu, Lv. 10 ●●●●○ ♥♥♥♥♡ (active)\nOnly Pikachu so far. /pokemon <mon> picks another.')
+  expect(await run($, 'box')).toBe('1 mon in your box:\nPikachu ♂, Lv. 10 ●●●●○ ♥♥♥♥♡ (active)\nOnly Pikachu so far. /pokemon <mon> picks another.')
 })
 
 test('trainer mode is on by default: an existing box keeps its mons, and only they and fetched mons can be shown', async ($, on) => {
@@ -328,7 +328,7 @@ test('in trainer mode an empty box picks one starter, and picks again once every
   expect(await run($, 'trainer')).toBe('Trainer mode is on. Pick your starter, Bulbasaur, Charmander, Squirtle, or Pikachu, then catch the rest in the wild. Mons fetched with /pokemon new stay free to show.')
   expect(await run($, 'vulpix')).toBe('Trainer mode is on, so pick your starter first: Bulbasaur, Charmander, Squirtle, or Pikachu. Catch the rest in the wild, or turn trainer mode off with /pokemon trainer.')
   expect(await run($, 'squirtle')).toBe('Now showing default Squirtle.')
-  expect(saved.stats.squirtle).toEqual({ xp: 5 ** 3 })
+  expect(saved.stats.squirtle).toEqual({ xp: 5 ** 3, sex: expect.stringMatching(/^(male|female)$/) })
   expect(await run($, 'charmander')).toBe('Trainer mode is on, so you can only switch to mons in your box. Catch a wild Charmander to raise one, or turn trainer mode off with /pokemon trainer.')
   saved.stats = { squirtle: { dead: { at: 0 } } }
   expect(await run($, 'bulbasaur')).toBe('Now showing default Bulbasaur.')
@@ -342,7 +342,7 @@ test('a species lost in a nuzlocke comes back only by catching a new one, at its
   await weaken($, clock, toasts)
   await catchFoe($, clock, toasts)
   expect(toasts).toContain('Gotcha! Pidgey was caught! It joined your box.')
-  expect(saved.stats.pidgey).toEqual({ xp: 5 ** 3, caught: true, parked: true })
+  expect(saved.stats.pidgey).toEqual({ xp: 5 ** 3, caught: true, sex: 'male', parked: true })
   expect(await run($, 'dex')).toBe('Pokédex: seen 1, caught 1 of 151.\n#016 Pidgey ◓\nRest well: Pidgey, Lv. 30, on 1970-01-01.')
   expect(await run($, 'pidgey')).toBe('Now showing default Pidgey.')
 })

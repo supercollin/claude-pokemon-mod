@@ -8,7 +8,9 @@
 // 'random' } entries at one level share it by chance, like Wurmple's, the pick made at the
 // level-up that reaches it. { into, fed: true } is a level-up with full food, standing in
 // for Feebas's beauty, and { into, level, also } a level evolution that puts another mon in
-// the box too, like Nincada's Shedinja. A mon that doesn't evolve has no entry.
+// the box too, like Nincada's Shedinja. A mon that doesn't evolve has no entry. The mon
+// an entry names shows as its sprite for the evolving mon's sex, so a female Bayleef
+// becomes meganium_female and a female Wynaut wobbuffet_female.
 
 const FIRST_LEVEL = 5
 
@@ -173,7 +175,7 @@ export const EVOLUTIONS = {
   pupitar: [{ into: 'tyranitar', level: 55 }],
 
   // Gen 3, by Ruby and Sapphire rules, fetched like gen 2's. Azurill and Wynaut grow into
-  // gen 2's Marill and Wobbuffet, Wynaut into either of Wobbuffet's sprites.
+  // gen 2's Marill and Wobbuffet, Wynaut into the Wobbuffet sprite for its sex.
   treecko: [{ into: 'grovyle', level: 16 }],
   grovyle: [{ into: 'sceptile', level: 36 }],
   torchic: [{ into: 'combusken', level: 16 }],
@@ -227,10 +229,7 @@ export const EVOLUTIONS = {
   feebas: [{ into: 'milotic', fed: true }],
   shuppet: [{ into: 'banette', level: 37 }],
   duskull: [{ into: 'dusclops', level: 37 }],
-  wynaut: [
-    { into: 'wobbuffet_male', level: 15, pick: 'random' },
-    { into: 'wobbuffet_female', level: 15, pick: 'random' },
-  ],
+  wynaut: [{ into: 'wobbuffet_male', level: 15 }],
   snorunt: [{ into: 'glalie', level: 42 }],
   spheal: [{ into: 'sealeo', level: 32 }],
   sealeo: [{ into: 'walrein', level: 44 }],

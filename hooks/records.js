@@ -1,5 +1,6 @@
 import { TICK_MS } from './constants.js'
 import { evolutionsOf, isLevelUpOnly, levelEvolutionOf, startLevel } from './evolutions.js'
+import { femaleEighthsOf, fixedSexOf, sexFor, withSexMark } from './genders.js'
 import { levelAt, MAX_LEVEL, xpAt } from './levels.js'
 import { displayName } from './names.js'
 import { S } from './state.js'
@@ -11,8 +12,22 @@ import { hasRunAway, isDead, isDown, isFainted, isGone, isHealing } from './stat
 // A nickname lives in the mon's record too, so it follows the mon through evolution
 export const nameOf = (name) => S.stats[name]?.nickname ?? displayName(name)
 
-// Like "Sparky (Pikachu)", or just "Pikachu" without a nickname
-export const fullNameOf = (name) => (S.stats[name]?.nickname ? S.stats[name].nickname + ' (' + displayName(name) + ')' : displayName(name))
+// A mon's sex as its record keeps it, or the one its sprite pins down when the record
+// has none yet, or null
+export const sexOf = (name) => S.stats[name]?.sex ?? fixedSexOf(name)
+
+// A record without a sex yet gets one for good: the one its sprite pins down, or one drawn
+// by its species' share of females. A genderless mon's record stays as it is, and so does
+// a lost mon's, which only marks the species lost.
+export const lacksSex = (name, record) => Boolean(record) && typeof record === 'object' && !record.sex && !record.dead && femaleEighthsOf(name) !== null
+
+export const sexedRecord = (name, record, random = Math.random) => (lacksSex(name, record) ? { ...record, sex: sexFor(name, random) } : record)
+
+// Like "Sparky (Pikachu ♀)", or just "Pikachu ♀" without a nickname
+export function fullNameOf(name) {
+  const species = withSexMark(displayName(name), sexOf(name))
+  return S.stats[name]?.nickname ? S.stats[name].nickname + ' (' + species + ')' : species
+}
 
 // XP lives in each mon's record. A mon that hasn't earned any starts at its first level.
 export const xpOf = (name) => S.stats[name]?.xp ?? xpAt(startLevel(name))

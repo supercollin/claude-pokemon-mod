@@ -317,8 +317,8 @@ and as many of each a fetched Hitmontop. With needs off, the meters count as ful
 it becomes Hitmontop.
 
 Gen 3 adds three more. Wurmple at 7 becomes Silcoon or Cascoon by chance, as the games
-decide by a hidden value, and Wynaut at 15 either of Wobbuffet's sprites. The pick is made
-once, at the level-up that reaches the level, and stays. Feebas, which the games evolve by
+decide by a hidden value. The pick is made once, at the level-up that reaches the level,
+and stays. Wynaut at 15 becomes the Wobbuffet of its sex, male or female. Feebas, which the games evolve by
 its beauty from Pokéblocks, evolves here on a level-up with a full food meter. Nincada
 becomes Ninjask at 20, and the shell it sheds joins your box as a Shedinja at that level,
 caught in your Pokédex.
@@ -477,6 +477,18 @@ its line in `/pokemon box` shows ◓. `/pokemon <mon>` still picks any mon, and 
 keeps its ◓ when it evolves, even one raised before its species was caught. Releasing a mon keeps it in the dex, and raising that species again
 shows ◓ too.
 
+Each mon is male or female, by its species' share of females in the games: 1 Charmander
+in 8 is female, every Chansey is, and Magnemite, Staryu, Ditto, and most legendaries have
+no sex. A wild mon's sex is drawn when it shows up and stays with it once caught, and a
+mon you start raising gets one the same way. Its mark, ♂ or ♀, follows its name when a
+wild mon appears, in `/pokemon stats`, `/pokemon box`, and `/pokemon party`, and sits over its level in
+the band when there's a row to spare. A species with a female sprite, like Pikachu, shows
+it for a female and its usual sprite for a male, so a female Pikachu is `pikachu_female`
+in your box. A mon keeps its sex when it evolves, and evolves into its sex's sprite when
+there's one, like a female Bayleef into a female Meganium. Mons raised before sexes came
+get one at the first session after the update, drawn the same way, or the one their sprite
+shows: `pikachu` is male and `pikachu_female` female.
+
 The battle needs a wider strip than the mon alone. A band 80 columns wide fits every pair,
 a narrower one only the smaller foes, and under about 40 columns no encounter comes.
 
@@ -550,7 +562,8 @@ To call a wild mon without waiting, turn on debug mode:
 3. Run `/reload-plugins`.
 
 Then `/pokemon wild`, `/pokemon wild <mon>`, or `/pokemon wild <mon> shiny` calls one in
-without waiting for the shared timer. `/pokemon kill` faints the mon on show, or loses it for good
+without waiting for the shared timer. `male` or `female` after the mon asks for that sex,
+when its species has it. `/pokemon kill` faints the mon on show, or loses it for good
 with nuzlocke on. Without debug, `wild` and `kill` reply as unknown options.
 
 <details>
@@ -578,7 +591,8 @@ Bringing one in is data, in `hooks/dex.js` and `hooks/evolutions.js`:
 3. A mon with no folder of its own, only its forms', goes in `WILD_FORMS`, its forms in `BASE_FORM`, and their names in `hooks/names.js`.
 4. Add its evolutions to `EVOLUTIONS`, and every mon they name that isn't bundled to `FETCHED`.
 5. Add its mons to the drop tables in `hooks/items.js`: `STONE_FAMILIES` for the stone each favors, and `HELD_FAMILIES` for an item it holds.
-6. Run `node scripts/check-data.mjs`. `/pokemon gen <N>` turns it on from then on.
+6. Add its genderless species and those not half female to the lists in `hooks/genders.js`. A female sprite goes in `BASE_FORM` as `<key>_female`, and a female shows it.
+7. Run `node scripts/check-data.mjs`. `/pokemon gen <N>` turns it on from then on.
 
 </details>
 
@@ -627,6 +641,7 @@ claude --plugin-dir .                            # live-reloading session
 | `hooks/effects/*.js` | Attack animations, one file per family |
 | `hooks/moves.js` | Each move's effect, and each mon's moveset |
 | `hooks/names.js` | Display names, like `Nidoran♀` and `Mr. Mime` |
+| `hooks/genders.js` | Each species' share of females, a mon's sex, its mark, and the sprite it shows for it |
 | `hooks/levels.js` | The XP curve, and the XP a turn earns |
 | `hooks/evolutions.js` | Gen 1 evolutions, and each mon's start level |
 | `hooks/items.js` | The item bag, what a knocked out foe drops, and the drop popping out of it |

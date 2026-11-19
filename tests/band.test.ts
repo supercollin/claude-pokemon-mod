@@ -711,14 +711,14 @@ test('feeding fills food, petting fills happiness, and both are saved once the m
 })
 
 test('while it eats or enjoys a pet, commands that change it wait, and the ones that only show something run', async ($, on) => {
-  const saved: Record<string, any> = { mon: 'abra', stats: { abra: { xp: 900 } } }
+  const saved: Record<string, any> = { mon: 'abra', stats: { abra: { xp: 900, sex: 'female' } } }
   const { clock } = await startedWith($, on, saved, 0)
   const run = async (args: string) => (await $.command.run({ command: 'pokemon', args })).text
   await run('feed')
   for (const args of ['pet', 'feed', 'release abra', 'pikachu', 'sleep', 'nickname Spoon', 'attack', 'shiny']) {
     expect(await run(args)).toBe('Abra is busy eating. Try again in a moment.')
   }
-  expect(await run('stats')).toMatch(/^Abra, Lv\. 9,/)
+  expect(await run('stats')).toMatch(/^Abra ♀, Lv\. 9,/)
   expect(await run('box')).toMatch(/^1 mon in your box:/)
   expect(await run('moves')).toMatch(/^Abra knows /)
   await clock.advance(150 * 40 + 2000)

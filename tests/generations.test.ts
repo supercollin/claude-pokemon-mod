@@ -265,6 +265,26 @@ test('a level-up evolves a fetched gen 2 mon, fetching the mon it becomes first'
   expect(await run($, 'moves')).toBe('Quilava knows Ember, Flamethrower, Tackle.')
 })
 
+test('an evolution keeps the mon\'s sex and shows its sprite for it, a female Wynaut becoming the female Wobbuffet', { timeoutMs: 30000 }, async ($, on) => {
+  const toasts = toastsOf(on)
+  on('turn.complete', () => ({ text: '' }))
+  const asked = serveMons(on, { 2: ['wobbuffet_female'] }, { types: ['psychic'] })
+  const saved: Record<string, any> = {
+    mon: 'wynaut',
+    wander: false,
+    stats: { wynaut: { xp: 15 ** 3 - 1, sex: 'female' } },
+    'custom:wynaut': { gen: 3, sprite: SPRITES.diglett, moves: ['Tackle'] },
+  }
+  const { clock } = await startedWith($, on, saved, 0)
+  await $.turn.complete(ANSWERED)
+  await clock.advance(7200)
+  expect(toasts).toContain('Congratulations! Your Wynaut evolved into Wobbuffet!')
+  expect(asked.some((url) => url.includes('/gen2/wobbuffet_female/'))).toBe(true)
+  expect(saved.mon).toBe('wobbuffet_female')
+  expect(saved.stats.wobbuffet_female.sex).toBe('female')
+  expect(await run($, 'stats')).toMatch(/^Wobbuffet ♀, Lv\. 15,/)
+})
+
 test('a gen 2 evolution that can\'t be fetched waits, and says why', { timeoutMs: 30000 }, async ($, on) => {
   const toasts = toastsOf(on)
   on('turn.complete', () => ({ text: '' }))
@@ -565,7 +585,7 @@ test('a fetched Skitty becomes a fetched Delcatty with a Moon Stone', { timeoutM
   expect(saved['custom:delcatty'].gen).toBe(3)
 })
 
-test('chance picks Wurmple\'s and Wynaut\'s evolution once, Feebas needs full food, and Wobbuffet keeps gen 2\'s tier', () => {
+test('chance picks Wurmple\'s evolution once, Feebas needs full food, and Wobbuffet keeps gen 2\'s tier', () => {
   const at = (level: number, more: Record<string, unknown> = {}) => ({ level, food: 0, hearts: 0, full: 5, time: 'day', ...more })
   expect(levelEvolutionOf('wurmple')).toBeNull()
   expect(levelUpEvolutionOf('wurmple', at(6, { random: () => 0 }))).toBeNull()
@@ -573,7 +593,7 @@ test('chance picks Wurmple\'s and Wynaut\'s evolution once, Feebas needs full fo
   expect(levelUpEvolutionOf('wurmple', at(7, { random: () => 0.99 }))?.into).toBe('cascoon')
   // A pick already made stays
   expect(levelUpEvolutionOf('wurmple', at(8, { random: () => 0, kept: 'cascoon' }))?.into).toBe('cascoon')
-  expect(levelUpEvolutionOf('wynaut', at(15, { random: () => 0.99 }))?.into).toBe('wobbuffet_female')
+  expect(levelEvolutionOf('wynaut')).toEqual({ into: 'wobbuffet_male', level: 15 })
   expect(levelUpEvolutionOf('feebas', at(9, { food: 5 }))?.into).toBe('milotic')
   expect(levelUpEvolutionOf('feebas', at(9, { food: 4, hearts: 5 }))).toBeNull()
   expect(preEvolutionOf('wobbuffet_male')).toBe('wynaut')
@@ -704,7 +724,7 @@ test('Rare Candy raises a level, evolves the shown mon at its level, and a box m
   const toasts = toastsOf(on)
   const stats = {
     charmander: { xp: 15 ** 3 + 10 },
-    bulbasaur: { xp: 15 ** 3, parked: true },
+    bulbasaur: { xp: 15 ** 3, sex: 'male', parked: true },
     abra: { xp: 30 ** 3, fainted: { ms: 0, at: 0 }, parked: true },
     pidgey: { xp: 9 ** 3, ranAway: { at: 0, variant: 'default' } },
   }
@@ -716,7 +736,7 @@ test('Rare Candy raises a level, evolves the shown mon at its level, and a box m
   expect(saved.bag).toEqual({ rarecandy: 2 })
 
   expect(await run($, 'use candy bulbasaur')).toBe('You give Bulbasaur a Rare Candy. It grew to Lv. 16!')
-  expect(saved.stats.bulbasaur).toEqual({ xp: 16 ** 3, parked: true, evolveReady: true })
+  expect(saved.stats.bulbasaur).toEqual({ xp: 16 ** 3, sex: 'male', parked: true, evolveReady: true })
   expect(await run($, 'use rare candy')).toBe('You give Charmander a Rare Candy. It grew to Lv. 16!')
   expect(saved.bag).toEqual({})
   expect(await run($, 'use rare candy')).toBe('You have no Rare Candy. Wild mons you knock out drop one now and then.')
@@ -758,7 +778,7 @@ test('a party mon earns half XP for its own subagent\'s answered turns, and evol
   runningAgents(on)
   on('turn.complete', () => ({ text: '' }))
   const toasts = toastsOf(on)
-  const saved: Record<string, any> = { wander: false, stats: { abra: { xp: 20 ** 3 }, charmander: { xp: 16 ** 3 - 5, parked: true } } }
+  const saved: Record<string, any> = { wander: false, stats: { abra: { xp: 20 ** 3 }, charmander: { xp: 16 ** 3 - 5, sex: 'male', parked: true } } }
   const { clock } = await startedWith($, on, saved, 0)
   await $.ui.mount({ ...BAND, surface: 'terminal' })
   await $.agent.spawn(spawnOf('t1'))
@@ -776,7 +796,7 @@ test('a party mon earns half XP for its own subagent\'s answered turns, and evol
   expect(saved.stats.charmander.evolveReady).toBe(true)
   expect(saved.stats.abra.xp).toBe(20 ** 3)
   expect(toasts).toContain('Charmander grew to Lv. 16 working beside Abra!')
-  expect(await run($, 'party')).toBe('1 mon in your party, beside Abra:\nCharmander, Lv. 16, ready to evolve, free')
+  expect(await run($, 'party')).toBe('1 mon in your party, beside Abra:\nCharmander ♂, Lv. 16, ready to evolve, free')
 
   await run($, 'charmander')
   await clock.advance(9000)

@@ -1,4 +1,5 @@
 import { BASE_FORM, evolutionsOf, FETCHED, preEvolutionOf, startLevel, UNOWN_FORMS } from './evolutions.js'
+import { randomSex, sexedSprite } from './genders.js'
 
 // The Pokédex and how often each mon turns up in the wild. GEN_DEX lists each generation's
 // Pokédex keys in national dex order. Gen 1's sprites are bundled. A later generation's
@@ -113,8 +114,6 @@ export const TIERS = {
 
 const STAGE_TIERS = ['common', 'uncommon', 'rare']
 const SHINY_ODDS = 1 / 128
-// A gen 1 mon's female sprite, shown in the wild half the time
-const FEMALE_FORM = Object.fromEntries(Object.entries(BASE_FORM).filter(([, base]) => BUNDLED_DEX.includes(base)).map(([female, base]) => [base, female]))
 
 // Outside the short lists, a family's base form is common and each evolution a tier
 // rarer. A mon with no family is uncommon, and a bundled mon that only evolves into a
@@ -147,10 +146,13 @@ function byTier(gens) {
   return BY_TIER.get(id)
 }
 
-// The sprite a wild key shows as: one of its forms, its female sprite half the time, or itself
+// A wild key's sex, drawn by its species' share of females, and the sprite it shows as:
+// its sprite for that sex, like pikachu_female, one of its forms, or itself
 function wildForm(key, random) {
-  if (WILD_FORMS[key]) return WILD_FORMS[key][Math.floor(random() * WILD_FORMS[key].length)]
-  return FEMALE_FORM[key] && random() < 0.5 ? FEMALE_FORM[key] : key
+  const sex = randomSex(key, random)
+  const sexed = sexedSprite(key, sex)
+  if (sexed !== key || !WILD_FORMS[key]) return { mon: sexed, sex }
+  return { mon: WILD_FORMS[key][Math.floor(random() * WILD_FORMS[key].length)], sex }
 }
 
 // A tier by weight, then a mon from it, from the generations in gens. random() returns a
@@ -161,9 +163,9 @@ export function pickWild(random, gens = BUNDLED_GENS) {
   const tier = Object.keys(TIERS).find((name) => (roll -= TIERS[name].weight) < 0) ?? 'common'
   const pool = byTier(gens)[tier]
   const key = pool[Math.floor(random() * pool.length)]
-  const mon = wildForm(key, random)
+  const { mon, sex } = wildForm(key, random)
   const variant = random() < SHINY_ODDS ? 'shiny' : 'default'
-  return { mon, variant, key, tier, level: startLevel(mon) }
+  return { mon, sex, variant, key, tier, level: startLevel(mon) }
 }
 
 // Two marks of one mon as one: the earliest time for each of seen and caught, and shiny
