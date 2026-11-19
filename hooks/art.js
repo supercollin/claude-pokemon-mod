@@ -121,9 +121,12 @@ export function stampPixel(s, cx, py) {
 // Protector is a brown shield (b) with a red face (r), the Electirizer and Magmarizer a
 // dark box (k) with a yellow or fiery front, the Dubious Disc a pink disc (p) with a dark
 // hole (k), and the Reaper Cloth a purple cloth (c) with eye holes (k). The Shiny, Dusk,
-// Dawn, and Ice Stones are stones too.
+// Dawn, and Ice Stones are stones too, and the plates tablets in their type's color.
 const STONE = ['.ooo.', 'obhbo', 'obmbo', 'obbbo', '.ooo.']
 const stoneOf = (o, b, m) => ({ rows: STONE, colors: { o, b, m, h: 0xffffff } })
+// Arceus's plates are one tablet in its type's color (b), with a pale rim (o) and shine (h)
+const PLATE = ['ooooo', 'obhbo', 'obbbo', 'ooooo']
+const plateOf = (b) => ({ rows: PLATE, colors: { o: 0xf0ecd8, b, h: 0xffffff } })
 export const ITEM_ART = {
   firestone: stoneOf(0xb83a10, 0xf07a28, 0xffe040),
   waterstone: stoneOf(0x1c4aa8, 0x4a90f0, 0xc8f0ff),
@@ -150,6 +153,22 @@ export const ITEM_ART = {
   electirizer: { rows: ['.y.y.', 'kkkkk', 'kyyyk', 'kkkkk', '.k.k.'], colors: { k: 0x484858, y: 0xf8d030 } },
   magmarizer: { rows: ['.r.r.', 'kkkkk', 'kroqk', 'kkkkk', '.k.k.'], colors: { k: 0x484858, r: 0xe04020, o: 0xf89030, q: 0xe04020 } },
   dubiousdisc: { rows: ['.ppp.', 'pmwmp', 'pwkwp', 'pmwmp', '.ppp.'], colors: { p: 0xe060a0, m: 0x60c0e0, w: 0xf0f0f8, k: 0x202838 } },
+  flameplate: plateOf(0xf08030),
+  splashplate: plateOf(0x6890f0),
+  zapplate: plateOf(0xf8d030),
+  meadowplate: plateOf(0x78c850),
+  icicleplate: plateOf(0x98d8d8),
+  fistplate: plateOf(0xc03028),
+  toxicplate: plateOf(0xa040a0),
+  earthplate: plateOf(0xe0c068),
+  skyplate: plateOf(0xa890f0),
+  mindplate: plateOf(0xf85888),
+  insectplate: plateOf(0xa8b820),
+  stoneplate: plateOf(0xb8a038),
+  spookyplate: plateOf(0x705898),
+  dracoplate: plateOf(0x7038f8),
+  dreadplate: plateOf(0x705848),
+  ironplate: plateOf(0xb8b8d0),
   reapercloth: { rows: ['.ccc.', 'ccccc', 'ckckc', 'ccccc', 'c.c.c'], colors: { c: 0x6a5a8a, k: 0x201830 } },
 }
 

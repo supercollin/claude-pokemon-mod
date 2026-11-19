@@ -40,6 +40,8 @@ export const S = {
   panel: 0,
   // Whether the panel has a row over the level for the mon's sex
   sexRow: false,
+  // The plates in the bag, so a knockout can leave out the ones you have
+  bagPlates: [],
   // Empty columns drawn left of the strip, so a bubble always fits on the left of the head.
   // They take only band width that's free, and none in a band shrunk to fit.
   margin: 0,

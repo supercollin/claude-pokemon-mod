@@ -1,5 +1,6 @@
 import { BUNDLED_GENS, dexKey, dexNumber, dexOf, GENS, genOf, isCaught, NATIONAL_DEX, tierOf } from './dex.js'
 import { MAX_LEVEL, xpAt } from './levels.js'
+import { itemName } from './items.js'
 import { iconsFor, statNow } from './meters.js'
 import { displayName } from './names.js'
 import { conditionOf, downReply, fullNameOf, goneLine, levelOf, nameOf, ownEvolutionsOf, readyToEvolve, xpOf } from './records.js'
@@ -60,11 +61,13 @@ export function statsText(pets, feeds) {
   const becomes = ready
     ? ' Ready to evolve into ' + displayName(ready) + '. /pokemon evolve lets it.'
     : evolutions.length > 0 ? ' Can become ' + evolutionsText(evolutions) + '.' : ''
+  const plate = S.stats[S.mon]?.plate
+  const holds = plate ? ' Holds the ' + itemName(plate) + '.' : ''
   const meters = S.needsOn
     ? ' Food ' + Math.round(statNow(S.mon, 'food')) + '%, happiness ' + Math.round(statNow(S.mon, 'happiness')) + '%.'
     : ' Needs are off.'
   const state = isFainted(S.mon) ? ' ' + downReply().text : ''
-  return fullNameOf(S.mon) + ', Lv. ' + level + ', ' + xpOf(S.mon) + ' XP' + next + '.' + becomes + meters + state + ' ' + pets + ' pets, ' + feeds + ' feeds.'
+  return fullNameOf(S.mon) + ', Lv. ' + level + ', ' + xpOf(S.mon) + ' XP' + next + '.' + becomes + holds + meters + state + ' ' + pets + ' pets, ' + feeds + ' feeds.'
 }
 
 // Every mon with a saved record, one a line, like "Charizard ◓, Lv. 36 ●●●○○ ♥♥♥♡♡ (active)",
@@ -162,7 +165,8 @@ export const HELP = [
   ]],
   ['Items', [
     ['bag', 'The items you hold, dropped by wild mons you knock out'],
-    ['use <item> [mon]', 'Use an item, like use rare candy or use thunder stone'],
+    ['use <item> [mon]', 'Use an item, like use rare candy or use thunder stone. Arceus holds a plate, like use flame plate'],
+    ['take', 'Take back the plate Arceus holds'],
   ]],
   ['Records', [
     ['stats', 'Its level, XP, evolution, and meters'],

@@ -15,7 +15,8 @@ import { evolutionsOf, isLevelUpOnly, levelEvolutionOf, levelUpEvolutionOf, star
 import { SPRITES } from './frames.js'
 import { femaleEighthsOf, SEXES, sexedSprite, sexFor } from './genders.js'
 import {
-  addedTo, bagOf, bagText, dropOf, findItem, itemFor, itemName, ITEMS, LONG_TURN_CANDY_ODDS, migratedBag, RARE_CANDY, takenFrom,
+  addedTo, bagOf, bagText, dropOf, findItem, itemFor, itemName, ITEMS, LONG_TURN_CANDY_ODDS, migratedBag, PLATE_KEYS, plateType, RARE_CANDY,
+  takenFrom,
 } from './items.js'
 import { bandRows, bandZoom, battleFits, clampX, homeX, isHome, stripTarget, wildAt } from './layout.js'
 import { careOf, LONG_TURN_MS, MAX_LEVEL, turnXp, xpAt } from './levels.js'
@@ -346,6 +347,7 @@ function stepWildPhase($) {
     $.ui.toast('A ' + wildName() + ' (Lv. ' + S.wild.level + ') appeared!' + yours)
     markOwned($, S.wild.seed).catch((err) => logOnce($, err))
     markDex($, S.wild.key, { seen: S.nowMs }).catch((err) => logOnce($, err))
+    refreshPlates($).catch((err) => logOnce($, err))
     if (S.wild.runaway) metRunaway($, S.wild.mon).catch((err) => logOnce($, err))
   } else if (result.event === 'caught') {
     caughtFoe($, S.wild).catch((err) => logOnce($, err))
@@ -465,7 +467,7 @@ function hitFoe($) {
   const name = displayName(S.wild.mon)
   const hp = Math.max(0, Math.round(S.wild.hp - damageOf(S.wild, S.attack.power, Math.random())))
   if (hp === 0) {
-    const item = dropOf(S.wild.key, S.wild.seed, S.wildGens)
+    const item = dropOf(S.wild.key, S.wild.seed, S.wildGens, ownedPlates())
     S.wild = { ...faintedWild(S.wild, S.tick), drop: item ? { item, at: S.tick } : null }
     if (!item) {
       $.ui.toast('Wild ' + name + ' fainted! It can\'t be caught now.')
@@ -763,6 +765,7 @@ async function joinCrewFor($, id, type) {
 function followEvolution($, into, record) {
   if (S.evolving || S.attack) return
   const name = nameOf(S.mon)
+  const from = S.mon
   const wasHome = isHome()
   delete S.stats[S.mon]
   S.stats[into] = record
@@ -771,7 +774,9 @@ function followEvolution($, into, record) {
   if (wasHome) S.x = homeX()
   clampX()
   S.sentCells = null
-  $.ui.toast('Congratulations! Your ' + name + ' evolved into ' + displayName(into) + '!')
+  // Arceus taking another plate's forme is the same mon, not an evolution
+  if (dexKey(into) === dexKey(from)) $.ui.toast(name + ' changed its forme to ' + displayName(into) + '!')
+  else $.ui.toast('Congratulations! Your ' + name + ' evolved into ' + displayName(into) + '!')
   $.ui.invalidate('ui.render')
 }
 
@@ -941,18 +946,95 @@ async function evolveIfReady($) {
 // the box, or on show, gets the item it needs, so nobody raised before the bag is stranded.
 async function loadBag($) {
   const saved = await $.store.get('bag')
-  if (saved && typeof saved === 'object') return bagOf(saved)
+  if (saved && typeof saved === 'object') return keptPlates(bagOf(saved))
   const stats = await $.store.get('stats')
   const boxed = stats && typeof stats === 'object' ? Object.keys(stats).filter((name) => !stats[name]?.ranAway && !stats[name]?.dead) : []
   const bag = migratedBag(new Set([...boxed, ...(isGone(S.mon) ? [] : [S.mon])]))
   await $.store.set('bag', bag)
-  return bag
+  return keptPlates(bag)
 }
 
 async function changeBag($, change) {
-  const bag = change(await loadBag($))
+  const bag = keptPlates(change(await loadBag($)))
   await $.store.set('bag', bag)
   return bag
+}
+
+// The plates in the bag are kept in memory, so a knockout knows which it can't drop
+// without waiting on the store
+function keptPlates(bag) {
+  S.bagPlates = PLATE_KEYS.filter((plate) => bag[plate] > 0)
+  return bag
+}
+
+// The plates in the bag as last saved, read without making the first bag
+async function refreshPlates($) {
+  keptPlates(bagOf(await $.store.get('bag')))
+}
+
+// The plates you have: in the bag, or held by an Arceus in your box
+const ownedPlates = () => [...S.bagPlates, ...Object.values(S.stats).map((record) => record?.plate).filter(Boolean)]
+
+// The Arceus forme a plate gives, or Normal's for none
+const formeOf = (plate) => (plate ? 'arceus_' + plateType(plate) : 'arceus')
+
+// Arceus holds a plate and takes its type's forme at once, keeping its level, XP, and
+// meters. The plate leaves the bag, and the one it held, if any, goes back. Without a
+// plate it's Normal again. The forme is fetched first, like an evolution's mon.
+async function holdPlate($, plate) {
+  const name = nameOf(S.mon)
+  const from = S.mon
+  const held = S.stats[from]?.plate ?? null
+  const into = formeOf(plate)
+  if (into !== from && S.stats[into] && !isDead(into)) return { text: 'Your box already has ' + fullNameOf(into) + '. Release it first to change ' + name + '\'s forme.' }
+  try {
+    await ensureMon($, into)
+  } catch (err) {
+    return { text: name + ' can\'t change its forme yet: ' + (err?.message ?? String(err)) }
+  }
+  if (S.mon !== from) return { text: name + ' isn\'t on show anymore, so it kept its plate.' }
+  await freshen($, [from])
+  const { plate: _, ...record } = S.stats[from] ?? {}
+  S.stats[into] = plate ? { ...record, plate } : record
+  if (into !== from) delete S.stats[from]
+  const wasHome = isHome()
+  S.mon = into
+  if (wasHome) S.x = homeX()
+  clampX()
+  await saveStats($, [from, into])
+  await saveMon($)
+  if (into !== from) {
+    const evolved = (await $.store.get('evolved')) ?? {}
+    await $.store.set('evolved', { ...evolved, [from]: into })
+  }
+  await changeBag($, (bag) => {
+    const taken = plate ? takenFrom(bag, plate) : bag
+    return held ? addedTo(taken, held) : taken
+  })
+  $.ui.invalidate('ui.render')
+  const back = held ? ' The ' + itemName(held) + ' went back in your bag.' : ''
+  if (!plate) return { text: 'You take the ' + itemName(held) + ' from ' + name + '. It\'s Normal again.' }
+  return { text: name + ' holds the ' + itemName(plate) + ' and becomes ' + plateType(plate) + ' type!' + back }
+}
+
+// /pokemon use <plate>: only Arceus holds one, and only one it has in the bag
+async function plateCommand($, plate) {
+  const name = nameOf(S.mon)
+  if (dexKey(S.mon) !== 'arceus') return { text: name + ' can\'t use ' + withArticle(itemName(plate)) + '. Only Arceus holds a plate.' }
+  if (isDown()) return downReply()
+  if (S.evolving || S.attack || S.food) return { text: name + ' is busy right now.' }
+  if (S.stats[S.mon]?.plate === plate) return { text: name + ' already holds the ' + itemName(plate) + '.' }
+  if (!(await loadBag($))[plate]) return { text: 'You have no ' + itemName(plate) + '. Wild mons of its type drop one now and then while gen 4 is on.' }
+  return holdPlate($, plate)
+}
+
+// /pokemon take: Arceus gives its plate back to the bag
+async function takeCommand($) {
+  const name = nameOf(S.mon)
+  if (!S.stats[S.mon]?.plate) return { text: name + ' holds nothing.' }
+  if (isDown()) return downReply()
+  if (S.evolving || S.attack || S.food) return { text: name + ' is busy right now.' }
+  return holdPlate($, null)
 }
 
 // A long main turn now and then turns up a Rare Candy
@@ -1006,6 +1088,7 @@ async function useCommand($, rest) {
   if (item === RARE_CANDY) return candyCommand($, wanted)
   if (wanted && !MONS.includes(wanted)) return { text: 'Unknown mon "' + wanted + '". /pokemon box lists yours.' }
   if (wanted && wanted !== S.mon) return { text: 'Show ' + nameOf(wanted) + ' first with /pokemon ' + wanted + ', then use the ' + itemName(item) + '.' }
+  if (PLATE_KEYS.includes(item)) return plateCommand($, item)
   if (isDown()) return downReply()
   const entry = ownEvolutionsOf(S.mon).find((e) => itemFor(e) === item)
   if (!entry) return otherSexReply((e) => itemFor(e) === item) ?? { text: nameOf(S.mon) + ' can\'t use ' + withArticle(itemName(item)) + '.' }
@@ -1763,6 +1846,8 @@ async function runPokemon($, e) {
     return stopEvolution($)
   } else if (asked === 'bag') {
     return { text: bagText(await loadBag($)) }
+  } else if (asked === 'take') {
+    return takeCommand($)
   } else if (asked === 'use' || asked.startsWith('use ')) {
     return useCommand($, asked.slice('use'.length))
   } else if (asked === 'stats') {
@@ -1858,6 +1943,7 @@ export function register(on) {
     const savedStats = await $.store.get('stats')
     if (savedStats && typeof savedStats === 'object') S.stats = savedStats
     await sexRecords($).catch((err) => logOnce($, err))
+    await refreshPlates($).catch((err) => logOnce($, err))
     S.nowMs = await $.clock.now()
     S.firstShown.set(S.mon, S.nowMs)
     S.ink = await themeInk($)

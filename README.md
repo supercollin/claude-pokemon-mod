@@ -86,6 +86,7 @@ Then pick your starter, like `/pokemon charmander`. Bulbasaur, Charmander, Squir
 | `/pokemon evolve` | Evolve with a stone or a trade, using the item from your bag |
 | `/pokemon bag` | The items wild mons dropped |
 | `/pokemon use <item> [mon]` | Use an item, like `/pokemon use rare candy` |
+| `/pokemon take` | Take back the plate Arceus holds |
 | `/pokemon stats` | Level, XP, evolution, and meters |
 | `/pokemon box` | Every mon you've raised |
 | `/pokemon party` | The mons that come out for subagents, and who each works for |
@@ -118,7 +119,8 @@ Then pick your starter, like `/pokemon charmander`. Bulbasaur, Charmander, Squir
 | `/pokemon evolve <mon>` | Pick what Eevee becomes, like `/pokemon evolve jolteon` |
 | `/pokemon stop` | Cancel an evolution. A stone or cable it needed stays in your bag |
 | `/pokemon bag` | List the items in your bag and how many of each, saved across sessions |
-| `/pokemon use <item> [mon]` | Use an item, named loosely, like `thunder stone`, `thunderstone`, or `candy`. A stone or Link Cable on the mon on show is the same as `/pokemon evolve`. Rare Candy raises the mon on show, or a box mon named, one level |
+| `/pokemon use <item> [mon]` | Use an item, named loosely, like `thunder stone`, `thunderstone`, or `candy`. A stone or Link Cable on the mon on show is the same as `/pokemon evolve`. Rare Candy raises the mon on show, or a box mon named, one level. A plate on Arceus makes it hold it |
+| `/pokemon take` | Take back the plate Arceus holds, so it's Normal again |
 | `/pokemon revive`, `/pokemon revive <mon>` | Take a fainted mon to a Pokémon Center. Nurse Joy heals it in 5 minutes, and it stands up at 50% food and 30% happiness |
 | `/pokemon nuzlocke` | Toggle nuzlocke (off by default, saved across sessions). On, a mon that faints is gone for good |
 | `/pokemon gen <N>` | Toggle a generation's mons in the wild (gen 1 always, saved across sessions). Gen 2, gen 3, and gen 4 can be turned on so far. `/pokemon gen` lists the ones on |
@@ -457,7 +459,8 @@ and the babies Budew, Chingling, Bonsly, Mime Jr., Happiny, Munchlax, and Mantyk
 the rare ones. Burmy and Wormadam turn up in their Plant, Sandy, or Trash Cloak, Shellos
 and Gastrodon from the east or west sea, Rotom in its own forme or one of its five
 appliances, Giratina in its Altered or Origin Forme, and Shaymin in its Land or Sky Forme,
-each the one Pokédex entry for its species. Arceus always comes as Normal. Gen 2, gen 3,
+each the one Pokédex entry for its species. Arceus always comes as Normal: the plate it
+holds changes it. Gen 2, gen 3,
 and gen 4 go on and off on their own.
 
 Your work does the fighting. Each tool call and each answered turn banks a move, two at
@@ -495,7 +498,16 @@ with several items it could drop drops one of them, always the same for the same
   Sandshrew and Zangoose, and the Razor Fang from Gligar, Gliscor, and the fanged mons like
   Ekans and Snubbull.
 
-A foe with no stone or held item from a generation in the wild, like a Pidgey, only ever
+- **Plates, for Arceus (gen 4):** one for each type but normal and fairy, from any mon of
+  that type, about 1 drop in 20, like a Flame Plate from a Charmander or a Sky Plate from
+  a Pidgey. A plate you already have, in the bag or held by your Arceus, never drops again.
+
+`/pokemon use flame plate` on Arceus makes it hold the Flame Plate, and it becomes Arceus
+of the fire type at once, keeping its level, XP, and meters, with moves of its new type.
+Another plate swaps it, and the one it held goes back in the bag. `/pokemon take` takes the
+plate back, and Arceus is Normal again. A plate is never used up.
+
+A foe with no stone, held item, or plate from a generation in the wild only ever
 drops a Link Cable or Rare Candy.
 Main turns of two minutes or more turn up a Rare Candy 1 time in 10 too.
 Every 10 to 15 s the foe plays one of its own moves at the mon, which flinches and puts

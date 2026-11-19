@@ -1,6 +1,6 @@
 import { expect, mock } from 'claude-code/testing'
 import { SPRITES } from '../hooks/frames.js'
-import { dropOf, findItem, heldItemsOf, stonesOf } from '../hooks/items.js'
+import { dropOf, findItem, heldItemsOf, platesOf, stonesOf } from '../hooks/items.js'
 import { dexKey, dexNumber, genOf, pickWild, tierOf } from '../hooks/dex.js'
 import { levelEvolutionOf, levelUpEvolutionOf, preEvolutionOf, startLevel } from '../hooks/evolutions.js'
 import { displayName } from '../hooks/names.js'
@@ -227,7 +227,7 @@ test('/pokemon use takes an item by a loose name, and a stone on a mon is the sa
   const saved: Record<string, any> = { trainer: false, mon: 'eevee', bag: { firestone: 1, waterstone: 1 } }
   const { clock } = await startedWith($, on, saved, 0)
   expect(await run($, 'use')).toBe('Name the item, like /pokemon use rare candy. /pokemon bag lists yours.')
-  expect(await run($, 'use potion')).toBe('Unknown item "potion". Items: Fire Stone, Water Stone, Thunder Stone, Leaf Stone, Moon Stone, Sun Stone, Shiny Stone, Dusk Stone, Dawn Stone, Ice Stone, King\'s Rock, Metal Coat, Dragon Scale, Up-Grade, Deep Sea Tooth, Deep Sea Scale, Protector, Electirizer, Magmarizer, Dubious Disc, Reaper Cloth, Razor Claw, Razor Fang, Oval Stone, Link Cable, Rare Candy.')
+  expect(await run($, 'use potion')).toBe('Unknown item "potion". Items: Fire Stone, Water Stone, Thunder Stone, Leaf Stone, Moon Stone, Sun Stone, Shiny Stone, Dusk Stone, Dawn Stone, Ice Stone, King\'s Rock, Metal Coat, Dragon Scale, Up-Grade, Deep Sea Tooth, Deep Sea Scale, Protector, Electirizer, Magmarizer, Dubious Disc, Reaper Cloth, Razor Claw, Razor Fang, Oval Stone, Flame Plate, Splash Plate, Zap Plate, Meadow Plate, Icicle Plate, Fist Plate, Toxic Plate, Earth Plate, Sky Plate, Mind Plate, Insect Plate, Stone Plate, Spooky Plate, Draco Plate, Dread Plate, Iron Plate, Link Cable, Rare Candy.')
   expect(await run($, 'use moon stone')).toBe('Eevee can\'t use a Moon Stone.')
   expect(await run($, 'use fire stone growlithe')).toBe('Show Growlithe first with /pokemon growlithe, then use the Fire Stone.')
   expect(await run($, 'use FireStone eevee')).toBe('You use a Fire Stone on Eevee.')
@@ -445,7 +445,8 @@ test('gen 4 foes drop their own type\'s stone, gen 4\'s new stones included, and
     const drops = new Set<string>()
     for (let seed = 0; seed < 6000; seed++) {
       const item = dropOf(key, seed)
-      if (item) drops.add(item)
+      // Plates have a test of their own
+      if (item && !item.endsWith('plate')) drops.add(item)
     }
     return [...drops].sort()
   }
@@ -469,7 +470,8 @@ test('an older foe drops a newer generation\'s items by its type once that gener
     const drops = new Set<string>()
     for (let seed = 0; seed < 6000; seed++) {
       const item = dropOf(key, seed, gens)
-      if (item) drops.add(item)
+      // Plates have a test of their own
+      if (item && !item.endsWith('plate')) drops.add(item)
     }
     return [...drops].sort()
   }
@@ -483,6 +485,65 @@ test('an older foe drops a newer generation\'s items by its type once that gener
   expect(kinds('onix', [1, 2])).toEqual(['linkcable', 'metalcoat', 'rarecandy'])
   expect(kinds('dratini', [1])).toEqual(['linkcable', 'rarecandy'])
   expect(stonesOf('abra', [1, 4])).toEqual(['dawnstone'])
+})
+
+test('a foe drops the plate of one of its types once gen 4 is on, 1 drop in 20, and never a plate you have', () => {
+  expect(platesOf('pikachu')).toEqual(['zapplate'])
+  expect(platesOf('charizard')).toEqual(['flameplate', 'skyplate'])
+  expect(platesOf('rattata')).toEqual([])
+  const count = (key: string, gens: number[], owned: string[] = []) => {
+    const drops: Record<string, number> = {}
+    let dropped = 0
+    for (let seed = 0; seed < 30000; seed++) {
+      const item = dropOf(key, seed, gens, owned)
+      if (!item) continue
+      dropped++
+      drops[item] = (drops[item] ?? 0) + 1
+    }
+    return { drops, dropped }
+  }
+  expect(count('charizard', [1, 2, 3]).drops.flameplate).toBeUndefined()
+  const { drops, dropped } = count('charizard', [1, 4])
+  expect(drops.flameplate).toBeGreaterThan(0)
+  expect(drops.skyplate).toBeGreaterThan(0)
+  expect((drops.flameplate + drops.skyplate) / dropped).toBeGreaterThan(0.03)
+  expect((drops.flameplate + drops.skyplate) / dropped).toBeLessThan(0.07)
+  const owned = count('charizard', [1, 4], ['flameplate']).drops
+  expect(owned.flameplate).toBeUndefined()
+  expect(owned.skyplate).toBeGreaterThan(0)
+  expect(count('rattata', [1, 4]).drops).not.toHaveProperty('flameplate')
+})
+
+test('Arceus holds a plate from the bag and takes its type\'s forme, gives the old one back, and /pokemon take makes it Normal again', { timeoutMs: 30000 }, async ($, on) => {
+  const toasts = toastsOf(on)
+  const asked = serveMons(on, { 4: ['arceus', 'arceus_fire', 'arceus_water'] }, { types: ['fire'] })
+  const saved: Record<string, any> = {
+    trainer: false,
+    mon: 'arceus',
+    bag: { flameplate: 1, splashplate: 1 },
+    stats: { arceus: { xp: 50 ** 3, nickname: 'Arc' }, pikachu: { xp: 5 ** 3, parked: true } },
+    'custom:arceus': { gen: 4, sprite: SPRITES.diglett, moves: ['Tackle'], by: 'new' },
+  }
+  await startedWith($, on, saved, 0)
+  expect(await run($, 'take')).toBe('Arc holds nothing.')
+  expect(await run($, 'use flame plate')).toBe('Arc holds the Flame Plate and becomes fire type!')
+  expect(asked.some((url) => url.includes('/gen4/arceus_fire/'))).toBe(true)
+  expect(saved.mon).toBe('arceus_fire')
+  expect(saved.stats.arceus).toBeUndefined()
+  expect(saved.stats.arceus_fire).toEqual({ xp: 50 ** 3, nickname: 'Arc', plate: 'flameplate' })
+  expect(saved.bag).toEqual({ splashplate: 1 })
+  expect(await run($, 'stats')).toMatch(/^Arc \(Arceus \(Fire\)\), Lv\. 50, .* Holds the Flame Plate\. /)
+  expect(await run($, 'use flame plate')).toBe('Arc already holds the Flame Plate.')
+  expect(await run($, 'use splash plate')).toBe('Arc holds the Splash Plate and becomes water type! The Flame Plate went back in your bag.')
+  expect(saved.mon).toBe('arceus_water')
+  expect(saved.bag).toEqual({ flameplate: 1 })
+  expect(await run($, 'take')).toBe('You take the Splash Plate from Arc. It\'s Normal again.')
+  expect(saved.mon).toBe('arceus')
+  expect(saved.stats.arceus).toEqual({ xp: 50 ** 3, nickname: 'Arc' })
+  expect(saved.bag).toEqual({ flameplate: 1, splashplate: 1 })
+  expect(toasts.some((text) => text.includes('evolved'))).toBe(false)
+  await run($, 'pikachu')
+  expect(await run($, 'use flame plate')).toBe('Pikachu can\'t use a Flame Plate. Only Arceus holds a plate.')
 })
 
 test('gen 3 foes drop their own type\'s stone, and Carvanha and Relicanth the Deep Sea items', () => {

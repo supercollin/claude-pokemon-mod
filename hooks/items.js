@@ -1,7 +1,8 @@
 import { ITEM_ART, stamp } from './art.js'
 import { rnd } from './effects/draw.js'
-import { GENS } from './dex.js'
+import { GENS, NATIONAL_DEX } from './dex.js'
 import { evolutionsOf } from './evolutions.js'
+import { TYPE_MONS } from './types.js'
 
 // The item bag, kept as plain data: { [item key]: count }. Knocked out wild mons drop
 // items, stone and trade evolutions use them up, and Rare Candy raises a level. Every
@@ -34,6 +35,22 @@ export const ITEMS = [
   { key: 'razorclaw', name: 'Razor Claw', gen: 4 },
   { key: 'razorfang', name: 'Razor Fang', gen: 4 },
   { key: 'ovalstone', name: 'Oval Stone', gen: 4 },
+  { key: 'flameplate', name: 'Flame Plate', gen: 4 },
+  { key: 'splashplate', name: 'Splash Plate', gen: 4 },
+  { key: 'zapplate', name: 'Zap Plate', gen: 4 },
+  { key: 'meadowplate', name: 'Meadow Plate', gen: 4 },
+  { key: 'icicleplate', name: 'Icicle Plate', gen: 4 },
+  { key: 'fistplate', name: 'Fist Plate', gen: 4 },
+  { key: 'toxicplate', name: 'Toxic Plate', gen: 4 },
+  { key: 'earthplate', name: 'Earth Plate', gen: 4 },
+  { key: 'skyplate', name: 'Sky Plate', gen: 4 },
+  { key: 'mindplate', name: 'Mind Plate', gen: 4 },
+  { key: 'insectplate', name: 'Insect Plate', gen: 4 },
+  { key: 'stoneplate', name: 'Stone Plate', gen: 4 },
+  { key: 'spookyplate', name: 'Spooky Plate', gen: 4 },
+  { key: 'dracoplate', name: 'Draco Plate', gen: 4 },
+  { key: 'dreadplate', name: 'Dread Plate', gen: 4 },
+  { key: 'ironplate', name: 'Iron Plate', gen: 4 },
   { key: 'linkcable', name: 'Link Cable', gen: 1 },
   { key: 'rarecandy', name: 'Rare Candy', gen: 1 },
 ]
@@ -42,10 +59,14 @@ export const RARE_CANDY = 'rarecandy'
 export const LINK_CABLE = 'linkcable'
 
 // A knockout drops an item one time in 5. A drop is Rare Candy one time in 15, a Link
-// Cable one in 12 of the rest, a foe that holds an item that item one in 10 of the rest,
+// Cable one in 12 of the rest, a plate one in 20 of the rest, a foe that holds an item
+// that item one in 10 of the rest,
 // and otherwise a stone it drops. A foe with no stone to drop, or none from a generation
 // in the wild, drops nothing in its place.
 const DROP_ODDS = 1 / 5
+// One drop in 20 is a plate for the foe's type, while gen 4 is in the wild and you have
+// none of it yet
+const PLATE_ODDS = 1 / 20
 const CANDY_ODDS = 1 / 15
 const CABLE_ODDS = 1 / 12
 const HELD_ODDS = 1 / 10
@@ -59,34 +80,14 @@ const DROP_SALT = 0x17e5
 // Dawn Stone from a psychic one, and an Ice Stone from an ice one. The Moon Stone stands
 // for the lunar mons and the fairy-like ones that use it, and the Sun Stone for the
 // sun-loving ones. Types are the games' today, fairy included.
+// Each mon of any of types, once, in national order
+const ofTypes = (...types) => NATIONAL_DEX.filter((key) => types.some((type) => TYPE_MONS[type].includes(key)))
+
 export const STONE_FAMILIES = {
-  firestone: [
-    'charmander', 'charmeleon', 'charizard', 'vulpix', 'ninetales', 'growlithe', 'arcanine', 'ponyta', 'rapidash', 'magmar', 'flareon', 'moltres',
-    'cyndaquil', 'quilava', 'typhlosion', 'slugma', 'magcargo', 'houndour', 'houndoom', 'magby', 'entei', 'hooh', 'torchic', 'combusken',
-    'blaziken', 'numel', 'camerupt', 'torkoal', 'chimchar', 'monferno', 'infernape', 'magmortar', 'heatran',
-  ],
-  waterstone: [
-    'squirtle', 'wartortle', 'blastoise', 'psyduck', 'golduck', 'poliwag', 'poliwhirl', 'poliwrath', 'tentacool', 'tentacruel', 'slowpoke', 'slowbro',
-    'seel', 'dewgong', 'shellder', 'cloyster', 'krabby', 'kingler', 'horsea', 'seadra', 'goldeen', 'seaking', 'staryu', 'starmie',
-    'magikarp', 'gyarados', 'lapras', 'vaporeon', 'omanyte', 'omastar', 'kabuto', 'kabutops', 'totodile', 'croconaw', 'feraligatr', 'chinchou',
-    'lanturn', 'marill', 'azumarill', 'politoed', 'wooper', 'quagsire', 'slowking', 'qwilfish', 'corsola', 'remoraid', 'octillery', 'mantine',
-    'kingdra', 'suicune', 'mudkip', 'marshtomp', 'swampert', 'lotad', 'lombre', 'ludicolo', 'wingull', 'pelipper', 'surskit', 'carvanha',
-    'sharpedo', 'wailmer', 'wailord', 'barboach', 'whiscash', 'corphish', 'crawdaunt', 'feebas', 'milotic', 'spheal', 'sealeo', 'walrein',
-    'clamperl', 'huntail', 'gorebyss', 'relicanth', 'luvdisc', 'kyogre', 'piplup', 'prinplup', 'empoleon', 'bibarel', 'buizel', 'floatzel',
-    'shellos', 'gastrodon', 'finneon', 'lumineon', 'mantyke', 'palkia', 'phione', 'manaphy',
-  ],
-  thunderstone: [
-    'pikachu', 'raichu', 'magnemite', 'magneton', 'voltorb', 'electrode', 'electabuzz', 'jolteon', 'zapdos', 'chinchou', 'lanturn', 'pichu',
-    'mareep', 'flaaffy', 'ampharos', 'elekid', 'raikou', 'electrike', 'manectric', 'plusle', 'minun', 'shinx', 'luxio', 'luxray',
-    'pachirisu', 'magnezone', 'electivire', 'rotom',
-  ],
-  leafstone: [
-    'bulbasaur', 'ivysaur', 'venusaur', 'oddish', 'gloom', 'vileplume', 'paras', 'parasect', 'bellsprout', 'weepinbell', 'victreebel', 'exeggcute',
-    'exeggutor', 'tangela', 'chikorita', 'bayleef', 'meganium', 'bellossom', 'hoppip', 'skiploom', 'jumpluff', 'sunkern', 'sunflora', 'celebi',
-    'treecko', 'grovyle', 'sceptile', 'lotad', 'lombre', 'ludicolo', 'seedot', 'nuzleaf', 'shiftry', 'shroomish', 'breloom', 'roselia',
-    'cacnea', 'cacturne', 'lileep', 'cradily', 'tropius', 'turtwig', 'grotle', 'torterra', 'budew', 'roserade', 'wormadam', 'cherubi',
-    'cherrim', 'carnivine', 'snover', 'abomasnow', 'tangrowth', 'leafeon', 'shaymin',
-  ],
+  firestone: TYPE_MONS.fire,
+  waterstone: TYPE_MONS.water,
+  thunderstone: TYPE_MONS.electric,
+  leafstone: TYPE_MONS.grass,
   moonstone: [
     'nidoran_female', 'nidorina', 'nidoqueen', 'nidoran_male', 'nidorino', 'nidoking', 'clefairy', 'clefable', 'jigglypuff', 'wigglytuff', 'cleffa', 'igglybuff',
     'togepi', 'togetic', 'umbreon', 'snubbull', 'granbull', 'ralts', 'kirlia', 'gardevoir', 'azurill', 'skitty', 'delcatty', 'mawile',
@@ -95,27 +96,10 @@ export const STONE_FAMILIES = {
   sunstone: [
     'bellossom', 'sunkern', 'sunflora', 'hooh', 'solrock', 'castform', 'cherrim',
   ],
-  shinystone: [
-    'clefairy', 'clefable', 'jigglypuff', 'wigglytuff', 'mrmime', 'cleffa', 'igglybuff', 'togepi', 'togetic', 'marill', 'azumarill', 'snubbull',
-    'granbull', 'ralts', 'kirlia', 'gardevoir', 'azurill', 'mawile', 'roselia', 'budew', 'roserade', 'mimejr', 'togekiss',
-  ],
-  duskstone: [
-    'gastly', 'haunter', 'gengar', 'umbreon', 'murkrow', 'misdreavus', 'sneasel', 'houndour', 'houndoom', 'tyranitar', 'poochyena', 'mightyena',
-    'nuzleaf', 'shiftry', 'shedinja', 'sableye', 'carvanha', 'sharpedo', 'cacturne', 'crawdaunt', 'shuppet', 'banette', 'duskull', 'dusclops',
-    'absol', 'drifloon', 'drifblim', 'mismagius', 'honchkrow', 'stunky', 'skuntank', 'spiritomb', 'drapion', 'weavile', 'dusknoir', 'froslass',
-    'rotom', 'giratina', 'darkrai',
-  ],
-  dawnstone: [
-    'abra', 'kadabra', 'alakazam', 'slowpoke', 'slowbro', 'drowzee', 'hypno', 'exeggcute', 'exeggutor', 'starmie', 'mrmime', 'jynx',
-    'mewtwo', 'mew', 'natu', 'xatu', 'espeon', 'slowking', 'unown', 'wobbuffet', 'girafarig', 'smoochum', 'lugia', 'celebi',
-    'ralts', 'kirlia', 'gardevoir', 'meditite', 'medicham', 'spoink', 'grumpig', 'lunatone', 'solrock', 'baltoy', 'claydol', 'chimecho',
-    'wynaut', 'beldum', 'metang', 'metagross', 'latias', 'latios', 'jirachi', 'deoxys', 'chingling', 'bronzor', 'bronzong', 'mimejr',
-    'gallade', 'uxie', 'mesprit', 'azelf', 'cresselia',
-  ],
-  icestone: [
-    'dewgong', 'cloyster', 'jynx', 'lapras', 'articuno', 'sneasel', 'swinub', 'piloswine', 'delibird', 'smoochum', 'snorunt', 'glalie',
-    'spheal', 'sealeo', 'walrein', 'regice', 'snover', 'abomasnow', 'weavile', 'glaceon', 'mamoswine', 'froslass',
-  ],
+  shinystone: [...TYPE_MONS.fairy, 'budew', 'roselia', 'roserade'],
+  duskstone: ofTypes('ghost', 'dark'),
+  dawnstone: TYPE_MONS.psychic,
+  icestone: TYPE_MONS.ice,
 }
 
 // The wild mons, by Pokédex key, that hold each item a trade or held-item evolution
@@ -129,15 +113,8 @@ export const HELD_FAMILIES = {
   kingsrock: [
     'poliwag', 'poliwhirl', 'poliwrath', 'slowpoke', 'slowbro', 'politoed', 'slowking', 'hariyama',
   ],
-  metalcoat: [
-    'magnemite', 'magneton', 'onix', 'scyther', 'forretress', 'steelix', 'scizor', 'skarmory', 'mawile', 'aron', 'lairon', 'aggron',
-    'beldum', 'metang', 'metagross', 'registeel', 'jirachi', 'empoleon', 'shieldon', 'bastiodon', 'bronzor', 'bronzong', 'lucario', 'magnezone',
-    'probopass', 'dialga', 'heatran',
-  ],
-  dragonscale: [
-    'horsea', 'seadra', 'dratini', 'dragonair', 'dragonite', 'kingdra', 'vibrava', 'flygon', 'altaria', 'bagon', 'shelgon', 'salamence',
-    'latias', 'latios', 'rayquaza', 'gible', 'gabite', 'garchomp', 'dialga', 'palkia', 'giratina',
-  ],
+  metalcoat: ['onix', 'scyther', ...TYPE_MONS.steel],
+  dragonscale: ['horsea', 'seadra', ...TYPE_MONS.dragon],
   upgrade: [
     'porygon', 'porygon2',
   ],
@@ -173,6 +150,31 @@ export const HELD_FAMILIES = {
   ],
 }
 
+// Arceus's plates, by the type each gives it, in the order of its forme folders
+export const PLATES = {
+  bug: 'insectplate',
+  dark: 'dreadplate',
+  dragon: 'dracoplate',
+  electric: 'zapplate',
+  fighting: 'fistplate',
+  fire: 'flameplate',
+  flying: 'skyplate',
+  ghost: 'spookyplate',
+  grass: 'meadowplate',
+  ground: 'earthplate',
+  ice: 'icicleplate',
+  poison: 'toxicplate',
+  psychic: 'mindplate',
+  rock: 'stoneplate',
+  steel: 'ironplate',
+  water: 'splashplate',
+}
+export const PLATE_KEYS = Object.values(PLATES)
+export const plateType = (plate) => Object.keys(PLATES).find((type) => PLATES[type] === plate) ?? null
+
+// The plates for a foe's types: one for each type it has but normal and fairy
+export const platesOf = (key) => Object.keys(PLATES).filter((type) => TYPE_MONS[type].includes(key)).map((type) => PLATES[type])
+
 const itemGen = (key) => ITEMS.find((item) => item.key === key)?.gen ?? 1
 
 // The stones and held items a foe can drop while gens are in the wild
@@ -181,12 +183,14 @@ export const heldItemsOf = (key, gens = GENS) =>
   Object.keys(HELD_FAMILIES).filter((item) => HELD_FAMILIES[item].includes(key) && gens.includes(itemGen(item)))
 
 // What a knocked out foe drops while gens are in the wild, or null for nothing, rolled
-// from its seed so the same foe always drops the same. A foe with several stones or held
-// items drops one of them.
-export function dropOf(key, seed, gens = GENS) {
+// from its seed so the same foe always drops the same. A foe with several stones, held
+// items, or plates drops one of them, and never a plate in owned.
+export function dropOf(key, seed, gens = GENS, owned = []) {
   if (rnd(seed, 4, DROP_SALT) >= DROP_ODDS) return null
   if (rnd(seed, 0, DROP_SALT) < CANDY_ODDS) return RARE_CANDY
   if (rnd(seed, 1, DROP_SALT) < CABLE_ODDS) return LINK_CABLE
+  const plates = platesOf(key).filter((plate) => gens.includes(itemGen(plate)) && !owned.includes(plate))
+  if (plates.length > 0 && rnd(seed, 6, DROP_SALT) < PLATE_ODDS) return plates[Math.floor(rnd(seed, 7, DROP_SALT) * plates.length)]
   const held = heldItemsOf(key, gens)
   if (held.length > 0 && rnd(seed, 2, DROP_SALT) < HELD_ODDS) return held[Math.floor(rnd(seed, 3, DROP_SALT) * held.length)]
   const stones = stonesOf(key, gens)

@@ -420,7 +420,7 @@ test('/pokemon list names every mon, and the hint and status stay short', async 
   on('env.get', () => ({ value: undefined }))
   on('store.get', () => ({ value: undefined }))
   await $.session.start({ surface: 'terminal', isInteractive: true, cwd: '/work' })
-  expect(hint).toBe('[<mon>|default|shiny|new|list|pet|feed|sleep|revive|nickname|attack|moves|catch|roar|evolve|stop|bag|use|stats|box|party|dex|release|wander|needs|emoji|size|images|pane|sync|autoevolve|nuzlocke|trainer|gen|help]')
+  expect(hint).toBe('[<mon>|default|shiny|new|list|pet|feed|sleep|revive|nickname|attack|moves|catch|roar|evolve|stop|bag|use|take|stats|box|party|dex|release|wander|needs|emoji|size|images|pane|sync|autoevolve|nuzlocke|trainer|gen|help]')
 
   const list = await $.command.run({ command: 'pokemon', args: 'list' })
   expect(list.text).toMatch(/^\d+ mons: abra, /)
