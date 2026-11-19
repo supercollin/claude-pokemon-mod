@@ -16,6 +16,9 @@ const DISPLAY_NAMES = {
   wobbuffet_female: 'Wobbuffet',
   unown_exclamation: 'Unown !',
   unown_question: 'Unown ?',
+  deoxys_attack: 'Deoxys (Attack)',
+  deoxys_defense: 'Deoxys (Defense)',
+  deoxys_speed: 'Deoxys (Speed)',
 }
 
 export function displayName(mon) {

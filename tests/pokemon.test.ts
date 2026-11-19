@@ -5,7 +5,7 @@ import { SPRITES } from '../hooks/frames.js'
 import { atCenter, CENTER_ROWS, centerPhase, centerSpan, centerStamps, JOY_COLORS, recallFlash, recallTint } from '../hooks/joy.js'
 import { dropOf, findItem, heldItemOf, stoneOfType } from '../hooks/items.js'
 import { dexKey, dexNumber, genOf, pickWild, tierOf } from '../hooks/dex.js'
-import { startLevel } from '../hooks/evolutions.js'
+import { preEvolutionOf, startLevel } from '../hooks/evolutions.js'
 import { encodePng } from '../hooks/png.js'
 import { zoomedPixel } from '../hooks/zoom.js'
 
@@ -3243,16 +3243,16 @@ test('/pokemon new fetches a mon from the generation that has it, saves it, and 
 test('a mon fetched in another session loads at session start', async ($, on) => {
   mock.clock(on)
   const sprite = SPRITES.diglett
-  mock.store(on, { mon: 'torchic', 'custom:torchic': { gen: 3, sprite, moves: ['Ember', 'Tackle'] } })
+  mock.store(on, { mon: 'turtwig', 'custom:turtwig': { gen: 4, sprite, moves: ['Ember', 'Tackle'] } })
   on('ui.render', () => THEIRS)
   on('command.register', () => ({ value: undefined }))
   on('session.start', () => ({ cwd: '/work' }))
   on('env.get', () => ({ value: undefined }))
   await $.session.start({ surface: 'terminal', isInteractive: true, cwd: '/work' })
-  expect((await $.command.run({ command: 'pokemon', args: '' })).text).toMatch(/^Showing default Torchic Lv\. /)
-  expect((await $.command.run({ command: 'pokemon', args: 'list' })).text).toMatch(/, torchic$/)
-  expect((await $.command.run({ command: 'pokemon', args: 'moves' })).text).toBe('Torchic knows Ember, Tackle.')
-  expect((await $.command.run({ command: 'pokemon', args: 'dex torchic' })).text).toBe("Torchic isn't in the Pokédex. Only gen 1 and 2 mons appear in the wild.")
+  expect((await $.command.run({ command: 'pokemon', args: '' })).text).toMatch(/^Showing default Turtwig Lv\. /)
+  expect((await $.command.run({ command: 'pokemon', args: 'list' })).text).toMatch(/, turtwig$/)
+  expect((await $.command.run({ command: 'pokemon', args: 'moves' })).text).toBe('Turtwig knows Ember, Tackle.')
+  expect((await $.command.run({ command: 'pokemon', args: 'dex turtwig' })).text).toBe("Turtwig isn't in the Pokédex. Only gen 1, 2, and 3 mons appear in the wild.")
 })
 
 test('/pokemon new gen3 picks a gen 3 mon you do not have yet', async ($, on) => {
@@ -4702,6 +4702,56 @@ test('a Rare Candy with full hearts grows a fetched Pichu into Pikachu', { timeo
   expect(saved.mon).toBe('pikachu')
 })
 
+test('gen 3 families take their tiers and start levels from Ruby and Sapphire, and Azurill leaves Marill gen 2\'s tier', () => {
+  expect(tierOf('treecko')).toBe('common')
+  expect(tierOf('grovyle')).toBe('uncommon')
+  expect(tierOf('sceptile')).toBe('rare')
+  expect(tierOf('metagross')).toBe('rare')
+  expect(tierOf('sableye')).toBe('uncommon')
+  expect(startLevel('grovyle')).toBe(16)
+  expect(startLevel('ludicolo')).toBe(14)
+  expect(startLevel('salamence')).toBe(50)
+  expect(preEvolutionOf('marill')).toBe('azurill')
+  expect(tierOf('azurill')).toBe('rare')
+  expect(tierOf('marill')).toBe('common')
+  expect(tierOf('azumarill')).toBe('uncommon')
+  expect(startLevel('marill')).toBe(5)
+})
+
+test('a Rare Candy with full hearts grows a fetched Azurill into Marill, fetched from gen 2', { timeoutMs: 30000 }, async ($, on) => {
+  const asked = serveMons(on, { 2: ['marill'] }, { types: ['water'] })
+  const saved: Record<string, any> = {
+    mon: 'azurill',
+    wander: false,
+    bag: { rarecandy: 1 },
+    stats: { azurill: { xp: 10 ** 3, happiness: { value: 100, at: 0 }, food: { value: 100, at: 0 } } },
+    'custom:azurill': { gen: 3, sprite: SPRITES.diglett, moves: ['Bubble', 'Tackle'] },
+  }
+  const { clock } = await startedWith($, on, saved, 0)
+  expect(await run($, 'use rare candy')).toBe('You give Azurill a Rare Candy. It grew to Lv. 11!')
+  await clock.advance(7200)
+  expect(saved.mon).toBe('marill')
+  expect(asked.some((url) => url.includes('/gen2/marill/'))).toBe(true)
+  expect(saved['custom:marill'].gen).toBe(2)
+})
+
+test('a fetched Skitty becomes a fetched Delcatty with a Moon Stone', { timeoutMs: 30000 }, async ($, on) => {
+  const asked = serveMons(on, { 3: ['delcatty'] }, { types: ['normal'] })
+  const saved: Record<string, any> = {
+    trainer: false,
+    mon: 'skitty',
+    bag: { moonstone: 1 },
+    'custom:skitty': { gen: 3, sprite: SPRITES.diglett, moves: ['Tackle'], by: 'new' },
+  }
+  const { clock } = await startedWith($, on, saved, 0)
+  expect(await run($, 'evolve')).toBe('You use a Moon Stone on Skitty.')
+  await clock.advance(7100)
+  expect(saved.mon).toBe('delcatty')
+  expect(saved.bag).toEqual({})
+  expect(asked.some((url) => url.includes('/gen3/delcatty/'))).toBe(true)
+  expect(saved['custom:delcatty'].gen).toBe(3)
+})
+
 // A fetched Tyrogue one XP short of Lv. 20, with its meters at food and happiness
 const tyrogueAt = (food: number, happiness: number, more: Record<string, unknown> = {}) => ({
   mon: 'tyrogue',
@@ -4864,12 +4914,24 @@ test('a generation stays out of the wild until it\'s turned on, and every form o
   expect(tierOf('pichu')).toBe('rare')
   expect(tierOf('chikorita')).toBe('common')
   expect(tierOf('bayleef')).toBe('uncommon')
+  // Gen 3 stays out until it's on too, and Deoxys's formes are its one entry
+  expect(both.some((pick) => genOf(pick.mon) === 3)).toBe(false)
+  const withGen3 = Array.from({ length: 4000 }, () => pickWild(random, [1, 3]))
+  expect(withGen3.filter((pick) => genOf(pick.mon) === 3).length).toBeGreaterThan(1000)
+  expect(withGen3.some((pick) => genOf(pick.mon) === 2)).toBe(false)
+  expect(dexNumber('treecko')).toBe(252)
+  expect(dexNumber('deoxys_speed')).toBe(386)
+  expect(genOf('deoxys_attack')).toBe(3)
+  expect(tierOf('deoxys_defense')).toBe('legendary')
+  expect(tierOf('rayquaza')).toBe('legendary')
+  expect(tierOf('bagon')).toBe('rare')
+  expect(tierOf('azurill')).toBe('rare')
 })
 
 test('/pokemon gen <N> turns a generation on and off, saved across sessions, and the Pokédex counts it', async ($, on) => {
   const saved: Record<string, any> = { mon: 'pidgey', trainer: false }
   await startedWith($, on, saved, 0)
-  const how = '/pokemon gen <N> turns gen 2 on or off.'
+  const how = '/pokemon gen <N> turns gen 2 or gen 3 on or off.'
   expect(await run($, 'gen')).toBe('In the wild: gen 1. ' + how)
   expect(await run($, 'dex')).toBe('Pokédex: seen 0, caught 0 of 151. No wild mons met yet.')
   expect(await run($, 'dex chikorita')).toBe('#152 Chikorita, common. It turns up in the wild once gen 2 is on: /pokemon gen 2 turns it on.')
@@ -4880,7 +4942,13 @@ test('/pokemon gen <N> turns a generation on and off, saved across sessions, and
   expect(await run($, 'dex chikorita')).toBe('#152 Chikorita, common. Not seen yet.')
   expect(await run($, 'help')).toContain('gen <N>')
   expect(await run($, 'gen 1')).toBe('Gen 1 is always in the wild. ' + how)
-  expect(await run($, 'gen 3')).toBe('Gen 3 isn\'t in the wild yet. ' + how)
+  expect(await run($, 'gen 4')).toBe('Gen 4 isn\'t in the wild yet. ' + how)
+  // Gen 3 comes in the same way
+  expect(await run($, 'dex deoxys')).toBe('#386 Deoxys, legendary. It turns up in the wild once gen 3 is on: /pokemon gen 3 turns it on.')
+  expect(await run($, 'gen 3')).toBe('Gen 3 is on. Its mons turn up in the wild too, each fetched from GitHub the first time you meet one.')
+  expect(await run($, 'gen')).toBe('In the wild: gen 1, 2, and 3. ' + how)
+  expect(await run($, 'dex')).toBe('Pokédex: seen 0, caught 0 of 386. No wild mons met yet.')
+  expect(await run($, 'gen 3')).toBe('Gen 3 is off. Its mons no longer turn up in the wild. The ones in your box stay.')
   expect(await run($, 'gen two')).toBe('Unknown generation "two". ' + how)
   expect(await run($, 'gen2')).toBe('Gen 2 is off. Its mons no longer turn up in the wild. The ones in your box stay.')
   expect(saved.gens).toEqual([])

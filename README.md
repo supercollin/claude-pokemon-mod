@@ -94,7 +94,7 @@ Then pick your starter, like `/pokemon charmander`. Bulbasaur, Charmander, Squir
 | `/pokemon catch` | Throw a Poké Ball at a wild mon |
 | `/pokemon trainer` | Turn trainer mode off to show any mon without catching it, or back on |
 | `/pokemon dex` | Every wild mon you've seen and caught |
-| `/pokemon gen 2` | Bring gen 2's mons into the wild, or take them out again |
+| `/pokemon gen 2` | Bring gen 2's mons into the wild, or take them out again, and `/pokemon gen 3` gen 3's |
 | `/pokemon new <mon>` | Fetch a mon from gen 2 to 5, like `/pokemon new mudkip`, or a random one with `/pokemon new gen3` |
 
 <details>
@@ -121,7 +121,7 @@ Then pick your starter, like `/pokemon charmander`. Bulbasaur, Charmander, Squir
 | `/pokemon use <item> [mon]` | Use an item, named loosely, like `thunder stone`, `thunderstone`, or `candy`. A stone or Link Cable on the mon on show is the same as `/pokemon evolve`. Rare Candy raises the mon on show, or a box mon named, one level |
 | `/pokemon revive`, `/pokemon revive <mon>` | Take a fainted mon to a Pokémon Center. Nurse Joy heals it in 5 minutes, and it stands up at 50% food and 30% happiness |
 | `/pokemon nuzlocke` | Toggle nuzlocke (off by default, saved across sessions). On, a mon that faints is gone for good |
-| `/pokemon gen <N>` | Toggle a generation's mons in the wild (gen 1 always, saved across sessions). Only gen 2 can be turned on so far. `/pokemon gen` lists the ones on |
+| `/pokemon gen <N>` | Toggle a generation's mons in the wild (gen 1 always, saved across sessions). Gen 2 and gen 3 can be turned on so far. `/pokemon gen` lists the ones on |
 | `/pokemon trainer` | Toggle trainer mode (on by default, saved across sessions). On, `/pokemon <mon>` shows only mons in your box, so the rest have to be caught in the wild. The mons already in your box stay. An empty box, or one whose mons are all gone, picks one starter: Bulbasaur, Charmander, Squirtle, or Pikachu. Mons fetched with `/pokemon new` stay free to show, except from a generation in the wild, which `/pokemon new` won't fetch then. Off, `/pokemon <mon>` shows any mon |
 | `/pokemon sleep` | Tuck the mon in, so its meters drain slower until Claude starts working in a session showing it. Run it again to wake it |
 | `/pokemon needs` | Toggle food and happiness (on by default). Off, the faint and runaway clocks stop too |
@@ -299,15 +299,15 @@ minutes or more and scaled by the meters. Levels follow the games' medium fast c
 level L takes L³ XP. A new mon starts at 5, or at the level it evolves at, so Charmeleon
 starts at 16. With 30 s turns and full meters, 5 to 16 takes about 75 turns.
 
-When the mon reaches its evolution level from Red and Blue, or Gold and Silver for gen 2,
-it evolves once idle. It glows,
+When the mon reaches its evolution level from Red and Blue, Gold and Silver for gen 2, or
+Ruby and Sapphire for gen 3, it evolves once idle. It glows,
 flickers between its two shapes, and flashes into its new form. `/pokemon stop` cancels,
 and the next level-up tries again. Level, XP, and meters carry over. With
 `/pokemon autoevolve` off, reaching the level only makes the mon ready, and it evolves when
 you run `/pokemon evolve`.
 
-Gen 2 mons aren't bundled, so a mon evolving into one, like Cyndaquil into Quilava,
-fetches it first, the way `/pokemon new` does, and every session can show it after. If the
+Gen 2 and gen 3 mons aren't bundled, so a mon evolving into one, like Cyndaquil into
+Quilava or Treecko into Grovyle, fetches it first, the way `/pokemon new` does, and every session can show it after. If the
 fetch fails, the mon doesn't evolve yet and says why, and the next level-up, showing it
 again, or `/pokemon evolve` tries again. Smoochum, Elekid, and Magby, fetched with
 `/pokemon new`, grow into Jynx, Electabuzz, and Magmar at 30. Tyrogue, which the games
@@ -318,7 +318,8 @@ it becomes Hitmontop.
 
 Some mons evolve on a level-up with all five hearts full, from a turn or a Rare Candy:
 Golbat into Crobat, Chansey into Blissey, and the fetched Pichu, Cleffa, Igglybuff, and
-Togepi into Pikachu, Clefairy, Jigglypuff, and Togetic. Eevee does too, into Espeon by day
+Togepi into Pikachu, Clefairy, Jigglypuff, and Togetic, and gen 3's Azurill into gen 2's
+Marill. Eevee does too, into Espeon by day
 and Umbreon by night, on your computer's clock as in Gold and Silver: day runs from 4:00
 to 18:00. With needs off, every level-up counts as full hearts. A level-up that reaches
 one makes the mon ready the way its level would, and `/pokemon evolve` alone only
@@ -335,7 +336,8 @@ Porygon into Porygon2 with an Up-Grade. `/pokemon use metal coat` on Onix starts
 done. Eevee needs a pick, like `/pokemon evolve jolteon`, which takes a Thunder Stone.
 Gloom needs one too: a Leaf Stone makes it Vileplume, and a Sun Stone a fetched
 Bellossom, and Poliwhirl one between Poliwrath and Politoed. Sunkern, from gen 2, also
-takes a Sun Stone.
+takes a Sun Stone, and from gen 3 Lombre a Water Stone, Nuzleaf a Leaf Stone, and Skitty a
+Moon Stone.
 Without the item, it says which one is missing.
 
 Items come from wild mons you knock out, and `/pokemon bag` lists them. The first time
@@ -409,6 +411,12 @@ Unown. With gen 2 on in trainer mode, its mons have to be caught: `/pokemon new`
 fetch them, and one fetched for the wild or an evolution isn't free to show. Turning
 gen 2 off keeps the mons in your box and the ones in your Pokédex.
 
+`/pokemon gen 3` brings gen 3's 135 mons in the same way. Regirock, Regice, Registeel,
+Latias, Latios, Kyogre, Groudon, Rayquaza, Jirachi, and Deoxys are legendary, and Bagon,
+Beldum, Feebas, Absol, and the babies Azurill and Wynaut among the rare ones. Deoxys turns
+up in one of its four formes, Normal, Attack, Defense, or Speed, each the one Pokédex
+entry for Deoxys. Gen 2 and gen 3 go on and off on their own.
+
 Your work does the fighting. Each tool call and each answered turn banks a move, two at
 most, and the mon spends one every 6 to 8 s on a random move aimed at the foe. Each hit
 shrinks the HP bar over the foe's head. A common foe takes about 3 hits, a legendary about 10.
@@ -452,7 +460,7 @@ without a catch, when the mon falls asleep, or on `/pokemon roar`. `/pokemon fee
 until it's gone, and so does an evolution that comes due.
 
 The Pokédex counts wild mons only, seen when one shows up and caught when you catch it,
-out of 151, or 251 with gen 2 on. A
+out of 151, plus 100 with gen 2 on and 135 with gen 3. A
 caught species joins your box at its first level, unless it's there already, and
 its line in `/pokemon box` shows ◓. `/pokemon <mon>` still picks any mon, and a mon
 keeps its ◓ when it evolves, even one raised before its species was caught. Releasing a mon keeps it in the dex, and raising that species again
