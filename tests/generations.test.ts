@@ -1,8 +1,9 @@
 import { expect, mock } from 'claude-code/testing'
 import { SPRITES } from '../hooks/frames.js'
-import { dropOf, findItem, heldItemOf, stoneOfType } from '../hooks/items.js'
+import { dropOf, findItem, heldItemsOf, platesOf, stonesOf } from '../hooks/items.js'
 import { dexKey, dexNumber, genOf, pickWild, tierOf } from '../hooks/dex.js'
 import { levelEvolutionOf, levelUpEvolutionOf, preEvolutionOf, startLevel } from '../hooks/evolutions.js'
+import { displayName } from '../hooks/names.js'
 import { test, BAND, THEIRS, startedWith, ANSWERED, toastsOf, spawnOf, runningAgents, inBattle, WEAK, weaken, catchFoe, APPEARED, run } from './helpers.ts'
 
 // Diglett's idle GIF, served for every file of a fetched mon
@@ -64,16 +65,16 @@ test('/pokemon new fetches a mon from the generation that has it, saves it, and 
 test('a mon fetched in another session loads at session start', async ($, on) => {
   mock.clock(on)
   const sprite = SPRITES.diglett
-  mock.store(on, { mon: 'turtwig', 'custom:turtwig': { gen: 4, sprite, moves: ['Ember', 'Tackle'] } })
+  mock.store(on, { mon: 'snivy', 'custom:snivy': { gen: 5, sprite, moves: ['Ember', 'Tackle'] } })
   on('ui.render', () => THEIRS)
   on('command.register', () => ({ value: undefined }))
   on('session.start', () => ({ cwd: '/work' }))
   on('env.get', () => ({ value: undefined }))
   await $.session.start({ surface: 'terminal', isInteractive: true, cwd: '/work' })
-  expect((await $.command.run({ command: 'pokemon', args: '' })).text).toMatch(/^Showing default Turtwig Lv\. /)
-  expect((await $.command.run({ command: 'pokemon', args: 'list' })).text).toMatch(/, turtwig$/)
-  expect((await $.command.run({ command: 'pokemon', args: 'moves' })).text).toBe('Turtwig knows Ember, Tackle.')
-  expect((await $.command.run({ command: 'pokemon', args: 'dex turtwig' })).text).toBe("Turtwig isn't in the Pokédex. Only gen 1, 2, and 3 mons appear in the wild.")
+  expect((await $.command.run({ command: 'pokemon', args: '' })).text).toMatch(/^Showing default Snivy Lv\. /)
+  expect((await $.command.run({ command: 'pokemon', args: 'list' })).text).toMatch(/, snivy$/)
+  expect((await $.command.run({ command: 'pokemon', args: 'moves' })).text).toBe('Snivy knows Ember, Tackle.')
+  expect((await $.command.run({ command: 'pokemon', args: 'dex snivy' })).text).toBe("Snivy isn't in the Pokédex. Only gen 1, 2, 3, and 4 mons appear in the wild.")
 })
 
 test('/pokemon new gen3 picks a gen 3 mon you do not have yet', async ($, on) => {
@@ -149,7 +150,7 @@ test('a knockout drops an item one time in 5: its own type\'s stone, or a Link C
     const drops: Record<string, number> = {}
     let none = 0
     for (let seed = 0; seed < 18000; seed++) {
-      const item = dropOf(key, seed)
+      const item = dropOf(key, seed, [1])
       if (item) drops[item] = (drops[item] ?? 0) + 1
       else none++
     }
@@ -163,8 +164,8 @@ test('a knockout drops an item one time in 5: its own type\'s stone, or a Link C
   expect(Object.keys(count('pikachu').drops).sort()).toEqual(['linkcable', 'rarecandy', 'thunderstone'])
   // A foe with no stone type drops only a Link Cable or Rare Candy
   expect(Object.keys(pidgey.drops).sort()).toEqual(['linkcable', 'rarecandy'])
-  expect(stoneOfType('pikachu')).toBe('thunderstone')
-  expect(stoneOfType('pidgey')).toBeNull()
+  expect(stonesOf('pikachu', [1])).toEqual(['thunderstone'])
+  expect(stonesOf('pidgey')).toEqual([])
   expect(vulpix.none / 18000).toBeGreaterThan(0.76)
   expect(vulpix.none / 18000).toBeLessThan(0.84)
   for (const { drops } of [vulpix, pidgey]) {
@@ -195,8 +196,8 @@ test('the first bag grants the item every stone or trade mon in the box needs, a
   }
   const saved: Record<string, any> = { mon: 'charmander', stats }
   await startedWith($, on, saved, 0)
-  expect(await run($, 'bag')).toBe('Your bag:\nFire Stone, 1\nWater Stone, 1\nThunder Stone, 2\nLink Cable, 1')
-  expect(saved.bag).toEqual({ thunderstone: 2, waterstone: 1, firestone: 1, linkcable: 1 })
+  expect(await run($, 'bag')).toBe('Your bag:\nFire Stone, 1\nWater Stone, 1\nThunder Stone, 2\nLeaf Stone, 1\nIce Stone, 1\nLink Cable, 1')
+  expect(saved.bag).toEqual({ thunderstone: 2, waterstone: 1, firestone: 1, leafstone: 1, icestone: 1, linkcable: 1 })
   // Made once, the bag is never granted again
   saved.bag = {}
   expect(await run($, 'bag')).toBe('Your bag is empty. Knock out a wild mon with /pokemon attack, and it may drop an item.')
@@ -226,8 +227,8 @@ test('/pokemon use takes an item by a loose name, and a stone on a mon is the sa
   const saved: Record<string, any> = { trainer: false, mon: 'eevee', bag: { firestone: 1, waterstone: 1 } }
   const { clock } = await startedWith($, on, saved, 0)
   expect(await run($, 'use')).toBe('Name the item, like /pokemon use rare candy. /pokemon bag lists yours.')
-  expect(await run($, 'use potion')).toBe('Unknown item "potion". Items: Fire Stone, Water Stone, Thunder Stone, Leaf Stone, Moon Stone, Sun Stone, King\'s Rock, Metal Coat, Dragon Scale, Up-Grade, Deep Sea Tooth, Deep Sea Scale, Link Cable, Rare Candy.')
-  expect(await run($, 'use leaf stone')).toBe('Eevee can\'t use a Leaf Stone.')
+  expect(await run($, 'use potion')).toBe('Unknown item "potion". Items: Fire Stone, Water Stone, Thunder Stone, Leaf Stone, Moon Stone, Sun Stone, Shiny Stone, Dusk Stone, Dawn Stone, Ice Stone, King\'s Rock, Metal Coat, Dragon Scale, Up-Grade, Deep Sea Tooth, Deep Sea Scale, Protector, Electirizer, Magmarizer, Dubious Disc, Reaper Cloth, Razor Claw, Razor Fang, Oval Stone, Flame Plate, Splash Plate, Zap Plate, Meadow Plate, Icicle Plate, Fist Plate, Toxic Plate, Earth Plate, Sky Plate, Mind Plate, Insect Plate, Stone Plate, Spooky Plate, Draco Plate, Dread Plate, Iron Plate, Link Cable, Rare Candy.')
+  expect(await run($, 'use moon stone')).toBe('Eevee can\'t use a Moon Stone.')
   expect(await run($, 'use fire stone growlithe')).toBe('Show Growlithe first with /pokemon growlithe, then use the Fire Stone.')
   expect(await run($, 'use FireStone eevee')).toBe('You use a Fire Stone on Eevee.')
   await clock.advance(7100)
@@ -265,6 +266,26 @@ test('a level-up evolves a fetched gen 2 mon, fetching the mon it becomes first'
   expect(await run($, 'moves')).toBe('Quilava knows Ember, Flamethrower, Tackle.')
 })
 
+test('an evolution keeps the mon\'s sex and shows its sprite for it, a female Wynaut becoming the female Wobbuffet', { timeoutMs: 30000 }, async ($, on) => {
+  const toasts = toastsOf(on)
+  on('turn.complete', () => ({ text: '' }))
+  const asked = serveMons(on, { 2: ['wobbuffet_female'] }, { types: ['psychic'] })
+  const saved: Record<string, any> = {
+    mon: 'wynaut',
+    wander: false,
+    stats: { wynaut: { xp: 15 ** 3 - 1, sex: 'female' } },
+    'custom:wynaut': { gen: 3, sprite: SPRITES.diglett, moves: ['Tackle'] },
+  }
+  const { clock } = await startedWith($, on, saved, 0)
+  await $.turn.complete(ANSWERED)
+  await clock.advance(7200)
+  expect(toasts).toContain('Congratulations! Your Wynaut evolved into Wobbuffet!')
+  expect(asked.some((url) => url.includes('/gen2/wobbuffet_female/'))).toBe(true)
+  expect(saved.mon).toBe('wobbuffet_female')
+  expect(saved.stats.wobbuffet_female.sex).toBe('female')
+  expect(await run($, 'stats')).toMatch(/^Wobbuffet ♀, Lv\. 15,/)
+})
+
 test('a gen 2 evolution that can\'t be fetched waits, and says why', { timeoutMs: 30000 }, async ($, on) => {
   const toasts = toastsOf(on)
   on('turn.complete', () => ({ text: '' }))
@@ -292,11 +313,11 @@ test('Gloom becomes Vileplume with a Leaf Stone, or a fetched Bellossom with a S
   expect(saved['custom:bellossom'].gen).toBe(2)
 })
 
-test('a foe that holds a trade item drops it now and then, and the same foe always drops the same', () => {
-  const count = (key: string) => {
+test('a foe that holds a trade item drops it now and then, only while the item\'s generation is in the wild, and the same foe always drops the same', () => {
+  const count = (key: string, gens = [1, 2]) => {
     const drops: Record<string, number> = {}
     for (let seed = 0; seed < 18000; seed++) {
-      const item = dropOf(key, seed)
+      const item = dropOf(key, seed, gens)
       if (item) drops[item] = (drops[item] ?? 0) + 1
     }
     return drops
@@ -310,7 +331,10 @@ test('a foe that holds a trade item drops it now and then, and the same foe alwa
   expect(Object.keys(count('porygon'))).toContain('upgrade')
   expect(Object.keys(count('horsea'))).toContain('dragonscale')
   expect(Object.keys(count('slowpoke'))).toContain('kingsrock')
-  expect(heldItemOf('pidgey')).toBeNull()
+  expect(heldItemsOf('pidgey')).toEqual([])
+  // The Metal Coat and Up-Grade came in gen 2, so with gen 1 alone they don't drop
+  expect(Object.keys(count('magnemite', [1])).sort()).toEqual(['linkcable', 'rarecandy', 'thunderstone'])
+  expect(Object.keys(count('porygon', [1])).sort()).toEqual(['linkcable', 'rarecandy'])
   expect(Object.keys(count('pidgey')).some((item) => ['kingsrock', 'metalcoat', 'dragonscale', 'upgrade'].includes(item))).toBe(false)
   expect(dropOf('magnemite', 42)).toBe(dropOf('magnemite', 42))
 })
@@ -319,18 +343,20 @@ test('gen 2 foes drop their own type\'s stone, Sun Stone included, and the items
   const kinds = (key: string) => {
     const drops = new Set<string>()
     for (let seed = 0; seed < 6000; seed++) {
-      const item = dropOf(key, seed)
+      const item = dropOf(key, seed, [1, 2])
       if (item) drops.add(item)
     }
     return [...drops].sort()
   }
   expect(kinds('cyndaquil')).toEqual(['firestone', 'linkcable', 'rarecandy'])
-  expect(kinds('sunkern')).toEqual(['linkcable', 'rarecandy', 'sunstone'])
+  expect(kinds('sunkern')).toEqual(['leafstone', 'linkcable', 'rarecandy', 'sunstone'])
   expect(kinds('togepi')).toEqual(['linkcable', 'moonstone', 'rarecandy'])
   expect(kinds('steelix')).toContain('metalcoat')
   expect(kinds('kingdra')).toEqual(['dragonscale', 'linkcable', 'rarecandy', 'waterstone'])
-  expect(stoneOfType('hooh')).toBe('sunstone')
-  expect(heldItemOf('porygon2')).toBe('upgrade')
+  expect(stonesOf('hooh', [1, 2])).toEqual(['firestone', 'sunstone'])
+  // Porygon2 holds the Up-Grade, and with gen 4 on the Dubious Disc it trades into Porygon-Z with
+  expect(heldItemsOf('porygon2', [1, 2])).toEqual(['upgrade'])
+  expect(heldItemsOf('porygon2')).toEqual(['upgrade', 'dubiousdisc'])
   // A gen 2 foe with no stone type drops no stone, as gen 1's don't
   expect(kinds('aipom')).toEqual(['linkcable', 'rarecandy'])
   expect(kinds('porygon')).toEqual(['linkcable', 'rarecandy', 'upgrade'])
@@ -356,17 +382,181 @@ test('Clamperl trades into Huntail holding a Deep Sea Tooth or Gorebyss holding 
   expect(asked.some((url) => url.includes('/gen3/gorebyss/'))).toBe(true)
 })
 
-test('gen 3 foes drop their own type\'s stone, and Carvanha and Relicanth the Deep Sea items', () => {
+test('a Dawn Stone makes a male Kirlia Gallade, and a female Kirlia says only a male can', { timeoutMs: 30000 }, async ($, on) => {
+  const asked = serveMons(on, { 4: ['gallade'] }, { types: ['psychic', 'fighting'] })
+  const kirlia = (sex: string) => ({
+    trainer: false,
+    mon: 'kirlia',
+    bag: { dawnstone: 1 },
+    stats: { kirlia: { xp: 20 ** 3, sex } },
+    'custom:kirlia': { gen: 3, sprite: SPRITES.diglett, moves: ['Confusion'], by: 'new' },
+  })
+  const saved: Record<string, any> = kirlia('female')
+  const { clock } = await startedWith($, on, saved, 0)
+  expect(await run($, 'stats')).toMatch(/ Can become Gardevoir at Lv\. 30\. /)
+  expect(await run($, 'evolve gallade')).toBe('Only a male Kirlia can become Gallade.')
+  expect(await run($, 'use dawn stone')).toBe('Only a male Kirlia can become Gallade.')
+  saved.stats.kirlia.sex = 'male'
+  await run($, 'kirlia')
+  expect(await run($, 'stats')).toMatch(/ Can become Gardevoir at Lv\. 30 or Gallade with a Dawn Stone\. /)
+  expect(await run($, 'use dawn stone')).toBe('You use a Dawn Stone on Kirlia.')
+  await clock.advance(7100)
+  expect(saved.mon).toBe('gallade')
+  expect(saved.stats.gallade.sex).toBe('male')
+  expect(saved.bag).toEqual({})
+  expect(asked.some((url) => url.includes('/gen4/gallade/'))).toBe(true)
+})
+
+test('Burmy at 20 becomes the Wormadam of its cloak when female and Mothim when male', () => {
+  expect(levelEvolutionOf('burmy_sandy', 'female')).toEqual({ into: 'wormadam_sandy', level: 20, sex: 'female' })
+  expect(levelEvolutionOf('burmy_sandy', 'male')).toEqual({ into: 'mothim', level: 20, sex: 'male' })
+  expect(levelEvolutionOf('burmy_trash', null)).toBeNull()
+  expect(startLevel('wormadam_trash')).toBe(20)
+  expect(preEvolutionOf('mothim')).toBe('burmy')
+  expect(levelEvolutionOf('snorunt', 'female')?.into).toBe('glalie')
+})
+
+test('Mantyke levels up into Mantine with a Remoraid on show or in the party', () => {
+  const at = (team: string[]) => ({ level: 12, food: 0, hearts: 0, full: 5, time: 'day', sex: 'male', team })
+  expect(levelUpEvolutionOf('mantyke', at(['remoraid']))?.into).toBe('mantine')
+  expect(levelUpEvolutionOf('mantyke', at(['octillery', 'pikachu']))).toBeNull()
+})
+
+for (const [hour, evolves] of [[22, true], [12, false]] as const) {
+  test(`a Razor Claw ${evolves ? 'makes Sneasel Weavile at night' : 'waits for the night'}`, { timeoutMs: 30000 }, async ($, on) => {
+    serveMons(on, { 4: ['weavile'] }, { types: ['dark', 'ice'] })
+    const now = new Date(2026, 10, 17, hour).getTime()
+    const saved: Record<string, any> = { trainer: false, mon: 'sneasel', bag: { razorclaw: 1 }, stats: { sneasel: { xp: 20 ** 3, sex: 'female' } } }
+    saved['custom:sneasel'] = { gen: 2, sprite: SPRITES.diglett, moves: ['Scratch'], by: 'new' }
+    const { clock } = await startedWith($, on, saved, now)
+    if (evolves) {
+      expect(await run($, 'use razor claw')).toBe('You use a Razor Claw on Sneasel.')
+      await clock.advance(7100)
+      expect(saved.mon).toBe('weavile')
+    } else {
+      expect(await run($, 'use razor claw')).toBe('Sneasel evolves into Weavile with a Razor Claw by night. It\'s day now.')
+      expect(saved.bag).toEqual({ razorclaw: 1 })
+    }
+  })
+}
+
+test('gen 4 foes drop their own type\'s stone, gen 4\'s new stones included, and the lines that evolve with an item hold it', () => {
   const kinds = (key: string) => {
     const drops = new Set<string>()
     for (let seed = 0; seed < 6000; seed++) {
       const item = dropOf(key, seed)
+      // Plates have a test of their own
+      if (item && !item.endsWith('plate')) drops.add(item)
+    }
+    return [...drops].sort()
+  }
+  expect(kinds('chimchar')).toEqual(['firestone', 'linkcable', 'rarecandy'])
+  expect(kinds('drifloon')).toEqual(['duskstone', 'linkcable', 'rarecandy'])
+  expect(kinds('snover')).toEqual(['icestone', 'leafstone', 'linkcable', 'rarecandy'])
+  expect(kinds('bronzor')).toEqual(['dawnstone', 'linkcable', 'metalcoat', 'rarecandy'])
+  expect(kinds('togekiss')).toEqual(['linkcable', 'rarecandy', 'shinystone'])
+  expect(kinds('rhyhorn')).toEqual(['linkcable', 'protector', 'rarecandy'])
+  expect(kinds('electabuzz')).toEqual(['electirizer', 'linkcable', 'rarecandy', 'thunderstone'])
+  expect(kinds('magby')).toEqual(['firestone', 'linkcable', 'magmarizer', 'rarecandy'])
+  expect(kinds('happiny')).toEqual(['linkcable', 'ovalstone', 'rarecandy'])
+  expect(heldItemsOf('dusclops')).toEqual(['reapercloth'])
+  expect(heldItemsOf('sneasel')).toEqual(['razorclaw'])
+  expect(heldItemsOf('gligar')).toEqual(['razorfang'])
+  expect(kinds('starly')).toEqual(['linkcable', 'rarecandy'])
+})
+
+test('an older foe drops a newer generation\'s items by its type once that generation is in the wild', () => {
+  const kinds = (key: string, gens: number[]) => {
+    const drops = new Set<string>()
+    for (let seed = 0; seed < 6000; seed++) {
+      const item = dropOf(key, seed, gens)
+      // Plates have a test of their own
+      if (item && !item.endsWith('plate')) drops.add(item)
+    }
+    return [...drops].sort()
+  }
+  expect(kinds('gastly', [1])).toEqual(['linkcable', 'rarecandy'])
+  expect(kinds('gastly', [1, 4])).toEqual(['duskstone', 'linkcable', 'rarecandy'])
+  // A foe of two types drops either stone
+  expect(kinds('sneasel', [1, 2, 4])).toEqual(['duskstone', 'icestone', 'linkcable', 'rarecandy', 'razorclaw'])
+  expect(kinds('clefairy', [1])).toEqual(['linkcable', 'moonstone', 'rarecandy'])
+  expect(kinds('clefairy', [1, 4])).toEqual(['linkcable', 'moonstone', 'rarecandy', 'shinystone'])
+  expect(kinds('clamperl', [1, 3])).toEqual(['deepseascale', 'deepseatooth', 'linkcable', 'rarecandy', 'waterstone'])
+  expect(kinds('onix', [1, 2])).toEqual(['linkcable', 'metalcoat', 'rarecandy'])
+  expect(kinds('dratini', [1])).toEqual(['linkcable', 'rarecandy'])
+  expect(stonesOf('abra', [1, 4])).toEqual(['dawnstone'])
+})
+
+test('a foe drops the plate of one of its types once gen 4 is on, 1 drop in 20, and never a plate you have', () => {
+  expect(platesOf('pikachu')).toEqual(['zapplate'])
+  expect(platesOf('charizard')).toEqual(['flameplate', 'skyplate'])
+  expect(platesOf('rattata')).toEqual([])
+  const count = (key: string, gens: number[], owned: string[] = []) => {
+    const drops: Record<string, number> = {}
+    let dropped = 0
+    for (let seed = 0; seed < 30000; seed++) {
+      const item = dropOf(key, seed, gens, owned)
+      if (!item) continue
+      dropped++
+      drops[item] = (drops[item] ?? 0) + 1
+    }
+    return { drops, dropped }
+  }
+  expect(count('charizard', [1, 2, 3]).drops.flameplate).toBeUndefined()
+  const { drops, dropped } = count('charizard', [1, 4])
+  expect(drops.flameplate).toBeGreaterThan(0)
+  expect(drops.skyplate).toBeGreaterThan(0)
+  expect((drops.flameplate + drops.skyplate) / dropped).toBeGreaterThan(0.03)
+  expect((drops.flameplate + drops.skyplate) / dropped).toBeLessThan(0.07)
+  const owned = count('charizard', [1, 4], ['flameplate']).drops
+  expect(owned.flameplate).toBeUndefined()
+  expect(owned.skyplate).toBeGreaterThan(0)
+  expect(count('rattata', [1, 4]).drops).not.toHaveProperty('flameplate')
+})
+
+test('Arceus holds a plate from the bag and takes its type\'s forme, gives the old one back, and /pokemon take makes it Normal again', { timeoutMs: 30000 }, async ($, on) => {
+  const toasts = toastsOf(on)
+  const asked = serveMons(on, { 4: ['arceus', 'arceus_fire', 'arceus_water'] }, { types: ['fire'] })
+  const saved: Record<string, any> = {
+    trainer: false,
+    mon: 'arceus',
+    bag: { flameplate: 1, splashplate: 1 },
+    stats: { arceus: { xp: 50 ** 3, nickname: 'Arc' }, pikachu: { xp: 5 ** 3, parked: true } },
+    'custom:arceus': { gen: 4, sprite: SPRITES.diglett, moves: ['Tackle'], by: 'new' },
+  }
+  await startedWith($, on, saved, 0)
+  expect(await run($, 'take')).toBe('Arc holds nothing.')
+  expect(await run($, 'use flame plate')).toBe('Arc holds the Flame Plate and becomes fire type!')
+  expect(asked.some((url) => url.includes('/gen4/arceus_fire/'))).toBe(true)
+  expect(saved.mon).toBe('arceus_fire')
+  expect(saved.stats.arceus).toBeUndefined()
+  expect(saved.stats.arceus_fire).toEqual({ xp: 50 ** 3, nickname: 'Arc', plate: 'flameplate' })
+  expect(saved.bag).toEqual({ splashplate: 1 })
+  expect(await run($, 'stats')).toMatch(/^Arc \(Arceus \(Fire\)\), Lv\. 50, .* Holds the Flame Plate\. /)
+  expect(await run($, 'use flame plate')).toBe('Arc already holds the Flame Plate.')
+  expect(await run($, 'use splash plate')).toBe('Arc holds the Splash Plate and becomes water type! The Flame Plate went back in your bag.')
+  expect(saved.mon).toBe('arceus_water')
+  expect(saved.bag).toEqual({ flameplate: 1 })
+  expect(await run($, 'take')).toBe('You take the Splash Plate from Arc. It\'s Normal again.')
+  expect(saved.mon).toBe('arceus')
+  expect(saved.stats.arceus).toEqual({ xp: 50 ** 3, nickname: 'Arc' })
+  expect(saved.bag).toEqual({ flameplate: 1, splashplate: 1 })
+  expect(toasts.some((text) => text.includes('evolved'))).toBe(false)
+  await run($, 'pikachu')
+  expect(await run($, 'use flame plate')).toBe('Pikachu can\'t use a Flame Plate. Only Arceus holds a plate.')
+})
+
+test('gen 3 foes drop their own type\'s stone, and Carvanha and Relicanth the Deep Sea items', () => {
+  const kinds = (key: string) => {
+    const drops = new Set<string>()
+    for (let seed = 0; seed < 6000; seed++) {
+      const item = dropOf(key, seed, [1, 2, 3])
       if (item) drops.add(item)
     }
     return [...drops].sort()
   }
   expect(kinds('torchic')).toEqual(['firestone', 'linkcable', 'rarecandy'])
-  expect(kinds('lotad')).toEqual(['linkcable', 'rarecandy', 'waterstone'])
+  expect(kinds('lotad')).toEqual(['leafstone', 'linkcable', 'rarecandy', 'waterstone'])
   expect(kinds('seedot')).toEqual(['leafstone', 'linkcable', 'rarecandy'])
   expect(kinds('skitty')).toEqual(['linkcable', 'moonstone', 'rarecandy'])
   expect(kinds('solrock')).toEqual(['linkcable', 'rarecandy', 'sunstone'])
@@ -506,7 +696,7 @@ test('a Rare Candy with full hearts grows a fetched Pichu into Pikachu', { timeo
     mon: 'pichu',
     wander: false,
     bag: { rarecandy: 1 },
-    stats: { pichu: { xp: 10 ** 3, happiness: { value: 100, at: 0 }, food: { value: 100, at: 0 } } },
+    stats: { pichu: { xp: 10 ** 3, sex: 'male', happiness: { value: 100, at: 0 }, food: { value: 100, at: 0 } } },
     'custom:pichu': { gen: 2, sprite: SPRITES.diglett, moves: ['Thunder Shock', 'Tackle'] },
   }
   const { clock } = await startedWith($, on, saved, 0)
@@ -529,6 +719,76 @@ test('gen 3 families take their tiers and start levels from Ruby and Sapphire, a
   expect(tierOf('marill')).toBe('common')
   expect(tierOf('azumarill')).toBe('uncommon')
   expect(startLevel('marill')).toBe(5)
+})
+
+test('gen 4 families take their tiers and start levels from Diamond and Pearl, and its forms and sexes evolve on their own', () => {
+  expect(tierOf('turtwig')).toBe('common')
+  expect(tierOf('torterra')).toBe('rare')
+  expect(tierOf('gible')).toBe('rare')
+  expect(tierOf('rotom')).toBe('rare')
+  expect(tierOf('arceus')).toBe('legendary')
+  expect(tierOf('vespiquen')).toBe('uncommon')
+  expect(tierOf('hippowdon')).toBe('uncommon')
+  expect(tierOf('gastrodon')).toBe('uncommon')
+  expect(startLevel('grotle')).toBe(18)
+  expect(startLevel('garchomp_female')).toBe(48)
+  expect(startLevel('hippowdon_female')).toBe(34)
+  expect(startLevel('vespiquen')).toBe(21)
+  expect(startLevel('gastrodon_west')).toBe(30)
+  expect(preEvolutionOf('vespiquen')).toBe('combee')
+  expect(preEvolutionOf('gabite_female')).toBe('gible')
+  // Only a female Combee evolves, and each sea and sex keeps to its own line
+  expect(levelEvolutionOf('combee_male')).toBeNull()
+  expect(levelEvolutionOf('combee_female')).toEqual({ into: 'vespiquen', level: 21 })
+  expect(levelEvolutionOf('shellos_east')?.into).toBe('gastrodon_east')
+  expect(levelEvolutionOf('gible_female')?.into).toBe('gabite_female')
+  expect(levelEvolutionOf('hippopotas_male')?.into).toBe('hippowdon_male')
+  // A move the games wait for is the level it's learned at
+  expect(levelEvolutionOf('aipom')).toEqual({ into: 'ambipom', level: 32 })
+  expect(levelEvolutionOf('bonsly')).toEqual({ into: 'sudowoodo', level: 17 })
+  expect(startLevel('ambipom')).toBe(32)
+  // A bundled mon keeps its gen 1 tier and start level when it only grows into a gen 4 mon
+  expect(tierOf('magneton')).toBe('uncommon')
+  expect(tierOf('mrmime')).toBe('uncommon')
+  expect(startLevel('mrmime')).toBe(5)
+  expect(tierOf('mimejr')).toBe('rare')
+  expect(displayName('mimejr')).toBe('Mime Jr.')
+  expect(displayName('porygonz')).toBe('Porygon-Z')
+  expect(displayName('rotom_wash')).toBe('Rotom (Wash)')
+  expect(displayName('burmy_sandy')).toBe('Burmy (Sandy)')
+  expect(displayName('combee_female')).toBe('Combee')
+  expect(displayName('garchomp_female')).toBe('Garchomp')
+  expect(dexNumber('turtwig')).toBe(387)
+  expect(dexNumber('arceus_fire')).toBe(493)
+})
+
+test('gen 4 in the wild: Burmy in a cloak, Combee and Gible by sex, Rotom in a forme, and Arceus always Normal', () => {
+  let seed = 3
+  const random = () => {
+    seed = (seed * 16807) % 2147483647
+    return (seed - 1) / 2147483646
+  }
+  const picks = Array.from({ length: 20000 }, () => pickWild(random, [1, 4]))
+  expect(picks.filter((pick) => genOf(pick.mon) === 4).length).toBeGreaterThan(5000)
+  for (const pick of picks) expect(pick.key).toBe(dexKey(pick.mon))
+  const of = (key: string) => picks.filter((pick) => pick.key === key)
+  expect(of('burmy').every((pick) => /^burmy_(plant|sandy|trash)$/.test(pick.mon))).toBe(true)
+  expect(of('combee').every((pick) => pick.mon === 'combee_' + pick.sex)).toBe(true)
+  expect(of('combee').filter((pick) => pick.sex === 'male').length).toBeGreaterThan(of('combee').filter((pick) => pick.sex === 'female').length)
+  expect(of('gible').every((pick) => pick.mon === (pick.sex === 'female' ? 'gible_female' : 'gible'))).toBe(true)
+  expect(of('rotom').some((pick) => pick.mon !== 'rotom')).toBe(true)
+  expect(of('rotom').every((pick) => pick.sex === null)).toBe(true)
+  expect(of('arceus').every((pick) => pick.mon === 'arceus')).toBe(true)
+})
+
+test('/pokemon new fetches Mime Jr. from its mimeJr folder, and a form takes its species\' types when PokéAPI has none for it', { timeoutMs: 30000 }, async ($, on) => {
+  const asked = serveMons(on, { 4: ['mimeJr', 'combee_female'] }, { types: ['psychic'] })
+  const saved: Record<string, any> = { trainer: false }
+  await startedWith($, on, saved, 0)
+  expect(await run($, 'new mimejr')).toMatch(/Mime Jr\./)
+  expect(asked.some((url) => url.includes('/gen4/mimeJr/'))).toBe(true)
+  expect(asked.some((url) => url.endsWith('/pokemon-form/mime-jr'))).toBe(true)
+  expect(saved['custom:mimejr'].gen).toBe(4)
 })
 
 test('a Rare Candy with full hearts grows a fetched Azurill into Marill, fetched from gen 2', { timeoutMs: 30000 }, async ($, on) => {
@@ -565,7 +825,7 @@ test('a fetched Skitty becomes a fetched Delcatty with a Moon Stone', { timeoutM
   expect(saved['custom:delcatty'].gen).toBe(3)
 })
 
-test('chance picks Wurmple\'s and Wynaut\'s evolution once, Feebas needs full food, and Wobbuffet keeps gen 2\'s tier', () => {
+test('chance picks Wurmple\'s evolution once, Feebas needs full food, and Wobbuffet keeps gen 2\'s tier', () => {
   const at = (level: number, more: Record<string, unknown> = {}) => ({ level, food: 0, hearts: 0, full: 5, time: 'day', ...more })
   expect(levelEvolutionOf('wurmple')).toBeNull()
   expect(levelUpEvolutionOf('wurmple', at(6, { random: () => 0 }))).toBeNull()
@@ -573,7 +833,7 @@ test('chance picks Wurmple\'s and Wynaut\'s evolution once, Feebas needs full fo
   expect(levelUpEvolutionOf('wurmple', at(7, { random: () => 0.99 }))?.into).toBe('cascoon')
   // A pick already made stays
   expect(levelUpEvolutionOf('wurmple', at(8, { random: () => 0, kept: 'cascoon' }))?.into).toBe('cascoon')
-  expect(levelUpEvolutionOf('wynaut', at(15, { random: () => 0.99 }))?.into).toBe('wobbuffet_female')
+  expect(levelEvolutionOf('wynaut')).toEqual({ into: 'wobbuffet_male', level: 15 })
   expect(levelUpEvolutionOf('feebas', at(9, { food: 5 }))?.into).toBe('milotic')
   expect(levelUpEvolutionOf('feebas', at(9, { food: 4, hearts: 5 }))).toBeNull()
   expect(preEvolutionOf('wobbuffet_male')).toBe('wynaut')
@@ -704,7 +964,7 @@ test('Rare Candy raises a level, evolves the shown mon at its level, and a box m
   const toasts = toastsOf(on)
   const stats = {
     charmander: { xp: 15 ** 3 + 10 },
-    bulbasaur: { xp: 15 ** 3, parked: true },
+    bulbasaur: { xp: 15 ** 3, sex: 'male', parked: true },
     abra: { xp: 30 ** 3, fainted: { ms: 0, at: 0 }, parked: true },
     pidgey: { xp: 9 ** 3, ranAway: { at: 0, variant: 'default' } },
   }
@@ -716,7 +976,7 @@ test('Rare Candy raises a level, evolves the shown mon at its level, and a box m
   expect(saved.bag).toEqual({ rarecandy: 2 })
 
   expect(await run($, 'use candy bulbasaur')).toBe('You give Bulbasaur a Rare Candy. It grew to Lv. 16!')
-  expect(saved.stats.bulbasaur).toEqual({ xp: 16 ** 3, parked: true, evolveReady: true })
+  expect(saved.stats.bulbasaur).toEqual({ xp: 16 ** 3, sex: 'male', parked: true, evolveReady: true })
   expect(await run($, 'use rare candy')).toBe('You give Charmander a Rare Candy. It grew to Lv. 16!')
   expect(saved.bag).toEqual({})
   expect(await run($, 'use rare candy')).toBe('You have no Rare Candy. Wild mons you knock out drop one now and then.')
@@ -758,7 +1018,7 @@ test('a party mon earns half XP for its own subagent\'s answered turns, and evol
   runningAgents(on)
   on('turn.complete', () => ({ text: '' }))
   const toasts = toastsOf(on)
-  const saved: Record<string, any> = { wander: false, stats: { abra: { xp: 20 ** 3 }, charmander: { xp: 16 ** 3 - 5, parked: true } } }
+  const saved: Record<string, any> = { wander: false, stats: { abra: { xp: 20 ** 3 }, charmander: { xp: 16 ** 3 - 5, sex: 'male', parked: true } } }
   const { clock } = await startedWith($, on, saved, 0)
   await $.ui.mount({ ...BAND, surface: 'terminal' })
   await $.agent.spawn(spawnOf('t1'))
@@ -776,7 +1036,7 @@ test('a party mon earns half XP for its own subagent\'s answered turns, and evol
   expect(saved.stats.charmander.evolveReady).toBe(true)
   expect(saved.stats.abra.xp).toBe(20 ** 3)
   expect(toasts).toContain('Charmander grew to Lv. 16 working beside Abra!')
-  expect(await run($, 'party')).toBe('1 mon in your party, beside Abra:\nCharmander, Lv. 16, ready to evolve, free')
+  expect(await run($, 'party')).toBe('1 mon in your party, beside Abra:\nCharmander ♂, Lv. 16, ready to evolve, free')
 
   await run($, 'charmander')
   await clock.advance(9000)
@@ -824,7 +1084,7 @@ test('a generation stays out of the wild until it\'s turned on, and every form o
 test('/pokemon gen <N> turns a generation on and off, saved across sessions, and the Pokédex counts it', async ($, on) => {
   const saved: Record<string, any> = { mon: 'pidgey', trainer: false }
   await startedWith($, on, saved, 0)
-  const how = '/pokemon gen <N> turns gen 2 or gen 3 on or off.'
+  const how = '/pokemon gen <N> turns gen 2, gen 3, or gen 4 on or off.'
   expect(await run($, 'gen')).toBe('In the wild: gen 1. ' + how)
   expect(await run($, 'dex')).toBe('Pokédex: seen 0, caught 0 of 151. No wild mons met yet.')
   expect(await run($, 'dex chikorita')).toBe('#152 Chikorita, common. It turns up in the wild once gen 2 is on: /pokemon gen 2 turns it on.')
@@ -835,13 +1095,18 @@ test('/pokemon gen <N> turns a generation on and off, saved across sessions, and
   expect(await run($, 'dex chikorita')).toBe('#152 Chikorita, common. Not seen yet.')
   expect(await run($, 'help')).toContain('gen <N>')
   expect(await run($, 'gen 1')).toBe('Gen 1 is always in the wild. ' + how)
-  expect(await run($, 'gen 4')).toBe('Gen 4 isn\'t in the wild yet. ' + how)
+  expect(await run($, 'gen 5')).toBe('Gen 5 isn\'t in the wild yet. ' + how)
   // Gen 3 comes in the same way
   expect(await run($, 'dex deoxys')).toBe('#386 Deoxys, legendary. It turns up in the wild once gen 3 is on: /pokemon gen 3 turns it on.')
   expect(await run($, 'gen 3')).toBe('Gen 3 is on. Its mons turn up in the wild too, each fetched from GitHub the first time you meet one.')
   expect(await run($, 'gen')).toBe('In the wild: gen 1, 2, and 3. ' + how)
   expect(await run($, 'dex')).toBe('Pokédex: seen 0, caught 0 of 386. No wild mons met yet.')
   expect(await run($, 'gen 3')).toBe('Gen 3 is off. Its mons no longer turn up in the wild. The ones in your box stay.')
+  // And gen 4
+  expect(await run($, 'dex arceus')).toBe('#493 Arceus, legendary. It turns up in the wild once gen 4 is on: /pokemon gen 4 turns it on.')
+  expect(await run($, 'gen 4')).toBe('Gen 4 is on. Its mons turn up in the wild too, each fetched from GitHub the first time you meet one.')
+  expect(await run($, 'dex')).toBe('Pokédex: seen 0, caught 0 of 358. No wild mons met yet.')
+  expect(await run($, 'gen 4')).toBe('Gen 4 is off. Its mons no longer turn up in the wild. The ones in your box stay.')
   expect(await run($, 'gen two')).toBe('Unknown generation "two". ' + how)
   expect(await run($, 'gen2')).toBe('Gen 2 is off. Its mons no longer turn up in the wild. The ones in your box stay.')
   expect(saved.gens).toEqual([])

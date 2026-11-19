@@ -62,7 +62,7 @@ test('a level-up evolves Charmander into Charmeleon, and its record moves along'
 test('with autoevolve off, a level-up waits for /pokemon evolve, and turning it back on evolves once idle', { timeoutMs: 30000 }, async ($, on) => {
   const toasts = toastsOf(on)
   on('turn.complete', () => ({ text: '' }))
-  const saved: Record<string, any> = { mon: 'charmander', wander: false, stats: { charmander: { xp: 16 ** 3 - 1 } } }
+  const saved: Record<string, any> = { mon: 'charmander', wander: false, stats: { charmander: { xp: 16 ** 3 - 1, sex: 'male' } } }
   const { clock } = await startedWith($, on, saved, 0)
   const run = async (args: string) => (await $.command.run({ command: 'pokemon', args })).text
   expect(await run('autoevolve')).toBe('Charmander waits for /pokemon evolve when it reaches its evolution level.')
@@ -72,7 +72,7 @@ test('with autoevolve off, a level-up waits for /pokemon evolve, and turning it 
   expect(toasts).toEqual(['Charmander grew to Lv. 16!', 'Charmander is ready to evolve into Charmeleon! /pokemon evolve lets it.'])
   await clock.advance(1000)
   expect(toasts).toHaveLength(2)
-  expect(await run('stats')).toMatch(/^Charmander, Lv\. 16, .* Ready to evolve into Charmeleon\. \/pokemon evolve lets it\./)
+  expect(await run('stats')).toMatch(/^Charmander ♂, Lv\. 16, .* Ready to evolve into Charmeleon\. \/pokemon evolve lets it\./)
 
   expect(await run('autoevolve')).toBe('Charmander evolves on its own once idle at its evolution level.')
   await clock.advance(50)
@@ -115,8 +115,8 @@ test('/pokemon evolve uses a stone or a trade, lists Eevee\'s choices, and says 
   expect(toasts).toEqual(['What? Pikachu is evolving!', 'Congratulations! Your Pikachu evolved into Raichu!'])
 
   await run('eevee')
-  const choices = 'Eevee can become Vaporeon with a Water Stone, Jolteon with a Thunder Stone, Flareon with a Fire Stone, Espeon at a level-up with full hearts by day, or Umbreon at a level-up with full hearts by night.'
-  expect(await run('evolve')).toMatch(new RegExp('^' + choices.replace(/\./g, '\\.') + ' Try /pokemon evolve (vaporeon|jolteon|flareon|espeon|umbreon)\\.$'))
+  const choices = 'Eevee can become Vaporeon with a Water Stone, Jolteon with a Thunder Stone, Flareon with a Fire Stone, Espeon at a level-up with full hearts by day, Umbreon at a level-up with full hearts by night, Leafeon with a Leaf Stone, or Glaceon with an Ice Stone.'
+  expect(await run('evolve')).toMatch(new RegExp('^' + choices.replace(/\./g, '\\.') + ' Try /pokemon evolve (vaporeon|jolteon|flareon|espeon|umbreon|leafeon|glaceon)\\.$'))
   expect(await run('evolve jolteon')).toBe('You use a Thunder Stone on Eevee.')
   await clock.advance(7100)
   expect(saved.mon).toBe('jolteon')
@@ -157,12 +157,12 @@ for (const caught of [true, false]) {
     const dex = caught ? { pikachu: { seen: 0, caught: 0 } } : {}
     const saved: Record<string, any> = { trainer: false, mon: 'pikachu', wander: false, bag: { thunderstone: 1 }, dex, stats: { pikachu: { xp: 30 ** 3 } } }
     const { clock } = await startedWith($, on, saved, 0)
-    expect(await run($, 'box')).toContain(caught ? 'Pikachu ◓, Lv. 30' : 'Pikachu, Lv. 30')
+    expect(await run($, 'box')).toContain(caught ? 'Pikachu ♂ ◓, Lv. 30' : 'Pikachu ♂, Lv. 30')
     await run($, 'evolve')
     await clock.advance(7200)
     expect(saved.mon).toBe('raichu')
     expect(Boolean(saved.stats.raichu.caught)).toBe(caught)
-    expect(await run($, 'box')).toContain(caught ? 'Raichu ◓, Lv. 30' : 'Raichu, Lv. 30')
+    expect(await run($, 'box')).toContain(caught ? 'Raichu ♂ ◓, Lv. 30' : 'Raichu ♂, Lv. 30')
   })
 }
 
@@ -239,8 +239,8 @@ test('/pokemon box lists every raised mon by level, then name, with meters drain
   const low = { value: 10, at: 0 }
   const stats = {
     pikachu: { xp: 12 ** 3, food: full, happiness: full },
-    charizard: { xp: 40 ** 3, food: low, happiness: { value: 50, at: 0 } },
-    bulbasaur: { xp: 12 ** 3 },
+    charizard: { xp: 40 ** 3, sex: 'female', food: low, happiness: { value: 50, at: 0 } },
+    bulbasaur: { xp: 12 ** 3, sex: 'male' },
     nidoran_female: { xp: 5 ** 3 },
   }
   await startedWith($, on, { mon: 'pikachu', stats }, 4 * HOUR)
@@ -248,9 +248,9 @@ test('/pokemon box lists every raised mon by level, then name, with meters drain
   expect(box.text).toBe(
     [
       '4 mons in your box:',
-      'Charizard, Lv. 40 ○○○○○ ♥♡♡♡♡',
-      'Bulbasaur, Lv. 12 ●●●●○ ♥♥♥♥♡',
-      'Pikachu, Lv. 12 ●●●○○ ♥♥♥♥♡ (active)',
+      'Charizard ♀, Lv. 40 ○○○○○ ♥♡♡♡♡',
+      'Bulbasaur ♂, Lv. 12 ●●●●○ ♥♥♥♥♡',
+      'Pikachu ♂, Lv. 12 ●●●○○ ♥♥♥♥♡ (active)',
       'Nidoran♀, Lv. 5 ●●●●○ ♥♥♥♥♡',
     ].join('\n'),
   )
@@ -261,31 +261,31 @@ test('/pokemon box lists emoji meters once /pokemon emoji turns them on', async 
   await startedWith($, on, { mon: 'pikachu', stats }, 0)
   await $.command.run({ command: 'pokemon', args: 'emoji' })
   const box = await $.command.run({ command: 'pokemon', args: 'box' })
-  expect(box.text).toBe('1 mon in your box:\nPikachu, Lv. 12 🍓🍓🍓○ ○ 💗♡ ♡ ♡ ♡ (active)\nOnly Pikachu so far. /pokemon <mon> picks another.')
+  expect(box.text).toBe('1 mon in your box:\nPikachu ♂, Lv. 12 🍓🍓🍓○ ○ 💗♡ ♡ ♡ ♡ (active)\nOnly Pikachu so far. /pokemon <mon> picks another.')
 })
 
 test('/pokemon box leaves out the meters with needs off', async ($, on) => {
-  await startedWith($, on, { mon: 'pikachu', needs: false, stats: { pikachu: { xp: 12 ** 3 }, charizard: { xp: 40 ** 3 } } }, 0)
+  await startedWith($, on, { mon: 'pikachu', needs: false, stats: { pikachu: { xp: 12 ** 3 }, charizard: { xp: 40 ** 3, sex: 'male' } } }, 0)
   const box = await $.command.run({ command: 'pokemon', args: 'box' })
-  expect(box.text).toBe('2 mons in your box:\nCharizard, Lv. 40\nPikachu, Lv. 12 (active)')
+  expect(box.text).toBe('2 mons in your box:\nCharizard ♂, Lv. 40\nPikachu ♂, Lv. 12 (active)')
 })
 
 test('/pokemon box marks the caught mons, an evolved catch included, in level order', async ($, on) => {
   const stats = {
     pikachu: { xp: 12 ** 3 },
-    pidgeotto: { xp: 20 ** 3, caught: true },
-    snorlax: { xp: 30 ** 3 },
-    charizard: { xp: 40 ** 3 },
+    pidgeotto: { xp: 20 ** 3, caught: true, sex: 'female' },
+    snorlax: { xp: 30 ** 3, sex: 'male' },
+    charizard: { xp: 40 ** 3, sex: 'male' },
   }
   await startedWith($, on, { mon: 'pikachu', needs: false, stats, dex: { snorlax: { seen: 0, caught: 0 } } }, 0)
   const box = await $.command.run({ command: 'pokemon', args: 'box' })
   expect(box.text).toBe(
     [
       '4 mons in your box:',
-      'Charizard, Lv. 40',
-      'Snorlax ◓, Lv. 30',
-      'Pidgeotto ◓, Lv. 20',
-      'Pikachu, Lv. 12 (active)',
+      'Charizard ♂, Lv. 40',
+      'Snorlax ♂ ◓, Lv. 30',
+      'Pidgeotto ♀ ◓, Lv. 20',
+      'Pikachu ♂, Lv. 12 (active)',
     ].join('\n'),
   )
 })
@@ -298,7 +298,7 @@ test('/pokemon box says when the box is empty, or holds only the active mon', as
   await $.command.run({ command: 'pokemon', args: 'pet' })
   // The pet pays out once its hearts have floated away
   await clock.advance(4000)
-  expect(await run()).toBe('1 mon in your box:\nAbra, Lv. 5 ●●●●○ ♥♥♥♥♥ (active)\nOnly Abra so far. /pokemon <mon> picks another.')
+  expect(await run()).toMatch(/^1 mon in your box:\nAbra [♂♀], Lv\. 5 ●●●●○ ♥♥♥♥♥ \(active\)\nOnly Abra so far\. \/pokemon <mon> picks another\.$/)
 })
 
 test('/pokemon dex counts nothing before any wild mon turns up', async ($, on) => {
@@ -365,15 +365,15 @@ test('/pokemon nickname names the active mon, keeps its case, and its species na
   expect(await run('nickname')).toBe('Name it with /pokemon nickname <name>, up to 12 characters.')
   expect(await run('nickname Sir Sparks A Lot')).toBe('That\'s too long. A nickname fits 12 characters.')
   expect(await run('nickname  Sparky ')).toBe('Pikachu is now Sparky!')
-  expect(saved.stats.pikachu).toEqual({ xp: 12 ** 3, nickname: 'Sparky' })
+  expect(saved.stats.pikachu).toEqual({ xp: 12 ** 3, sex: 'male', nickname: 'Sparky' })
   expect(await run('nickname')).toBe('Pikachu goes by Sparky. Name it with /pokemon nickname <name>, up to 12 characters.')
   expect(await run('nickname Zappy')).toBe('Sparky is now Zappy!')
 
   expect(await run('pet')).toMatch(/^Zappy /)
   // The pet pays out once its hearts have floated away
   await clock.advance(4000)
-  expect(await run('stats')).toMatch(/^Zappy \(Pikachu\), Lv\. 12,/)
-  expect(await run('box')).toBe('1 mon in your box:\nZappy (Pikachu), Lv. 12 ●●●●○ ♥♥♥♥♥ (active)\nOnly Zappy so far. /pokemon <mon> picks another.')
+  expect(await run('stats')).toMatch(/^Zappy \(Pikachu ♂\), Lv\. 12,/)
+  expect(await run('box')).toBe('1 mon in your box:\nZappy (Pikachu ♂), Lv. 12 ●●●●○ ♥♥♥♥♥ (active)\nOnly Zappy so far. /pokemon <mon> picks another.')
   expect(await run('')).toContain('Zappy Lv. 12')
 
   expect(await run('nickname PIKACHU')).toBe('Zappy is just Pikachu again.')
@@ -405,7 +405,7 @@ test('a nickname carries through evolution', { timeoutMs: 30000 }, async ($, on)
   expect(await run('evolve')).toBe('You use a Thunder Stone on Sparky.')
   await clock.advance(7100)
   expect(toasts).toEqual(['What? Sparky is evolving!', 'Congratulations! Your Sparky evolved into Raichu!'])
-  expect(saved.stats).toEqual({ raichu: { xp: 12 ** 3, nickname: 'Sparky' } })
+  expect(saved.stats).toEqual({ raichu: { xp: 12 ** 3, sex: 'male', nickname: 'Sparky' } })
   expect(await run('nickname')).toBe('Raichu goes by Sparky. Name it with /pokemon nickname <name>, up to 12 characters.')
 })
 
@@ -420,7 +420,7 @@ test('/pokemon list names every mon, and the hint and status stay short', async 
   on('env.get', () => ({ value: undefined }))
   on('store.get', () => ({ value: undefined }))
   await $.session.start({ surface: 'terminal', isInteractive: true, cwd: '/work' })
-  expect(hint).toBe('[<mon>|default|shiny|new|list|pet|feed|sleep|revive|nickname|attack|moves|catch|roar|evolve|stop|bag|use|stats|box|party|dex|release|wander|needs|emoji|size|images|pane|sync|autoevolve|nuzlocke|trainer|gen|help]')
+  expect(hint).toBe('[<mon>|default|shiny|new|list|pet|feed|sleep|revive|nickname|attack|moves|catch|roar|evolve|stop|bag|use|take|stats|box|party|dex|release|wander|needs|emoji|size|images|pane|sync|autoevolve|nuzlocke|trainer|gen|help]')
 
   const list = await $.command.run({ command: 'pokemon', args: 'list' })
   expect(list.text).toMatch(/^\d+ mons: abra, /)

@@ -1,4 +1,5 @@
-import { BASE_FORM, evolutionsOf, FETCHED, preEvolutionOf, startLevel, UNOWN_FORMS } from './evolutions.js'
+import { BASE_FORM, evolutionsOf, FETCHED, BURMY_CLOAKS, preEvolutionOf, ROTOM_FORMS, startLevel, UNOWN_FORMS } from './evolutions.js'
+import { randomSex, sexedSprite } from './genders.js'
 
 // The Pokédex and how often each mon turns up in the wild. GEN_DEX lists each generation's
 // Pokédex keys in national dex order. Gen 1's sprites are bundled. A later generation's
@@ -55,7 +56,21 @@ const GEN3 = [
   'kyogre', 'groudon', 'rayquaza', 'jirachi', 'deoxys',
 ]
 
-export const GEN_DEX = { 1: GEN1, 2: GEN2, 3: GEN3 }
+const GEN4 = [
+  'turtwig', 'grotle', 'torterra', 'chimchar', 'monferno', 'infernape', 'piplup', 'prinplup', 'empoleon', 'starly',
+  'staravia', 'staraptor', 'bidoof', 'bibarel', 'kricketot', 'kricketune', 'shinx', 'luxio', 'luxray', 'budew',
+  'roserade', 'cranidos', 'rampardos', 'shieldon', 'bastiodon', 'burmy', 'wormadam', 'mothim', 'combee', 'vespiquen',
+  'pachirisu', 'buizel', 'floatzel', 'cherubi', 'cherrim', 'shellos', 'gastrodon', 'ambipom', 'drifloon', 'drifblim',
+  'buneary', 'lopunny', 'mismagius', 'honchkrow', 'glameow', 'purugly', 'chingling', 'stunky', 'skuntank', 'bronzor',
+  'bronzong', 'bonsly', 'mimejr', 'happiny', 'chatot', 'spiritomb', 'gible', 'gabite', 'garchomp', 'munchlax',
+  'riolu', 'lucario', 'hippopotas', 'hippowdon', 'skorupi', 'drapion', 'croagunk', 'toxicroak', 'carnivine', 'finneon',
+  'lumineon', 'mantyke', 'snover', 'abomasnow', 'weavile', 'magnezone', 'lickilicky', 'rhyperior', 'tangrowth', 'electivire',
+  'magmortar', 'togekiss', 'yanmega', 'leafeon', 'glaceon', 'gliscor', 'mamoswine', 'porygonz', 'gallade', 'probopass',
+  'dusknoir', 'froslass', 'rotom', 'uxie', 'mesprit', 'azelf', 'dialga', 'palkia', 'heatran', 'regigigas',
+  'giratina', 'cresselia', 'phione', 'manaphy', 'darkrai', 'shaymin', 'arceus',
+]
+
+export const GEN_DEX = { 1: GEN1, 2: GEN2, 3: GEN3, 4: GEN4 }
 export const GENS = Object.keys(GEN_DEX).map(Number)
 // The generations whose sprites come with the mod, always in the wild
 export const BUNDLED_GENS = [1]
@@ -66,12 +81,25 @@ export const NATIONAL_DEX = GENS.flatMap((gen) => GEN_DEX[gen])
 export const dexOf = (gens) => GENS.filter((gen) => gens.includes(gen)).flatMap((gen) => GEN_DEX[gen])
 
 // The folders a Pokédex key with none of its own is fetched from, one picked per encounter:
-// gen 2's Unown, Wobbuffet, and Heracross, and gen 3's Deoxys in its four formes
+// gen 2's Unown, Wobbuffet, and Heracross, gen 3's Deoxys in its four formes, and gen 4's
+// Burmy and Wormadam in their cloaks, Shellos and Gastrodon from either sea, Combee,
+// Hippopotas, and Hippowdon by sex, and Rotom, Giratina, and Shaymin in their formes.
+// Arceus is always Normal in the wild: the plate it holds changes it.
 export const WILD_FORMS = {
   unown: UNOWN_FORMS.map((form) => 'unown_' + form),
   wobbuffet: ['wobbuffet_male', 'wobbuffet_female'],
   heracross: ['heracross_male', 'heracross_female'],
   deoxys: ['deoxys', 'deoxys_attack', 'deoxys_defense', 'deoxys_speed'],
+  burmy: BURMY_CLOAKS.map((cloak) => 'burmy_' + cloak),
+  wormadam: BURMY_CLOAKS.map((cloak) => 'wormadam_' + cloak),
+  combee: ['combee_male', 'combee_female'],
+  shellos: ['shellos_east', 'shellos_west'],
+  gastrodon: ['gastrodon_east', 'gastrodon_west'],
+  hippopotas: ['hippopotas_male', 'hippopotas_female'],
+  hippowdon: ['hippowdon_male', 'hippowdon_female'],
+  rotom: ['rotom', ...ROTOM_FORMS.map((form) => 'rotom_' + form)],
+  giratina: ['giratina', 'giratina_origin'],
+  shaymin: ['shaymin', 'shaymin_sky'],
 }
 
 export const dexKey = (mon) => BASE_FORM[mon] ?? mon
@@ -89,10 +117,12 @@ export const dexNumber = (mon) => NATIONAL_DEX.indexOf(dexKey(mon)) + 1
 export const LEGENDARY = [
   'articuno', 'zapdos', 'moltres', 'mewtwo', 'mew', 'raikou', 'entei', 'suicune', 'lugia', 'hooh', 'celebi',
   'regirock', 'regice', 'registeel', 'latias', 'latios', 'kyogre', 'groudon', 'rayquaza', 'jirachi', 'deoxys',
+  'uxie', 'mesprit', 'azelf', 'dialga', 'palkia', 'heatran', 'regigigas', 'giratina', 'cresselia', 'phione',
+  'manaphy', 'darkrai', 'shaymin', 'arceus',
 ]
 
-// Rare mons and everything they evolve into. Gen 2's and gen 3's babies hatch from eggs in
-// the games, so they're rare in the wild here, as the only way to catch one.
+// Rare mons and everything they evolve into. Gen 2's, gen 3's, and gen 4's babies hatch
+// from eggs in the games, so they're rare in the wild here, as the only way to catch one.
 export const RARE = [
   'lapras', 'snorlax', 'eevee', 'dratini', 'omanyte', 'kabuto', 'aerodactyl', 'chansey', 'tauros', 'kangaskhan',
   'scyther', 'pinsir', 'porygon', 'ditto', 'hitmonlee', 'hitmonchan',
@@ -100,6 +130,8 @@ export const RARE = [
   'pichu', 'cleffa', 'igglybuff', 'togepi', 'tyrogue', 'smoochum', 'elekid', 'magby',
   'bagon', 'beldum', 'feebas', 'absol', 'relicanth', 'tropius', 'castform', 'kecleon', 'spinda', 'lileep', 'anorith',
   'azurill', 'wynaut',
+  'gible', 'riolu', 'spiritomb', 'rotom', 'chatot', 'cranidos', 'shieldon',
+  'budew', 'chingling', 'bonsly', 'mimejr', 'happiny', 'munchlax', 'mantyke',
 ]
 
 // weight is how often a tier turns up, hits how many attacks wear one out, and catch
@@ -113,8 +145,6 @@ export const TIERS = {
 
 const STAGE_TIERS = ['common', 'uncommon', 'rare']
 const SHINY_ODDS = 1 / 128
-// A gen 1 mon's female sprite, shown in the wild half the time
-const FEMALE_FORM = Object.fromEntries(Object.entries(BASE_FORM).filter(([, base]) => BUNDLED_DEX.includes(base)).map(([female, base]) => [base, female]))
 
 // Outside the short lists, a family's base form is common and each evolution a tier
 // rarer. A mon with no family is uncommon, and a bundled mon that only evolves into a
@@ -147,10 +177,13 @@ function byTier(gens) {
   return BY_TIER.get(id)
 }
 
-// The sprite a wild key shows as: one of its forms, its female sprite half the time, or itself
+// A wild key's sex, drawn by its species' share of females, and the sprite it shows as:
+// its sprite for that sex, like pikachu_female, one of its forms, or itself
 function wildForm(key, random) {
-  if (WILD_FORMS[key]) return WILD_FORMS[key][Math.floor(random() * WILD_FORMS[key].length)]
-  return FEMALE_FORM[key] && random() < 0.5 ? FEMALE_FORM[key] : key
+  const sex = randomSex(key, random)
+  const sexed = sexedSprite(key, sex)
+  if (sexed !== key || !WILD_FORMS[key]) return { mon: sexed, sex }
+  return { mon: WILD_FORMS[key][Math.floor(random() * WILD_FORMS[key].length)], sex }
 }
 
 // A tier by weight, then a mon from it, from the generations in gens. random() returns a
@@ -161,9 +194,9 @@ export function pickWild(random, gens = BUNDLED_GENS) {
   const tier = Object.keys(TIERS).find((name) => (roll -= TIERS[name].weight) < 0) ?? 'common'
   const pool = byTier(gens)[tier]
   const key = pool[Math.floor(random() * pool.length)]
-  const mon = wildForm(key, random)
+  const { mon, sex } = wildForm(key, random)
   const variant = random() < SHINY_ODDS ? 'shiny' : 'default'
-  return { mon, variant, key, tier, level: startLevel(mon) }
+  return { mon, sex, variant, key, tier, level: startLevel(mon) }
 }
 
 // Two marks of one mon as one: the earliest time for each of seen and caught, and shiny

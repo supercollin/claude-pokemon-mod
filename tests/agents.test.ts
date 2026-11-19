@@ -206,7 +206,7 @@ test('a mon released in another session stays released when this one switches to
   saved.stats = { abra: { xp: 900 } }
   await $.command.run({ command: 'pokemon', args: 'pikachu' })
   expect(saved.stats.pikachu).toBeUndefined()
-  expect((await $.command.run({ command: 'pokemon', args: 'stats' })).text).toMatch(/^Pikachu, Lv\. 5,/)
+  expect((await $.command.run({ command: 'pokemon', args: 'stats' })).text).toMatch(/^Pikachu ♂, Lv\. 5,/)
   await $.command.run({ command: 'pokemon', args: 'abra' })
   expect((await $.command.run({ command: 'pokemon', args: 'box' })).text).not.toContain('Pikachu')
 })
@@ -360,7 +360,7 @@ test('past five subagents, the last slot counts the rest as +n', async ($, on) =
 const PIKACHU = 0xf8d050
 const CHARMANDER = 0xf88838
 // A box beside Abra: Pikachu at Lv. 12 comes out first, then Charmander at Lv. 8
-const PARTY_BOX = { pikachu: { xp: 12 ** 3 }, charmander: { xp: 8 ** 3 } }
+const PARTY_BOX = { pikachu: { xp: 12 ** 3 }, charmander: { xp: 8 ** 3, sex: 'male' } }
 // The band's whole width while a party mon is out: the strip takes all the room
 const FULL = BAND.props.bodyColumns
 
@@ -496,7 +496,7 @@ test('a subagent past the room keeps a closed ball, with its mon waiting inside'
   expect(paints(cells, CHARMANDER)).toBe(false)
   expect(paints(cells, BALL_TOP)).toBe(true)
   const party = await $.command.run({ command: 'pokemon', args: 'party' })
-  expect(party.text).toContain('Charmander, Lv. 8, working for Count files, waiting in its ball for room')
+  expect(party.text).toContain('Charmander ♂, Lv. 8, working for Count files, waiting in its ball for room')
 })
 
 test('with no other mon in the box, a subagent is just a ball', async ($, on) => {
@@ -514,18 +514,18 @@ test('with no other mon in the box, a subagent is just a ball', async ($, on) =>
 
 test('/pokemon party lists the party, highest level first, and the agent each one works for', async ($, on) => {
   runningAgents(on)
-  const stats = { ...PARTY_BOX, squirtle: { xp: 6 ** 3, nickname: 'Shelly' }, bulbasaur: { xp: 30 ** 3, fainted: { ms: 0, at: 0 } } }
+  const stats = { ...PARTY_BOX, squirtle: { xp: 6 ** 3, nickname: 'Shelly', sex: 'male' }, bulbasaur: { xp: 30 ** 3, fainted: { ms: 0, at: 0 } } }
   const { clock } = await startedWith($, on, { wander: false, stats }, 0)
   await $.ui.mount({ ...BAND, surface: 'terminal' })
   await $.agent.spawn(spawnOf('t1'))
   await clock.advance(4000)
   const party = await $.command.run({ command: 'pokemon', args: 'party' })
-  expect(party.text).toBe(['3 mons in your party, beside Abra:', 'Pikachu, Lv. 12, working for Count files', 'Charmander, Lv. 8, free', 'Shelly (Squirtle), Lv. 6, free'].join('\n'))
+  expect(party.text).toBe(['3 mons in your party, beside Abra:', 'Pikachu ♂, Lv. 12, working for Count files', 'Charmander ♂, Lv. 8, free', 'Shelly (Squirtle ♂), Lv. 6, free'].join('\n'))
 })
 
 test('/pokemon party add and remove pick who comes out, in the order added', async ($, on) => {
   runningAgents(on)
-  const stats = { ...PARTY_BOX, squirtle: { xp: 6 ** 3 } }
+  const stats = { ...PARTY_BOX, squirtle: { xp: 6 ** 3, sex: 'male' } }
   const { clock, blits } = await startedWith($, on, { wander: false, stats }, 0)
   const ui = await $.ui.mount({ ...BAND, surface: 'terminal' })
   const party = async (args: string) => (await $.command.run({ command: 'pokemon', args })).text
@@ -537,7 +537,7 @@ test('/pokemon party add and remove pick who comes out, in the order added', asy
   expect(await party('party add abra')).toBe('Abra is the mon on show. Pick another with /pokemon <mon> first.')
   expect(await party('party add mew')).toBe('Mew isn\'t in your box. Catch one, or pick it with /pokemon mew.')
   expect(await party('party add pidgey2')).toBe('Unknown mon "pidgey2". /pokemon box lists yours.')
-  expect(await party('party')).toBe(['3 mons in your party, beside Abra:', 'Charmander, Lv. 8, free', 'Squirtle, Lv. 6, free', 'Pikachu, Lv. 12, free'].join('\n'))
+  expect(await party('party')).toBe(['3 mons in your party, beside Abra:', 'Charmander ♂, Lv. 8, free', 'Squirtle ♂, Lv. 6, free', 'Pikachu ♂, Lv. 12, free'].join('\n'))
 
   // Charmander, first in the picked order, comes out ahead of the higher level Pikachu
   await $.agent.spawn(spawnOf('t1'))
@@ -567,7 +567,7 @@ test('/pokemon party assign ties a mon to an agent type, and the rest of the par
   for (let k = 0; k < 60 && !paints(await shown(ui, blits), PIKACHU); k++) await clock.advance(1000)
   out = await shown(ui, blits)
   expect(paints(out, PIKACHU)).toBe(true)
-  expect(await party('party')).toBe(['2 mons in your party, beside Abra:', 'Charmander, Lv. 8, for explore, working for Count files', 'Pikachu, Lv. 12, working for Count files'].join('\n'))
+  expect(await party('party')).toBe(['2 mons in your party, beside Abra:', 'Charmander ♂, Lv. 8, for explore, working for Count files', 'Pikachu ♂, Lv. 12, working for Count files'].join('\n'))
 })
 
 test('a mon assigned to an agent type stays in its ball for other types', async ($, on) => {

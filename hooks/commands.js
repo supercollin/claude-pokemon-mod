@@ -58,8 +58,9 @@ export function nicknameCommand(wanted) {
   const old = S.stats[S.mon]?.nickname
   if (moveKey(nickname) === moveKey(species) || moveKey(nickname) === moveKey(S.mon)) {
     if (!old) return { text: species + ' has no nickname.' }
+    // A sex alone isn't a mon raised, so a record with nothing else goes
     const { nickname: _, ...rest } = S.stats[S.mon]
-    if (Object.keys(rest).length > 0) S.stats[S.mon] = rest
+    if (Object.keys(rest).some((key) => key !== 'sex')) S.stats[S.mon] = rest
     else delete S.stats[S.mon]
     return { text: old + ' is just ' + species + ' again.' }
   }

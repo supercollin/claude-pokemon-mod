@@ -60,7 +60,7 @@ export const foeRoom = () => {
 export const stripColumns = () => S.columns + S.panel
 export const sceneColumns = () => S.margin + S.columns + S.panel
 // The rows the level and meters take at the bottom of the panel
-const panelRows = () => (S.needsOn ? 3 : 1)
+const panelRows = () => (S.needsOn ? 3 : 1) + (S.sexRow ? 1 : 0)
 
 // The fewest empty columns on screen between a mon at home and the level and meters beside
 // it. A small band shows the scene at its scale, so the gap takes more of its columns.

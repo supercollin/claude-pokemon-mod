@@ -4,12 +4,18 @@
 // Each mon is saved in the store under 'custom:<mon>', so it outlives plugin updates.
 // Every fetch goes through the get passed in, (url, init) => $.http.fetch(url, init).
 
+import { BASE_FORM } from './evolutions.js'
+
 const REPO = 'https://api.github.com/repos/jakobhoeg/vscode-pokemon/contents/media'
 const GENS = [1, 2, 3, 4, 5]
 const VARIANTS = ['default', 'shiny']
 const ANIMS = ['idle', 'walk']
 const LETTERS = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
 const HEADERS = { Accept: 'application/vnd.github+json', 'User-Agent': 'claude-pokemon' }
+// Keys are lowercase, like what /pokemon is typed with. These two folders aren't, and
+// PokéAPI names them with a hyphen.
+const FOLDERS = { mimejr: 'mimeJr', porygonz: 'porygonZ' }
+const API_NAMES = { mimejr: 'mime-jr', porygonz: 'porygon-z' }
 
 export const CUSTOM_PREFIX = 'custom:'
 
@@ -260,7 +266,7 @@ function githubError(res) {
 }
 
 async function fetchGif(get, gen, name, file) {
-  const res = await get(`${REPO}/gen${gen}/${name}/${file}`, { headers: HEADERS })
+  const res = await get(`${REPO}/gen${gen}/${FOLDERS[name] ?? name}/${file}`, { headers: HEADERS })
   if (!res.ok) return { status: res.status, error: githubError(res) }
   const { content } = JSON.parse(res.text)
   return { gif: decodeGif(fromBase64(content)) }
@@ -270,18 +276,21 @@ async function fetchGif(get, gen, name, file) {
 export async function monsOfGen(get, gen) {
   const res = await get(`${REPO}/gen${gen}`, { headers: HEADERS })
   if (!res.ok) throw new Error(githubError(res))
-  return JSON.parse(res.text).filter((entry) => entry.type === 'dir').map((entry) => entry.name)
+  return JSON.parse(res.text).filter((entry) => entry.type === 'dir').map((entry) => entry.name.toLowerCase())
 }
 
-// The mon's types from PokéAPI, or normal when it doesn't know the name
+// The mon's types from PokéAPI, as its form when PokéAPI has it, like rotom-wash, or as its
+// species, like combee for combee_female, or normal when it knows neither
 async function typesOf(get, name) {
-  try {
-    const res = await get(`https://pokeapi.co/api/v2/pokemon-form/${name.replace(/_/g, '-')}`)
-    if (!res.ok) return ['normal']
-    return JSON.parse(res.text).types.map((t) => t.type.name)
-  } catch {
-    return ['normal']
+  for (const key of [...new Set([name, BASE_FORM[name] ?? name])]) {
+    try {
+      const res = await get(`https://pokeapi.co/api/v2/pokemon-form/${API_NAMES[key] ?? key.replace(/_/g, '-')}`)
+      if (res.ok) return JSON.parse(res.text).types.map((t) => t.type.name)
+    } catch {
+      // Offline or refused, the next name or normal does
+    }
   }
+  return ['normal']
 }
 
 // Fetch a mon's four GIFs, from the generation given or the first that has it, and build

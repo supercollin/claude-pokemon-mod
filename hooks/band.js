@@ -1,13 +1,14 @@
 import { BUBBLE_SPAN, INKS } from './art.js'
 import { PIXEL_PX } from './constants.js'
 import { SPRITES } from './frames.js'
+import { SEX_COLORS, sexMark, withSexMark } from './genders.js'
 import {
   bandRows, bandZoom, baseStrip, clampX, gapRightOf, homeX, isHome, isSmall, leadFloor, sceneRoom, smallZoom, stripTarget,
 } from './layout.js'
 import { filledIcons, iconsFor, meterColumns, meterStyle, STAT_ICONS } from './meters.js'
 import { displayName } from './names.js'
 import { cellsNow, drawsHearts, drawsImage, heartsImage, imageNow, svgNow } from './paint.js'
-import { conditionOf, goneLine, levelLine, nameOf } from './records.js'
+import { conditionOf, goneLine, levelLine, nameOf, sexOf } from './records.js'
 import { S } from './state.js'
 import { isGone } from './status.js'
 import { isOnStage } from './wild.js'
@@ -58,6 +59,10 @@ export function drawScene(elements, e, site) {
   clampX()
 
   const zoom = bandZoom()
+  // The mon's sex sits over its level, when the band has a row to spare for it
+  const sex = zoom ? sexOf(S.mon) : null
+  const panelLines = (S.needsOn ? 3 : 1) + (desktop ? (site.buttons?.length ?? 0) : 0)
+  S.sexRow = Boolean(sex) && panelLines < zoom.rows
   // Pixel hearts go out with the band's blits, so a band too short for them has none
   S.drawnHearts = Boolean(zoom) && drawsHearts()
   const meter = (key, lead = '') => {
@@ -96,6 +101,7 @@ export function drawScene(elements, e, site) {
       sprite = elements.Raster({ key: 'pokemon', columns: zoom.columns, rows: zoom.rows, cells: S.sentCells })
     }
     const meterLines = [...(S.needsOn ? [level, meter('food'), meter('happiness')] : [level]), ...(desktop ? (site.buttons ?? []) : [])]
+    if (S.sexRow) meterLines.unshift(Text({ color: SEX_COLORS[sex], children: [sexMark(sex)] }))
     if (S.panel > 0) {
       const meters = Box({ position: 'absolute', right: 0, bottom: 0, width: panelColumns, paddingLeft: 1, flexDirection: 'column', children: meterLines })
       corner = [Box({ position: 'relative', children: [sprite, meters] })]
@@ -108,7 +114,7 @@ export function drawScene(elements, e, site) {
   } else {
     // Too short even for a shrunk mon: its name, level, and meters on one line, and no blits
     S.bandId = null
-    const name = Text({ children: [nameOf(S.mon) + ' ' + levelLine() + (conditionOf(S.mon) ? ' ' + conditionOf(S.mon) : '')] })
+    const name = Text({ children: [withSexMark(nameOf(S.mon), sexOf(S.mon)) + ' ' + levelLine() + (conditionOf(S.mon) ? ' ' + conditionOf(S.mon) : '')] })
     const meters = S.needsOn ? [meter('food', ' '), meter('happiness', ' ')] : []
     corner = [Box({ flexDirection: 'row', children: [name, ...meters] })]
   }

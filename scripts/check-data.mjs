@@ -3,7 +3,8 @@
 // Checks that the mod's tables agree with each other: every move has an effect, every
 // mon has sprites and moves, evolutions name real mons without loops, levels round-trip,
 // the generated frames match their mon's size and palette, every frame's eyes are
-// marked inside it, and the Pokédex holds every mon once with a known tier.
+// marked inside it, the Pokédex holds every mon once with a known tier, and each species
+// has one share of females.
 //
 // node scripts/check-data.mjs
 
@@ -11,6 +12,7 @@ import { effectOf } from '../hooks/attacks.js'
 import { BUNDLED_DEX, BUNDLED_GENS, GEN_DEX, GENS, LEGENDARY, NATIONAL_DEX, RARE, TIERS, WILD_FORMS, dexKey, tierOf } from '../hooks/dex.js'
 import { EVOLUTIONS, FETCHED } from '../hooks/evolutions.js'
 import { EYES, eyesOf } from '../hooks/eyes.js'
+import { femaleEighthsOf, fixedSexOf, SEX_LISTS, SEXES, sexedSprite } from '../hooks/genders.js'
 import { ITEM_ART } from '../hooks/art.js'
 import { HELD_FAMILIES, ITEMS, STONE_FAMILIES, itemFor } from '../hooks/items.js'
 import { SPRITES } from '../hooks/frames.js'
@@ -39,10 +41,12 @@ for (const mon of mons) {
   if (!displayName(mon)) fail(`${mon} has no display name`)
 }
 
-// A mon an evolution names is bundled, or fetched at runtime and listed in FETCHED
+// A mon an evolution names is bundled, or fetched at runtime and listed in FETCHED. It
+// names its sprite for either sex too, like wobbuffet_female for a female Wynaut's.
 const named = new Set()
 const known = (mon) => {
   named.add(mon)
+  for (const sex of SEXES) named.add(sexedSprite(mon, sex))
   return SPRITES[mon] || FETCHED.includes(mon)
 }
 
@@ -50,14 +54,20 @@ for (const [mon, entries] of Object.entries(EVOLUTIONS)) {
   if (!known(mon)) fail(`evolutions for ${mon}, which has no sprites and isn't in FETCHED`)
   for (const entry of entries) {
     if (!known(entry.into)) fail(`${mon} evolves into ${entry.into}, which has no sprites and isn't in FETCHED`)
-    const ways = ['level', 'item', 'trade', 'happy', 'time', 'more', 'pick', 'fed', 'also'].filter((key) => entry[key] !== undefined).join('+')
-    const shapes = ['level', 'item', 'trade', 'item+trade', 'happy', 'happy+time', 'level+more', 'level+pick', 'fed', 'level+also']
+    const ways = ['level', 'item', 'trade', 'happy', 'time', 'more', 'pick', 'fed', 'also', 'with', 'sex'].filter((key) => entry[key] !== undefined).join('+')
+    const shapes = [
+      'level', 'item', 'trade', 'item+trade', 'happy', 'happy+time', 'level+more', 'level+pick', 'fed', 'level+also', 'item+time', 'with',
+      'level+sex', 'item+sex',
+    ]
     if (!shapes.includes(ways)) {
-      fail(`${mon} into ${entry.into} needs a level, an item, a trade, a trade and an item, full hearts with or without a time of day, a level and a meter, a level left to chance, full food, or a level and a mon it adds`)
+      fail(`${mon} into ${entry.into} needs a level, an item, a trade, a trade and an item, full hearts with or without a time of day, a level and a meter, a level left to chance, full food, a level and a mon it adds, an item at a time of day, a mon in the party, or a level or an item for one sex`)
     }
     if (entry.pick !== undefined && entry.pick !== 'random') fail(`${mon} into ${entry.into} has pick ${entry.pick}`)
     if (entry.pick && entries.filter((other) => other.pick && other.level === entry.level).length < 2) fail(`${mon} into ${entry.into} is left to chance alone`)
     if (entry.fed !== undefined && entry.fed !== true) fail(`${mon} into ${entry.into} has fed ${entry.fed}`)
+    if (entry.sex !== undefined && !SEXES.includes(entry.sex)) fail(`${mon} into ${entry.into} has sex ${entry.sex}`)
+    if (entry.sex !== undefined && femaleEighthsOf(entry.into) !== null && fixedSexOf(entry.into) && fixedSexOf(entry.into) !== entry.sex) fail(`${mon} into ${entry.into} is for a ${entry.sex}, but ${entry.into} is always ${fixedSexOf(entry.into)}`)
+    if (entry.with !== undefined && !NATIONAL_DEX.includes(entry.with)) fail(`${mon} into ${entry.into} needs ${entry.with} in the party, which isn't a Pokédex entry`)
     if (entry.also !== undefined && !known(entry.also)) fail(`${mon} into ${entry.into} adds ${entry.also}, which has no sprites and isn't in FETCHED`)
     if (entry.happy !== undefined && entry.happy !== true) fail(`${mon} into ${entry.into} has happy ${entry.happy}`)
     if (entry.time !== undefined && !['day', 'night'].includes(entry.time)) fail(`${mon} into ${entry.into} has time ${entry.time}`)
@@ -130,6 +140,11 @@ for (const mon of mons) {
   }
 }
 
+// Each species listed with a share of females is a Pokédex entry, listed once
+const sexed = [SEX_LISTS.GENDERLESS, ...Object.values(SEX_LISTS.FEMALE_EIGHTHS)].flat()
+for (const key of sexed) if (!NATIONAL_DEX.includes(key)) fail(`${key} has a share of females but isn't a Pokédex entry`)
+if (new Set(sexed).size !== sexed.length) fail('a species has two shares of females')
+
 // Each generation's size in the national Pokédex, to catch a mon left out or put in twice
 const GEN_SIZES = { 1: 151, 2: 100, 3: 135, 4: 107, 5: 156 }
 for (const gen of GENS) {
@@ -146,18 +161,15 @@ if (new Set(NATIONAL_DEX).size !== NATIONAL_DEX.length) fail('the Pokédex lists
 for (const mon of mons) if (!BUNDLED_DEX.includes(dexKey(mon))) fail(`${mon} has no Pokédex entry`)
 for (const mon of FETCHED) if (!NATIONAL_DEX.includes(dexKey(mon))) fail(`${mon} is in FETCHED but not in the Pokédex`)
 for (const mon of [...LEGENDARY, ...RARE]) if (!NATIONAL_DEX.includes(mon)) fail(`tier list names ${mon}, which isn't in the Pokédex`)
-// A drop family names Pokédex keys, and a mon favors at most one stone and holds at most one item
+// A drop family names Pokédex keys, each once, and every item says its generation
 for (const families of [STONE_FAMILIES, HELD_FAMILIES]) {
-  const seen = new Map()
   for (const [item, family] of Object.entries(families)) {
     if (!ITEMS.some((known) => known.key === item)) fail(`drop family for ${item}, which isn't an item`)
-    for (const mon of family) {
-      if (!NATIONAL_DEX.includes(mon)) fail(`${item} drop family names ${mon}, which isn't in the Pokédex`)
-      if (seen.has(mon)) fail(`${mon} drops both ${seen.get(mon)} and ${item}`)
-      seen.set(mon, item)
-    }
+    if (new Set(family).size !== family.length) fail(`${item} drop family names a mon twice`)
+    for (const mon of family) if (!NATIONAL_DEX.includes(mon)) fail(`${item} drop family names ${mon}, which isn't in the Pokédex`)
   }
 }
+for (const item of ITEMS) if (!GENS.includes(item.gen)) fail(`${item.key} has no generation`)
 for (const mon of NATIONAL_DEX) if (!TIERS[tierOf(mon)]) fail(`${mon} has unknown tier ${tierOf(mon)}`)
 
 if (problems.length > 0) {
