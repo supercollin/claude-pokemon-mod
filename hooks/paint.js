@@ -1,6 +1,6 @@
 import { HEART_CELL, HEART_ICON, HEART_TOP, METER_STYLES } from './art.js'
 import { DEFAULT_COLOR, IMAGE_UP, IMAGE_WAIT_TICKS } from './constants.js'
-import { bandRows, bandZoom, isSmall, sceneColumns, underPanel } from './layout.js'
+import { bandRows, bandZoom, isSmall, panelEdge, sceneColumns } from './layout.js'
 import { STAT_ICONS } from './meters.js'
 import { encodePng } from './png.js'
 import { frameNow } from './scene.js'
@@ -69,11 +69,13 @@ export function imageNow(zoom) {
   const { at, width, height } = fullFrame(zoom)
   const pixels = new Int32Array(width * height)
   let same = encodedPixels?.length === pixels.length && encodedWidth === width
+  const edge = panelEdge(zoom)
   for (let py = 0; py < height; py++) {
+    const panelFrom = zoomedAt(py, zoom.scale) >> 1 >= edge.row ? edge.column : Infinity
     for (let cx = 0; cx < width; cx++) {
       const c = at(cx, py)
       const i = py * width + cx
-      pixels[i] = c === null || underPanel(zoomedAt(cx, zoom.scale), zoomedAt(py, zoom.scale) >> 1, zoom) ? -1 : c
+      pixels[i] = c === null || zoomedAt(cx, zoom.scale) >= panelFrom ? -1 : c
       if (same && pixels[i] !== encodedPixels[i]) same = false
     }
   }
@@ -101,24 +103,32 @@ export function imageNow(zoom) {
 }
 
 // Pack the current frame into Raster cells, two pixels per cell with half blocks
+// It runs every tick, so it looks up no pixel under the panel, where none shows, and
+// writes each cell's words in place.
 export function cellsNow() {
   const { at, glyphs, zoom } = frameNow()
   const words = new Uint32Array(zoom.columns * zoom.rows * 3)
+  const edge = panelEdge(zoom)
   for (let cy = 0; cy < zoom.rows; cy++) {
+    const panelFrom = cy >= edge.row ? edge.column : zoom.columns
     for (let cx = 0; cx < zoom.columns; cx++) {
       const i = (cy * zoom.columns + cx) * 3
-      const upper = at(cx, cy * 2)
-      const lower = at(cx, cy * 2 + 1)
-      const glyph = glyphs.get(cx + ',' + cy)
-      if (underPanel(cx, cy, zoom)) words.set([SPACE, DEFAULT_COLOR, DEFAULT_COLOR], i)
-      else if (glyph) words.set([glyph[0], glyph[1], upper ?? lower ?? DEFAULT_COLOR], i)
-      // A cell one color top and bottom is a space on that background, which every
-      // terminal fills edge to edge. Only a cell split in two needs a half block, whose
-      // shape depends on the font and can leave thin seams between rows.
-      else if (upper !== null && upper === lower) words.set([SPACE, DEFAULT_COLOR, upper], i)
-      else if (upper !== null) words.set([UPPER_HALF, upper, lower ?? DEFAULT_COLOR], i)
-      else if (lower !== null) words.set([LOWER_HALF, lower, DEFAULT_COLOR], i)
-      else words.set([SPACE, DEFAULT_COLOR, DEFAULT_COLOR], i)
+      let [code, fg, bg] = [SPACE, DEFAULT_COLOR, DEFAULT_COLOR]
+      if (cx < panelFrom) {
+        const upper = at(cx, cy * 2)
+        const lower = at(cx, cy * 2 + 1)
+        const glyph = glyphs.size > 0 ? glyphs.get(cx + ',' + cy) : undefined
+        if (glyph) [code, fg, bg] = [glyph[0], glyph[1], upper ?? lower ?? DEFAULT_COLOR]
+        // A cell one color top and bottom is a space on that background, which every
+        // terminal fills edge to edge. Only a cell split in two needs a half block, whose
+        // shape depends on the font and can leave thin seams between rows.
+        else if (upper !== null && upper === lower) bg = upper
+        else if (upper !== null) [code, fg, bg] = [UPPER_HALF, upper, lower ?? DEFAULT_COLOR]
+        else if (lower !== null) [code, fg] = [LOWER_HALF, lower]
+      }
+      words[i] = code
+      words[i + 1] = fg
+      words[i + 2] = bg
     }
   }
   return new Uint8Array(words.buffer).toBase64()
@@ -137,9 +147,12 @@ export function svgNow() {
   const height = full ? full.height : zoom.rows * 2
   const runs = new Map()
   const fill = (color, d) => runs.set(color, (runs.get(color) ?? '') + d)
+  const edge = full ? null : panelEdge(zoom)
   const pixelAt = (cx, py) => {
+    if (full) return at(cx, py)
     const cy = py >> 1
-    return !full && (underPanel(cx, cy, zoom) || glyphs.has(cx + ',' + cy)) ? null : at(cx, py)
+    if (cx >= edge.column && cy >= edge.row) return null
+    return glyphs.size > 0 && glyphs.has(cx + ',' + cy) ? null : at(cx, py)
   }
   for (let py = 0; py < height; py++) {
     for (let cx = 0; cx < width; ) {

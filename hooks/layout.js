@@ -142,8 +142,12 @@ export function foeMiddle(rows) {
   return { x: Math.round((box.left + box.right) / 2), y: Math.round((box.top + box.bottom) / 2) }
 }
 
-// The cells left blank under the level and meters, which are drawn over them
-export const underPanel = (cx, cy, zoom) => cx >= (isSmall() ? zoom.columns - Math.round(S.panel * zoom.scale) : S.margin + S.columns) && cy >= zoom.rows - panelRows()
+// The cells left blank under the level and meters, which are drawn over them: those from
+// this column and this row on. A painter works it out once per frame, not per cell.
+export const panelEdge = (zoom) => ({
+  column: isSmall() ? zoom.columns - Math.round(S.panel * zoom.scale) : S.margin + S.columns,
+  row: zoom.rows - panelRows(),
+})
 
 // The small band is the full-size scene drawn into a smaller box: an Image in the
 // terminal, scaled by the terminal so no pixel is lost, and an Svg on the desktop. In
