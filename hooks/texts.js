@@ -27,10 +27,26 @@ const MORE_TEXTS = {
 export function evolutionText(entry) {
   const into = displayName(entry.into)
   if (entry.happy) return into + ' at a level-up with full hearts' + (entry.time ? ' by ' + entry.time : '')
+  if (entry.fed) return into + ' at a level-up with full food'
   if (entry.more) return into + ' at Lv. ' + entry.level + MORE_TEXTS[entry.more]
   if (entry.trade && entry.item) return into + ' by trade holding ' + withArticle(entry.item)
   if (entry.item) return into + ' with ' + withArticle(entry.item)
   return entry.trade ? into + ' by trade' : into + ' at Lv. ' + entry.level
+}
+
+// Every way a mon evolves, like "Vileplume with a Leaf Stone or Bellossom with a Sun Stone".
+// The ones left to chance at a level read as one, like "Silcoon or Cascoon at Lv. 7, by
+// chance", and as plain "Wobbuffet at Lv. 15" when every pick shows as the same mon.
+export function evolutionsText(entries) {
+  const texts = []
+  for (const entry of entries) {
+    if (!entry.pick) texts.push(evolutionText(entry))
+    else if (entries.find((other) => other.pick && other.level === entry.level) === entry) {
+      const names = [...new Set(entries.filter((other) => other.pick && other.level === entry.level).map((other) => displayName(other.into)))]
+      texts.push(orList(names) + ' at Lv. ' + entry.level + (names.length > 1 ? ', by chance' : ''))
+    }
+  }
+  return orList(texts)
 }
 
 // Like "Pikachu, Lv. 12, 1820 XP (377 to Lv. 13). Can become Raichu with a Thunder Stone.
@@ -43,7 +59,7 @@ export function statsText(pets, feeds) {
   const ready = readyToEvolve()
   const becomes = ready
     ? ' Ready to evolve into ' + displayName(ready) + '. /pokemon evolve lets it.'
-    : evolutions.length > 0 ? ' Can become ' + orList(evolutions.map(evolutionText)) + '.' : ''
+    : evolutions.length > 0 ? ' Can become ' + evolutionsText(evolutions) + '.' : ''
   const meters = S.needsOn
     ? ' Food ' + Math.round(statNow(S.mon, 'food')) + '%, happiness ' + Math.round(statNow(S.mon, 'happiness')) + '%.'
     : ' Needs are off.'

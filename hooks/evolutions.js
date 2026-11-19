@@ -4,8 +4,11 @@
 // item } for a trade holding an item, which takes that item and no Link Cable, or
 // { into, happy: true } on a level-up with full hearts, with time: 'day' or 'night' when
 // only then. { into, level, more } stands in for Tyrogue's stats: at that level, more food
-// icons than hearts, more hearts than food, or as many of each. A mon that doesn't evolve
-// has no entry.
+// icons than hearts, more hearts than food, or as many of each. { into, level, pick:
+// 'random' } entries at one level share it by chance, like Wurmple's, the pick made at the
+// level-up that reaches it. { into, fed: true } is a level-up with full food, standing in
+// for Feebas's beauty, and { into, level, also } a level evolution that puts another mon in
+// the box too, like Nincada's Shedinja. A mon that doesn't evolve has no entry.
 
 const FIRST_LEVEL = 5
 
@@ -169,8 +172,8 @@ export const EVOLUTIONS = {
   larvitar: [{ into: 'pupitar', level: 30 }],
   pupitar: [{ into: 'tyranitar', level: 55 }],
 
-  // Gen 3, by Ruby and Sapphire rules, fetched like gen 2's. Azurill grows into gen 2's
-  // Marill.
+  // Gen 3, by Ruby and Sapphire rules, fetched like gen 2's. Azurill and Wynaut grow into
+  // gen 2's Marill and Wobbuffet, Wynaut into either of Wobbuffet's sprites.
   treecko: [{ into: 'grovyle', level: 16 }],
   grovyle: [{ into: 'sceptile', level: 36 }],
   torchic: [{ into: 'combusken', level: 16 }],
@@ -179,6 +182,10 @@ export const EVOLUTIONS = {
   marshtomp: [{ into: 'swampert', level: 36 }],
   poochyena: [{ into: 'mightyena', level: 18 }],
   zigzagoon: [{ into: 'linoone', level: 20 }],
+  wurmple: [
+    { into: 'silcoon', level: 7, pick: 'random' },
+    { into: 'cascoon', level: 7, pick: 'random' },
+  ],
   silcoon: [{ into: 'beautifly', level: 10 }],
   cascoon: [{ into: 'dustox', level: 10 }],
   lotad: [{ into: 'lombre', level: 14 }],
@@ -191,6 +198,7 @@ export const EVOLUTIONS = {
   kirlia: [{ into: 'gardevoir', level: 30 }],
   surskit: [{ into: 'masquerain', level: 22 }],
   shroomish: [{ into: 'breloom', level: 23 }],
+  nincada: [{ into: 'ninjask', level: 20, also: 'shedinja' }],
   slakoth: [{ into: 'vigoroth', level: 18 }],
   vigoroth: [{ into: 'slaking', level: 36 }],
   whismur: [{ into: 'loudred', level: 20 }],
@@ -216,8 +224,13 @@ export const EVOLUTIONS = {
   baltoy: [{ into: 'claydol', level: 36 }],
   lileep: [{ into: 'cradily', level: 40 }],
   anorith: [{ into: 'armaldo', level: 40 }],
+  feebas: [{ into: 'milotic', fed: true }],
   shuppet: [{ into: 'banette', level: 37 }],
   duskull: [{ into: 'dusclops', level: 37 }],
+  wynaut: [
+    { into: 'wobbuffet_male', level: 15, pick: 'random' },
+    { into: 'wobbuffet_female', level: 15, pick: 'random' },
+  ],
   snorunt: [{ into: 'glalie', level: 42 }],
   spheal: [{ into: 'sealeo', level: 32 }],
   sealeo: [{ into: 'walrein', level: 44 }],
@@ -234,19 +247,20 @@ export const FETCHED = [
   'baltoy', 'banette', 'barboach', 'bayleef', 'beautifly', 'beldum', 'bellossom', 'blaziken', 'blissey', 'breloom',
   'cacnea', 'cacturne', 'camerupt', 'carvanha', 'cascoon', 'chikorita', 'chinchou', 'claydol', 'cleffa', 'combusken',
   'corphish', 'cradily', 'crawdaunt', 'crobat', 'croconaw', 'cyndaquil', 'delcatty', 'donphan', 'dusclops', 'duskull',
-  'dustox', 'electrike', 'elekid', 'espeon', 'exploud', 'feraligatr', 'flaaffy', 'flygon', 'forretress', 'furret',
-  'gardevoir', 'glalie', 'granbull', 'grovyle', 'grumpig', 'gulpin', 'hariyama', 'hitmontop', 'hoothoot', 'hoppip',
-  'houndoom', 'houndour', 'igglybuff', 'jumpluff', 'kingdra', 'kirlia', 'lairon', 'lanturn', 'larvitar', 'ledian',
-  'ledyba', 'lileep', 'linoone', 'lombre', 'lotad', 'loudred', 'ludicolo', 'magby', 'magcargo', 'makuhita',
-  'manectric', 'mareep', 'marill', 'marshtomp', 'masquerain', 'medicham', 'meditite', 'meganium', 'metagross', 'metang',
-  'mightyena', 'mudkip', 'natu', 'noctowl', 'numel', 'nuzleaf', 'octillery', 'pelipper', 'phanpy', 'pichu',
-  'piloswine', 'pineco', 'politoed', 'poochyena', 'porygon2', 'pupitar', 'quagsire', 'quilava', 'ralts', 'remoraid',
-  'salamence', 'sceptile', 'scizor', 'sealeo', 'seedot', 'sentret', 'sharpedo', 'shelgon', 'shiftry', 'shroomish',
-  'shuppet', 'silcoon', 'skiploom', 'skitty', 'slaking', 'slakoth', 'slowking', 'slugma', 'smoochum', 'snorunt',
-  'snubbull', 'spheal', 'spinarak', 'spoink', 'steelix', 'sunflora', 'sunkern', 'surskit', 'swablu', 'swalot',
-  'swampert', 'swellow', 'swinub', 'taillow', 'teddiursa', 'togepi', 'togetic', 'torchic', 'totodile', 'trapinch',
-  'treecko', 'typhlosion', 'tyranitar', 'tyrogue', 'umbreon', 'ursaring', 'vibrava', 'vigoroth', 'wailmer', 'wailord',
-  'walrein', 'whiscash', 'whismur', 'wingull', 'wooper', 'xatu', 'zigzagoon',
+  'dustox', 'electrike', 'elekid', 'espeon', 'exploud', 'feebas', 'feraligatr', 'flaaffy', 'flygon', 'forretress',
+  'furret', 'gardevoir', 'glalie', 'granbull', 'grovyle', 'grumpig', 'gulpin', 'hariyama', 'hitmontop', 'hoothoot',
+  'hoppip', 'houndoom', 'houndour', 'igglybuff', 'jumpluff', 'kingdra', 'kirlia', 'lairon', 'lanturn', 'larvitar',
+  'ledian', 'ledyba', 'lileep', 'linoone', 'lombre', 'lotad', 'loudred', 'ludicolo', 'magby', 'magcargo',
+  'makuhita', 'manectric', 'mareep', 'marill', 'marshtomp', 'masquerain', 'medicham', 'meditite', 'meganium', 'metagross',
+  'metang', 'mightyena', 'milotic', 'mudkip', 'natu', 'nincada', 'ninjask', 'noctowl', 'numel', 'nuzleaf',
+  'octillery', 'pelipper', 'phanpy', 'pichu', 'piloswine', 'pineco', 'politoed', 'poochyena', 'porygon2', 'pupitar',
+  'quagsire', 'quilava', 'ralts', 'remoraid', 'salamence', 'sceptile', 'scizor', 'sealeo', 'seedot', 'sentret',
+  'sharpedo', 'shedinja', 'shelgon', 'shiftry', 'shroomish', 'shuppet', 'silcoon', 'skiploom', 'skitty', 'slaking',
+  'slakoth', 'slowking', 'slugma', 'smoochum', 'snorunt', 'snubbull', 'spheal', 'spinarak', 'spoink', 'steelix',
+  'sunflora', 'sunkern', 'surskit', 'swablu', 'swalot', 'swampert', 'swellow', 'swinub', 'taillow', 'teddiursa',
+  'togepi', 'togetic', 'torchic', 'totodile', 'trapinch', 'treecko', 'typhlosion', 'tyranitar', 'tyrogue', 'umbreon',
+  'ursaring', 'vibrava', 'vigoroth', 'wailmer', 'wailord', 'walrein', 'whiscash', 'whismur', 'wingull', 'wobbuffet_female',
+  'wobbuffet_male', 'wooper', 'wurmple', 'wynaut', 'xatu', 'zigzagoon',
 ]
 
 // PARENTS maps each evolved mon to the mon it comes from and the entry that takes it there.
@@ -257,7 +271,7 @@ for (const [from, entries] of Object.entries(EVOLUTIONS)) {
   if (BASE_FORM[from]) continue
   for (const entry of entries) {
     if (FETCHED.includes(from) && !FETCHED.includes(entry.into)) continue
-    PARENTS.set(entry.into, { from, entry })
+    PARENTS.set(BASE_FORM[entry.into] ?? entry.into, { from, entry })
   }
 }
 
@@ -266,10 +280,12 @@ const parentOf = (mon) => PARENTS.get(BASE_FORM[mon] ?? mon)
 export const evolutionsOf = (mon) => EVOLUTIONS[mon] ?? []
 
 // The evolution a level alone reaches, leaving out Tyrogue's that also weigh the meters
-export const levelEvolutionOf = (mon) => evolutionsOf(mon).find((entry) => entry.level && !entry.more) ?? null
+// and the ones left to chance
+export const levelEvolutionOf = (mon) => evolutionsOf(mon).find((entry) => entry.level && !entry.more && !entry.pick) ?? null
 
-// An evolution a level-up reaches by the meters or the clock, kept on the record as readyFor
-export const isLevelUpOnly = (entry) => Boolean(entry.happy || entry.more)
+// An evolution a level-up reaches by the meters, the clock, or chance, kept on the record
+// as readyFor
+export const isLevelUpOnly = (entry) => Boolean(entry.happy || entry.more || entry.pick || entry.fed)
 
 // Which meter has more icons, as a Tyrogue entry's more names it
 export function moreOf(food, hearts) {
@@ -284,11 +300,16 @@ export function timeOfDay(ms) {
   return hour >= 4 && hour < 18 ? 'day' : 'night'
 }
 
-// The evolution a level-up reaches by the meters or the clock, or null: one by friendship
-// with full hearts at this time of day, or Tyrogue's at its level by which meter has more
-export function levelUpEvolutionOf(mon, { level, food, hearts, full, time }) {
+// The evolution a level-up reaches by the meters, the clock, or chance, or null: one by
+// friendship with full hearts at this time of day, Feebas's with full food, Tyrogue's at
+// its level by which meter has more, or one of those left to chance at their level. A pick
+// already made, kept, stays; random() returns a number in [0, 1).
+export function levelUpEvolutionOf(mon, { level, food, hearts, full, time, random = Math.random, kept = null }) {
+  const picks = evolutionsOf(mon).filter((entry) => entry.pick && level >= entry.level)
+  if (picks.length > 0) return picks.find((entry) => entry.into === kept) ?? picks[Math.floor(random() * picks.length)]
   const reached = (entry) => {
     if (entry.happy) return hearts === full && (!entry.time || entry.time === time)
+    if (entry.fed) return food === full
     return Boolean(entry.more) && level >= entry.level && entry.more === moreOf(food, hearts)
   }
   return evolutionsOf(mon).find(reached) ?? null

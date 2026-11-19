@@ -35,7 +35,7 @@ import {
   hasRunAway, isAsleep, isDead, isDown, isFainted, isFlinching, isFree, isGone, isHealing, isPetted, isTuckedIn, markActive,
 } from './status.js'
 import { assignedTo, canWork, crewVariant, endAgent, partyMons, stepCrewMons, typesOf } from './team.js'
-import { andList, boxText, dexText, evolutionText, HELP, helpText, orList, statsText, withArticle } from './texts.js'
+import { andList, boxText, dexText, evolutionsText, evolutionText, HELP, helpText, orList, statsText, withArticle } from './texts.js'
 import {
   chargedWild, damageOf, engagedWild, faintedWild, fleeingWild, foeX, isHere, isOnStage, isWeak, newWild, partingBite,
   STRIKE_GAP_MS, STRIKE_JITTER_MS, stepWild, strikeBite, strikingWild, struckWild, WEAK_MS, WILD_STAY_MS, WILD_TURNS,
@@ -187,6 +187,27 @@ function finishEvolution($) {
   if (item) changeBag($, (bag) => takenFrom(bag, item)).catch((err) => logOnce($, err))
   $.ui.toast('Congratulations! Your ' + name + ' evolved into ' + displayName(into) + '!')
   $.ui.invalidate('ui.render')
+  const also = evolutionsOf(from).find((entry) => entry.into === into)?.also
+  if (also) joinedBox($, also, levelOf(into)).catch((err) => logOnce($, err))
+}
+
+// A mon an evolution leaves behind, like the shell Nincada sheds as Shedinja, joins the box
+// at the evolved mon's level, caught in the Pokédex. One already there stays as it is, and
+// one that can't be fetched now doesn't come.
+async function joinedBox($, mon, level) {
+  try {
+    await ensureMon($, mon)
+  } catch (err) {
+    $.ui.toast(displayName(mon) + ' couldn\'t join your box: ' + (err?.message ?? String(err)))
+    return
+  }
+  await freshen($, [mon])
+  if (isDead(mon)) delete S.stats[mon]
+  if (S.stats[mon]) return
+  S.stats[mon] = { xp: xpAt(level), caught: true, parked: true }
+  await markDex($, dexKey(mon), { seen: S.nowMs, caught: S.nowMs })
+  await saveRecords($, [mon])
+  $.ui.toast(displayName(mon) + ' joined your box too!')
 }
 
 // Call off an evolution under way or due. The mon stays as it is.
@@ -213,12 +234,14 @@ async function evolveCommand($, wanted) {
   let picked = entries
   if (wanted) picked = entries.filter((entry) => moveKey(entry.into) === moveKey(wanted))
   else if (entries.some((entry) => isLevelUpOnly(entry) && entry.into === reached)) picked = entries.filter((entry) => entry.into === reached)
+  // Chance picks for it at the level-up that reaches its level, so there's nothing to choose
+  if (picked.length !== 1 && entries.every((entry) => entry.pick)) return { text: name + ' can become ' + evolutionsText(entries) + '.' }
   if (picked.length !== 1) {
     const example = entries[Math.floor(Math.random() * entries.length)].into
-    return { text: name + ' can become ' + orList(entries.map(evolutionText)) + '. Try /pokemon evolve ' + example + '.' }
+    return { text: name + ' can become ' + evolutionsText(entries) + '. Try /pokemon evolve ' + example + '.' }
   }
   const [entry] = picked
-  if (isLevelUpOnly(entry) && entry.into !== reached) return { text: name + ' can become ' + evolutionText(entry) + '.' }
+  if (isLevelUpOnly(entry) && entry.into !== reached) return { text: name + ' can become ' + (entry.pick ? evolutionsText(entries) : evolutionText(entry)) + '.' }
   const level = levelOf(S.mon)
   if (entry.level && level < entry.level) {
     return { text: name + ' evolves into ' + displayName(entry.into) + ' at Lv. ' + entry.level + '. It\'s Lv. ' + level + '.' }
@@ -817,12 +840,14 @@ async function gainXp($, durationMs) {
 const PARTY_XP_SHARE = 0.5
 
 // A level-up reaches a friendship evolution with full hearts, by day or night when it asks,
-// and Tyrogue's by which meter has more icons. With needs off both meters count as full.
-// The record keeps what it reached, so it stays ready the way a level evolution does.
+// Feebas's with full food, Tyrogue's by which meter has more icons, and picks one left to
+// chance at its level. With needs off both meters count as full. The record keeps what it
+// reached, so it stays ready the way a level evolution does, and a pick stays the same.
 function markedLevelUp(name) {
   const food = S.needsOn ? filledIcons('food', name) : STAT_ICONS
   const hearts = S.needsOn ? filledIcons('happiness', name) : STAT_ICONS
-  const entry = levelUpEvolutionOf(name, { level: levelOf(name), food, hearts, full: STAT_ICONS, time: timeOfDay(S.nowMs) })
+  const kept = S.stats[name]?.readyFor
+  const entry = levelUpEvolutionOf(name, { level: levelOf(name), food, hearts, full: STAT_ICONS, time: timeOfDay(S.nowMs), kept })
   return entry ? { ...S.stats[name], readyFor: entry.into } : S.stats[name]
 }
 

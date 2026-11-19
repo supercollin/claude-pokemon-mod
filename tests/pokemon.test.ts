@@ -5,7 +5,7 @@ import { SPRITES } from '../hooks/frames.js'
 import { atCenter, CENTER_ROWS, centerPhase, centerSpan, centerStamps, JOY_COLORS, recallFlash, recallTint } from '../hooks/joy.js'
 import { dropOf, findItem, heldItemOf, stoneOfType } from '../hooks/items.js'
 import { dexKey, dexNumber, genOf, pickWild, tierOf } from '../hooks/dex.js'
-import { preEvolutionOf, startLevel } from '../hooks/evolutions.js'
+import { levelEvolutionOf, levelUpEvolutionOf, preEvolutionOf, startLevel } from '../hooks/evolutions.js'
 import { encodePng } from '../hooks/png.js'
 import { zoomedPixel } from '../hooks/zoom.js'
 
@@ -4750,6 +4750,86 @@ test('a fetched Skitty becomes a fetched Delcatty with a Moon Stone', { timeoutM
   expect(saved.bag).toEqual({})
   expect(asked.some((url) => url.includes('/gen3/delcatty/'))).toBe(true)
   expect(saved['custom:delcatty'].gen).toBe(3)
+})
+
+test('chance picks Wurmple\'s and Wynaut\'s evolution once, Feebas needs full food, and Wobbuffet keeps gen 2\'s tier', () => {
+  const at = (level: number, more: Record<string, unknown> = {}) => ({ level, food: 0, hearts: 0, full: 5, time: 'day', ...more })
+  expect(levelEvolutionOf('wurmple')).toBeNull()
+  expect(levelUpEvolutionOf('wurmple', at(6, { random: () => 0 }))).toBeNull()
+  expect(levelUpEvolutionOf('wurmple', at(7, { random: () => 0 }))?.into).toBe('silcoon')
+  expect(levelUpEvolutionOf('wurmple', at(7, { random: () => 0.99 }))?.into).toBe('cascoon')
+  // A pick already made stays
+  expect(levelUpEvolutionOf('wurmple', at(8, { random: () => 0, kept: 'cascoon' }))?.into).toBe('cascoon')
+  expect(levelUpEvolutionOf('wynaut', at(15, { random: () => 0.99 }))?.into).toBe('wobbuffet_female')
+  expect(levelUpEvolutionOf('feebas', at(9, { food: 5 }))?.into).toBe('milotic')
+  expect(levelUpEvolutionOf('feebas', at(9, { food: 4, hearts: 5 }))).toBeNull()
+  expect(preEvolutionOf('wobbuffet_male')).toBe('wynaut')
+  expect(startLevel('wobbuffet_female')).toBe(15)
+  expect(tierOf('wobbuffet')).toBe('uncommon')
+  expect(tierOf('wynaut')).toBe('rare')
+  expect(tierOf('silcoon')).toBe('uncommon')
+  expect(tierOf('dustox')).toBe('rare')
+  expect(tierOf('milotic')).toBe('rare')
+  expect(startLevel('ninjask')).toBe(20)
+})
+
+test('Wurmple reaching Lv. 7 evolves into Silcoon or Cascoon, picked by chance', { timeoutMs: 30000 }, async ($, on) => {
+  const toasts = toastsOf(on)
+  on('turn.complete', () => ({ text: '' }))
+  serveMons(on, { 3: ['silcoon', 'cascoon'] }, { types: ['bug'] })
+  const saved: Record<string, any> = {
+    mon: 'wurmple',
+    wander: false,
+    stats: { wurmple: { xp: 7 ** 3 - 1 } },
+    'custom:wurmple': { gen: 3, sprite: SPRITES.diglett, moves: ['Tackle'] },
+  }
+  const { clock } = await startedWith($, on, saved, 0)
+  expect(await run($, 'stats')).toMatch(/ Can become Silcoon or Cascoon at Lv\. 7, by chance\./)
+  expect(await run($, 'evolve')).toBe('Wurmple can become Silcoon or Cascoon at Lv. 7, by chance.')
+  await $.turn.complete(ANSWERED)
+  expect(toasts[0]).toBe('Wurmple grew to Lv. 7!')
+  await clock.advance(7200)
+  expect(['silcoon', 'cascoon']).toContain(saved.mon)
+  expect(toasts).toContain('Congratulations! Your Wurmple evolved into ' + (saved.mon === 'silcoon' ? 'Silcoon' : 'Cascoon') + '!')
+  expect(saved.stats[saved.mon].readyFor).toBeUndefined()
+})
+
+test('Nincada evolving into Ninjask puts a Shedinja in the box too, caught at its level', { timeoutMs: 30000 }, async ($, on) => {
+  const toasts = toastsOf(on)
+  on('turn.complete', () => ({ text: '' }))
+  const asked = serveMons(on, { 3: ['ninjask', 'shedinja'] }, { types: ['bug'] })
+  const saved: Record<string, any> = {
+    mon: 'nincada',
+    wander: false,
+    stats: { nincada: { xp: 20 ** 3 - 1 } },
+    'custom:nincada': { gen: 3, sprite: SPRITES.diglett, moves: ['Tackle'] },
+  }
+  const { clock } = await startedWith($, on, saved, 0)
+  expect(await run($, 'stats')).toMatch(/ Can become Ninjask at Lv\. 20\./)
+  await $.turn.complete(ANSWERED)
+  await clock.advance(7200)
+  expect(saved.mon).toBe('ninjask')
+  expect(asked.some((url) => url.includes('/gen3/shedinja/'))).toBe(true)
+  expect(saved.stats.shedinja).toEqual({ xp: 20 ** 3, caught: true, parked: true })
+  expect(typeof saved.dex.shedinja.caught).toBe('number')
+  expect(toasts).toContain('Shedinja joined your box too!')
+  expect(await run($, 'shedinja')).toMatch(/^Now showing default Shedinja/)
+})
+
+test('a Rare Candy with full food grows a fetched Feebas into Milotic, whatever its hearts', { timeoutMs: 30000 }, async ($, on) => {
+  serveMons(on, { 3: ['milotic'] }, { types: ['water'] })
+  const saved: Record<string, any> = {
+    mon: 'feebas',
+    wander: false,
+    bag: { rarecandy: 1 },
+    stats: { feebas: { xp: 10 ** 3, happiness: { value: 0, at: 0 }, food: { value: 100, at: 0 } } },
+    'custom:feebas': { gen: 3, sprite: SPRITES.diglett, moves: ['Tackle'] },
+  }
+  const { clock } = await startedWith($, on, saved, 0)
+  expect(await run($, 'evolve')).toBe('Feebas can become Milotic at a level-up with full food.')
+  expect(await run($, 'use rare candy')).toBe('You give Feebas a Rare Candy. It grew to Lv. 11!')
+  await clock.advance(7200)
+  expect(saved.mon).toBe('milotic')
 })
 
 // A fetched Tyrogue one XP short of Lv. 20, with its meters at food and happiness

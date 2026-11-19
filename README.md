@@ -316,6 +316,13 @@ with more food icons than hearts makes it Hitmonlee, more hearts than food Hitmo
 and as many of each a fetched Hitmontop. With needs off, the meters count as full, so
 it becomes Hitmontop.
 
+Gen 3 adds three more. Wurmple at 7 becomes Silcoon or Cascoon by chance, as the games
+decide by a hidden value, and Wynaut at 15 either of Wobbuffet's sprites. The pick is made
+once, at the level-up that reaches the level, and stays. Feebas, which the games evolve by
+its beauty from Pokéblocks, evolves here on a level-up with a full food meter. Nincada
+becomes Ninjask at 20, and the shell it sheds joins your box as a Shedinja at that level,
+caught in your Pokédex.
+
 Some mons evolve on a level-up with all five hearts full, from a turn or a Rare Candy:
 Golbat into Crobat, Chansey into Blissey, and the fetched Pichu, Cleffa, Igglybuff, and
 Togepi into Pikachu, Clefairy, Jigglypuff, and Togetic, and gen 3's Azurill into gen 2's
