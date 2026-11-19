@@ -642,7 +642,8 @@ claude --plugin-dir .                            # live-reloading session
 | `hooks/frames.js` | Generated pixel frames. Don't edit by hand |
 | `sprites/<mon>/*.gif` | Source GIFs, 32x32 |
 | `scripts/` | Frame builder, attack, sleep, battle, heal, and party previewers on a stand-in host, data check |
-| `tests/pokemon.test.ts` | `claude plugin test` suite |
+| `tests/*.test.ts` | `claude plugin test` suite, one file per theme, run in parallel |
+| `tests/helpers.ts` | Stubs, colors, and readers the test files share, and `test` with a longer default timeout |
 
 CI runs the lint, the data check, and the tests on every pull request and push to `main`.
 Commits follow [Conventional Commits](https://www.conventionalcommits.org). When `main`

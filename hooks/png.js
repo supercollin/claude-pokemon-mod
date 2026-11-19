@@ -65,13 +65,6 @@ class Bits {
     }
   }
 
-  // Huffman codes go most significant bit first
-  code(value, count) {
-    let reversed = 0
-    for (let k = 0; k < count; k++) reversed |= ((value >> k) & 1) << (count - 1 - k)
-    this.put(reversed, count)
-  }
-
   push(byte) {
     if (this.pos === this.out.length) {
       const grown = new Uint8Array(this.out.length * 2)
@@ -87,21 +80,46 @@ class Bits {
   }
 }
 
+// Huffman codes go most significant bit first, so put takes them reversed
+function reversed(value, count) {
+  let out = 0
+  for (let k = 0; k < count; k++) out |= ((value >> k) & 1) << (count - 1 - k)
+  return out
+}
+
+// The fixed Huffman code of each literal and length symbol, and of each distance code,
+// reversed once here rather than at every symbol written
+const LITERAL_SIZE = new Uint8Array(288)
+const LITERAL_CODE = new Uint16Array(288)
+for (let value = 0; value < 288; value++) {
+  let code = 0xc0 + value - 280
+  let size = 8
+  if (value < 144) code = 0x30 + value
+  else if (value < 256) [code, size] = [0x190 + value - 144, 9]
+  else if (value < 280) [code, size] = [value - 256, 7]
+  LITERAL_SIZE[value] = size
+  LITERAL_CODE[value] = reversed(code, size)
+}
+const DIST_CODE = Uint8Array.from({ length: 30 }, (_, d) => reversed(d, 5))
+
+// Each match length's index into LENGTH_BASE
+const LENGTH_INDEX = new Uint8Array(MAX_MATCH + 1)
+for (let length = 3, l = 0; length <= MAX_MATCH; length++) {
+  while (l < 28 && LENGTH_BASE[l + 1] <= length) l++
+  LENGTH_INDEX[length] = l
+}
+
 function literal(bits, value) {
-  if (value < 144) bits.code(0x30 + value, 8)
-  else if (value < 256) bits.code(0x190 + value - 144, 9)
-  else if (value < 280) bits.code(value - 256, 7)
-  else bits.code(0xc0 + value - 280, 8)
+  bits.put(LITERAL_CODE[value], LITERAL_SIZE[value])
 }
 
 function match(bits, length, distance) {
-  let l = 0
-  while (l < 28 && LENGTH_BASE[l + 1] <= length) l++
+  const l = LENGTH_INDEX[length]
   literal(bits, 257 + l)
   bits.put(length - LENGTH_BASE[l], LENGTH_EXTRA[l])
   let d = 0
   while (d < 29 && DIST_BASE[d + 1] <= distance) d++
-  bits.code(d, 5)
+  bits.put(DIST_CODE[d], 5)
   bits.put(distance - DIST_BASE[d], DIST_EXTRA[d])
 }
 
@@ -129,12 +147,16 @@ function deflate(data) {
       const limit = Math.min(MAX_MATCH, data.length - i)
       let candidate = head[hash(i)]
       for (let chain = 0; candidate >= 0 && i - candidate <= WINDOW && chain < MAX_CHAIN; chain++) {
-        let length = 0
-        while (length < limit && data[candidate + length] === data[i + length]) length++
-        if (length > bestLength) {
-          bestLength = length
-          bestDistance = i - candidate
-          if (length === limit) break
+        // A candidate that differs at the best length so far can't beat it, so it's
+        // passed over without comparing the bytes before
+        if (data[candidate + bestLength] === data[i + bestLength]) {
+          let length = 0
+          while (length < limit && data[candidate + length] === data[i + length]) length++
+          if (length > bestLength) {
+            bestLength = length
+            bestDistance = i - candidate
+            if (length === limit) break
+          }
         }
         candidate = prev[candidate % WINDOW]
       }
