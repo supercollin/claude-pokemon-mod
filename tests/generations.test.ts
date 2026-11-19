@@ -1,6 +1,6 @@
 import { expect, mock } from 'claude-code/testing'
 import { SPRITES } from '../hooks/frames.js'
-import { dropOf, findItem, heldItemOf, stoneOfType } from '../hooks/items.js'
+import { dropOf, findItem, heldItemsOf, stonesOf } from '../hooks/items.js'
 import { dexKey, dexNumber, genOf, pickWild, tierOf } from '../hooks/dex.js'
 import { levelEvolutionOf, levelUpEvolutionOf, preEvolutionOf, startLevel } from '../hooks/evolutions.js'
 import { displayName } from '../hooks/names.js'
@@ -150,7 +150,7 @@ test('a knockout drops an item one time in 5: its own type\'s stone, or a Link C
     const drops: Record<string, number> = {}
     let none = 0
     for (let seed = 0; seed < 18000; seed++) {
-      const item = dropOf(key, seed)
+      const item = dropOf(key, seed, [1])
       if (item) drops[item] = (drops[item] ?? 0) + 1
       else none++
     }
@@ -164,8 +164,8 @@ test('a knockout drops an item one time in 5: its own type\'s stone, or a Link C
   expect(Object.keys(count('pikachu').drops).sort()).toEqual(['linkcable', 'rarecandy', 'thunderstone'])
   // A foe with no stone type drops only a Link Cable or Rare Candy
   expect(Object.keys(pidgey.drops).sort()).toEqual(['linkcable', 'rarecandy'])
-  expect(stoneOfType('pikachu')).toBe('thunderstone')
-  expect(stoneOfType('pidgey')).toBeNull()
+  expect(stonesOf('pikachu', [1])).toEqual(['thunderstone'])
+  expect(stonesOf('pidgey')).toEqual([])
   expect(vulpix.none / 18000).toBeGreaterThan(0.76)
   expect(vulpix.none / 18000).toBeLessThan(0.84)
   for (const { drops } of [vulpix, pidgey]) {
@@ -196,8 +196,8 @@ test('the first bag grants the item every stone or trade mon in the box needs, a
   }
   const saved: Record<string, any> = { mon: 'charmander', stats }
   await startedWith($, on, saved, 0)
-  expect(await run($, 'bag')).toBe('Your bag:\nFire Stone, 1\nWater Stone, 1\nThunder Stone, 2\nLeaf Stone, 1\nLink Cable, 1')
-  expect(saved.bag).toEqual({ thunderstone: 2, waterstone: 1, firestone: 1, leafstone: 1, linkcable: 1 })
+  expect(await run($, 'bag')).toBe('Your bag:\nFire Stone, 1\nWater Stone, 1\nThunder Stone, 2\nLeaf Stone, 1\nIce Stone, 1\nLink Cable, 1')
+  expect(saved.bag).toEqual({ thunderstone: 2, waterstone: 1, firestone: 1, leafstone: 1, icestone: 1, linkcable: 1 })
   // Made once, the bag is never granted again
   saved.bag = {}
   expect(await run($, 'bag')).toBe('Your bag is empty. Knock out a wild mon with /pokemon attack, and it may drop an item.')
@@ -227,7 +227,7 @@ test('/pokemon use takes an item by a loose name, and a stone on a mon is the sa
   const saved: Record<string, any> = { trainer: false, mon: 'eevee', bag: { firestone: 1, waterstone: 1 } }
   const { clock } = await startedWith($, on, saved, 0)
   expect(await run($, 'use')).toBe('Name the item, like /pokemon use rare candy. /pokemon bag lists yours.')
-  expect(await run($, 'use potion')).toBe('Unknown item "potion". Items: Fire Stone, Water Stone, Thunder Stone, Leaf Stone, Moon Stone, Sun Stone, Dawn Stone, King\'s Rock, Metal Coat, Dragon Scale, Up-Grade, Deep Sea Tooth, Deep Sea Scale, Razor Claw, Razor Fang, Oval Stone, Link Cable, Rare Candy.')
+  expect(await run($, 'use potion')).toBe('Unknown item "potion". Items: Fire Stone, Water Stone, Thunder Stone, Leaf Stone, Moon Stone, Sun Stone, Shiny Stone, Dusk Stone, Dawn Stone, Ice Stone, King\'s Rock, Metal Coat, Dragon Scale, Up-Grade, Deep Sea Tooth, Deep Sea Scale, Protector, Electirizer, Magmarizer, Dubious Disc, Reaper Cloth, Razor Claw, Razor Fang, Oval Stone, Link Cable, Rare Candy.')
   expect(await run($, 'use moon stone')).toBe('Eevee can\'t use a Moon Stone.')
   expect(await run($, 'use fire stone growlithe')).toBe('Show Growlithe first with /pokemon growlithe, then use the Fire Stone.')
   expect(await run($, 'use FireStone eevee')).toBe('You use a Fire Stone on Eevee.')
@@ -313,11 +313,11 @@ test('Gloom becomes Vileplume with a Leaf Stone, or a fetched Bellossom with a S
   expect(saved['custom:bellossom'].gen).toBe(2)
 })
 
-test('a foe that holds a trade item drops it now and then, and the same foe always drops the same', () => {
-  const count = (key: string) => {
+test('a foe that holds a trade item drops it now and then, only while the item\'s generation is in the wild, and the same foe always drops the same', () => {
+  const count = (key: string, gens = [1, 2]) => {
     const drops: Record<string, number> = {}
     for (let seed = 0; seed < 18000; seed++) {
-      const item = dropOf(key, seed)
+      const item = dropOf(key, seed, gens)
       if (item) drops[item] = (drops[item] ?? 0) + 1
     }
     return drops
@@ -331,7 +331,10 @@ test('a foe that holds a trade item drops it now and then, and the same foe alwa
   expect(Object.keys(count('porygon'))).toContain('upgrade')
   expect(Object.keys(count('horsea'))).toContain('dragonscale')
   expect(Object.keys(count('slowpoke'))).toContain('kingsrock')
-  expect(heldItemOf('pidgey')).toBeNull()
+  expect(heldItemsOf('pidgey')).toEqual([])
+  // The Metal Coat and Up-Grade came in gen 2, so with gen 1 alone they don't drop
+  expect(Object.keys(count('magnemite', [1])).sort()).toEqual(['linkcable', 'rarecandy', 'thunderstone'])
+  expect(Object.keys(count('porygon', [1])).sort()).toEqual(['linkcable', 'rarecandy'])
   expect(Object.keys(count('pidgey')).some((item) => ['kingsrock', 'metalcoat', 'dragonscale', 'upgrade'].includes(item))).toBe(false)
   expect(dropOf('magnemite', 42)).toBe(dropOf('magnemite', 42))
 })
@@ -340,18 +343,20 @@ test('gen 2 foes drop their own type\'s stone, Sun Stone included, and the items
   const kinds = (key: string) => {
     const drops = new Set<string>()
     for (let seed = 0; seed < 6000; seed++) {
-      const item = dropOf(key, seed)
+      const item = dropOf(key, seed, [1, 2])
       if (item) drops.add(item)
     }
     return [...drops].sort()
   }
   expect(kinds('cyndaquil')).toEqual(['firestone', 'linkcable', 'rarecandy'])
-  expect(kinds('sunkern')).toEqual(['linkcable', 'rarecandy', 'sunstone'])
+  expect(kinds('sunkern')).toEqual(['leafstone', 'linkcable', 'rarecandy', 'sunstone'])
   expect(kinds('togepi')).toEqual(['linkcable', 'moonstone', 'rarecandy'])
   expect(kinds('steelix')).toContain('metalcoat')
   expect(kinds('kingdra')).toEqual(['dragonscale', 'linkcable', 'rarecandy', 'waterstone'])
-  expect(stoneOfType('hooh')).toBe('sunstone')
-  expect(heldItemOf('porygon2')).toBe('upgrade')
+  expect(stonesOf('hooh', [1, 2])).toEqual(['firestone', 'sunstone'])
+  // Porygon2 holds the Up-Grade, and with gen 4 on the Dubious Disc it trades into Porygon-Z with
+  expect(heldItemsOf('porygon2', [1, 2])).toEqual(['upgrade'])
+  expect(heldItemsOf('porygon2')).toEqual(['upgrade', 'dubiousdisc'])
   // A gen 2 foe with no stone type drops no stone, as gen 1's don't
   expect(kinds('aipom')).toEqual(['linkcable', 'rarecandy'])
   expect(kinds('porygon')).toEqual(['linkcable', 'rarecandy', 'upgrade'])
@@ -435,7 +440,7 @@ for (const [hour, evolves] of [[22, true], [12, false]] as const) {
   })
 }
 
-test('gen 3 foes drop their own type\'s stone, and Carvanha and Relicanth the Deep Sea items', () => {
+test('gen 4 foes drop their own type\'s stone, gen 4\'s new stones included, and the lines that evolve with an item hold it', () => {
   const kinds = (key: string) => {
     const drops = new Set<string>()
     for (let seed = 0; seed < 6000; seed++) {
@@ -444,8 +449,53 @@ test('gen 3 foes drop their own type\'s stone, and Carvanha and Relicanth the De
     }
     return [...drops].sort()
   }
+  expect(kinds('chimchar')).toEqual(['firestone', 'linkcable', 'rarecandy'])
+  expect(kinds('drifloon')).toEqual(['duskstone', 'linkcable', 'rarecandy'])
+  expect(kinds('snover')).toEqual(['icestone', 'leafstone', 'linkcable', 'rarecandy'])
+  expect(kinds('bronzor')).toEqual(['dawnstone', 'linkcable', 'metalcoat', 'rarecandy'])
+  expect(kinds('togekiss')).toEqual(['linkcable', 'rarecandy', 'shinystone'])
+  expect(kinds('rhyhorn')).toEqual(['linkcable', 'protector', 'rarecandy'])
+  expect(kinds('electabuzz')).toEqual(['electirizer', 'linkcable', 'rarecandy', 'thunderstone'])
+  expect(kinds('magby')).toEqual(['firestone', 'linkcable', 'magmarizer', 'rarecandy'])
+  expect(kinds('happiny')).toEqual(['linkcable', 'ovalstone', 'rarecandy'])
+  expect(heldItemsOf('dusclops')).toEqual(['reapercloth'])
+  expect(heldItemsOf('sneasel')).toEqual(['razorclaw'])
+  expect(heldItemsOf('gligar')).toEqual(['razorfang'])
+  expect(kinds('starly')).toEqual(['linkcable', 'rarecandy'])
+})
+
+test('an older foe drops a newer generation\'s items by its type once that generation is in the wild', () => {
+  const kinds = (key: string, gens: number[]) => {
+    const drops = new Set<string>()
+    for (let seed = 0; seed < 6000; seed++) {
+      const item = dropOf(key, seed, gens)
+      if (item) drops.add(item)
+    }
+    return [...drops].sort()
+  }
+  expect(kinds('gastly', [1])).toEqual(['linkcable', 'rarecandy'])
+  expect(kinds('gastly', [1, 4])).toEqual(['duskstone', 'linkcable', 'rarecandy'])
+  // A foe of two types drops either stone
+  expect(kinds('sneasel', [1, 2, 4])).toEqual(['duskstone', 'icestone', 'linkcable', 'rarecandy', 'razorclaw'])
+  expect(kinds('clefairy', [1])).toEqual(['linkcable', 'moonstone', 'rarecandy'])
+  expect(kinds('clefairy', [1, 4])).toEqual(['linkcable', 'moonstone', 'rarecandy', 'shinystone'])
+  expect(kinds('clamperl', [1, 3])).toEqual(['deepseascale', 'deepseatooth', 'linkcable', 'rarecandy', 'waterstone'])
+  expect(kinds('onix', [1, 2])).toEqual(['linkcable', 'metalcoat', 'rarecandy'])
+  expect(kinds('dratini', [1])).toEqual(['linkcable', 'rarecandy'])
+  expect(stonesOf('abra', [1, 4])).toEqual(['dawnstone'])
+})
+
+test('gen 3 foes drop their own type\'s stone, and Carvanha and Relicanth the Deep Sea items', () => {
+  const kinds = (key: string) => {
+    const drops = new Set<string>()
+    for (let seed = 0; seed < 6000; seed++) {
+      const item = dropOf(key, seed, [1, 2, 3])
+      if (item) drops.add(item)
+    }
+    return [...drops].sort()
+  }
   expect(kinds('torchic')).toEqual(['firestone', 'linkcable', 'rarecandy'])
-  expect(kinds('lotad')).toEqual(['linkcable', 'rarecandy', 'waterstone'])
+  expect(kinds('lotad')).toEqual(['leafstone', 'linkcable', 'rarecandy', 'waterstone'])
   expect(kinds('seedot')).toEqual(['leafstone', 'linkcable', 'rarecandy'])
   expect(kinds('skitty')).toEqual(['linkcable', 'moonstone', 'rarecandy'])
   expect(kinds('solrock')).toEqual(['linkcable', 'rarecandy', 'sunstone'])

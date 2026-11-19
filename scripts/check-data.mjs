@@ -161,18 +161,15 @@ if (new Set(NATIONAL_DEX).size !== NATIONAL_DEX.length) fail('the Pokédex lists
 for (const mon of mons) if (!BUNDLED_DEX.includes(dexKey(mon))) fail(`${mon} has no Pokédex entry`)
 for (const mon of FETCHED) if (!NATIONAL_DEX.includes(dexKey(mon))) fail(`${mon} is in FETCHED but not in the Pokédex`)
 for (const mon of [...LEGENDARY, ...RARE]) if (!NATIONAL_DEX.includes(mon)) fail(`tier list names ${mon}, which isn't in the Pokédex`)
-// A drop family names Pokédex keys, and a mon favors at most one stone and holds at most one item
+// A drop family names Pokédex keys, each once, and every item says its generation
 for (const families of [STONE_FAMILIES, HELD_FAMILIES]) {
-  const seen = new Map()
   for (const [item, family] of Object.entries(families)) {
     if (!ITEMS.some((known) => known.key === item)) fail(`drop family for ${item}, which isn't an item`)
-    for (const mon of family) {
-      if (!NATIONAL_DEX.includes(mon)) fail(`${item} drop family names ${mon}, which isn't in the Pokédex`)
-      if (seen.has(mon)) fail(`${mon} drops both ${seen.get(mon)} and ${item}`)
-      seen.set(mon, item)
-    }
+    if (new Set(family).size !== family.length) fail(`${item} drop family names a mon twice`)
+    for (const mon of family) if (!NATIONAL_DEX.includes(mon)) fail(`${item} drop family names ${mon}, which isn't in the Pokédex`)
   }
 }
+for (const item of ITEMS) if (!GENS.includes(item.gen)) fail(`${item.key} has no generation`)
 for (const mon of NATIONAL_DEX) if (!TIERS[tierOf(mon)]) fail(`${mon} has unknown tier ${tierOf(mon)}`)
 
 if (problems.length > 0) {

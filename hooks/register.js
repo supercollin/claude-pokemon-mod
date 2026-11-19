@@ -465,7 +465,7 @@ function hitFoe($) {
   const name = displayName(S.wild.mon)
   const hp = Math.max(0, Math.round(S.wild.hp - damageOf(S.wild, S.attack.power, Math.random())))
   if (hp === 0) {
-    const item = dropOf(S.wild.key, S.wild.seed)
+    const item = dropOf(S.wild.key, S.wild.seed, S.wildGens)
     S.wild = { ...faintedWild(S.wild, S.tick), drop: item ? { item, at: S.tick } : null }
     if (!item) {
       $.ui.toast('Wild ' + name + ' fainted! It can\'t be caught now.')

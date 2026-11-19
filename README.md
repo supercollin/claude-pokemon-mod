@@ -363,14 +363,19 @@ Gloom needs one too: a Leaf Stone makes it Vileplume, and a Sun Stone a fetched
 Bellossom, and Poliwhirl one between Poliwrath and Politoed. Sunkern, from gen 2, also
 takes a Sun Stone, and from gen 3 Lombre a Water Stone, Nuzleaf a Leaf Stone, and Skitty a
 Moon Stone. Magneton and Nosepass, which evolve at Mt. Coronet in gen 4, take a Thunder
-Stone into Magnezone and Probopass, and Eevee a Leaf Stone into Leafeon, as in Sword and
-Shield. Gen 3's Clamperl trades into Huntail holding a Deep Sea Tooth, or Gorebyss
-holding a Deep Sea Scale.
+Stone into Magnezone and Probopass, and Eevee a Leaf Stone into Leafeon and an Ice Stone
+into Glaceon, as in Sword and Shield. Gen 3's Clamperl trades into Huntail holding a Deep
+Sea Tooth, or Gorebyss holding a Deep Sea Scale. Gen 4 brings four stones: a Shiny Stone
+makes Togetic Togekiss and Roselia Roserade, and a Dusk Stone makes Misdreavus Mismagius
+and Murkrow Honchkrow. And five trades holding an item: Rhydon into Rhyperior with a
+Protector, Electabuzz into Electivire with an Electirizer, Magmar into Magmortar with a
+Magmarizer, Porygon2 into Porygon-Z with a Dubious Disc, and Dusclops into Dusknoir with
+a Reaper Cloth.
 Without the item, it says which one is missing.
 
 Items come from wild mons you knock out, and `/pokemon bag` lists them. The first time
 the bag is made, every stone or trade mon already in your box gets one of the item it
-needs, so none is left stranded, and Eevee gets one of each of its four stones.
+needs, so none is left stranded, and Eevee gets one of each of its five stones.
 
 Rare Candy raises a mon one level, to the start of the next, with `/pokemon use rare
 candy` for the mon on show or `/pokemon use rare candy <mon>` for one in your box. A
@@ -460,20 +465,38 @@ most, and the mon spends one every 6 to 8 s on a random move aimed at the foe. E
 shrinks the HP bar over the foe's head. A common foe takes about 3 hits, a legendary about 10.
 Once another hit could knock the foe out, it's weak, and the mon holds off. Only
 `/pokemon attack` lands the last hit. A foe at 0 HP faints and blinks away, and can't be
-caught, but 1 time in 5 an item pops out of it and goes into your bag. It's usually the
-stone for the foe's type, like a Fire Stone from a Vulpix or a Thunder Stone from a
-Voltorb. Gen 2's and gen 3's foes drop theirs too, like a Fire Stone from a Cyndaquil or a
-Torchic, and the Sun Stone comes from Sunkern, Sunflora, Bellossom, Ho-Oh, Solrock, and
-Castform. About 1 drop in 13 is a Link
-Cable instead, and 1 in 15 a Rare Candy.
-A foe that holds an item in Gold and Silver drops it about 1 drop in 12: a Metal Coat from
-Magnemite and Magneton, a Dragon Scale from Horsea and Seadra, and a King's Rock from the
-Poliwag and Slowpoke lines. Porygon drops the Up-Grade, which no wild mon holds there.
-With gen 2 on, the mons those trades make hold their item too, and Skarmory and
-Forretress a Metal Coat. No wild mon holds a Deep Sea Tooth or Scale in Ruby and Sapphire,
-so with gen 3 on Carvanha, Sharpedo, and Huntail drop the Tooth, and Relicanth and
-Gorebyss the Scale. A foe with neither a stone type nor a held item, like a Pidgey,
-only ever drops a Link Cable or Rare Candy.
+caught, but 1 time in 5 an item pops out of it and goes into your bag. About 1 drop in
+15 is a Rare Candy and 1 in 13 a Link Cable. A foe that holds an item drops it about 1
+drop in 12, and otherwise it drops a stone for its type.
+
+Each item came in a generation, and a foe drops it only while that generation is in the
+wild, whatever the foe's own: a Gastly drops a Dusk Stone once gen 4 is on, and a
+Magnemite a Metal Coat once gen 2 is. The Link Cable and Rare Candy always come. A foe
+with several items it could drop drops one of them, always the same for the same foe.
+
+- **Stones, by type, from every generation:** a Fire, Water, Thunder, or Leaf Stone from a
+  mon of that type (gen 1), a Shiny Stone from a fairy-type mon or Budew's line, a Dusk
+  Stone from a ghost or dark one, a Dawn Stone from a psychic one, and an Ice Stone from
+  an ice one (gen 4). A mon of two types drops either stone, like a Sneasel a Dusk or Ice
+  Stone. The Moon Stone (gen 1) comes from the lunar and fairy-like mons that use it, like
+  Clefairy, the Nidoran lines, and Lunatone, and the Sun Stone (gen 2) from the sun-loving
+  ones: Sunkern, Sunflora, Bellossom, Ho-Oh, Solrock, Castform, and Cherrim.
+- **Held items:** the mons that hold one in the games, the line that evolves with it, and
+  a few that plainly fit. The King's Rock (gen 2) comes from the Poliwag and Slowpoke lines
+  and Hariyama, the Metal Coat (gen 2) from every steel type and from Onix and Scyther, the
+  Dragon Scale (gen 2) from every dragon type and from Horsea and Seadra, and the Up-Grade
+  (gen 2) from Porygon and Porygon2. The Deep Sea Tooth (gen 3) comes from Carvanha,
+  Sharpedo, Huntail, and Clamperl, and the Deep Sea Scale from Chinchou, Lanturn, Gorebyss,
+  Relicanth, and Clamperl. From gen 4, the Elekid and Magby lines hold the Electirizer and
+  Magmarizer, and the Happiny line the Oval Stone, as in the games. No wild mon holds the
+  other gen 4 items, so the Protector comes from Rhyhorn's line, Shieldon, and Bastiodon,
+  the Dubious Disc from Porygon2 and Porygon-Z, the Reaper Cloth from Duskull's line,
+  Shuppet, and Banette, the Razor Claw from Sneasel, Weavile, and the clawed mons like
+  Sandshrew and Zangoose, and the Razor Fang from Gligar, Gliscor, and the fanged mons like
+  Ekans and Snubbull.
+
+A foe with no stone or held item from a generation in the wild, like a Pidgey, only ever
+drops a Link Cable or Rare Candy.
 Main turns of two minutes or more turn up a Rare Candy 1 time in 10 too.
 Every 10 to 15 s the foe plays one of its own moves at the mon, which flinches and puts
 its next move off.
@@ -621,7 +644,7 @@ Bringing one in is data, in `hooks/dex.js` and `hooks/evolutions.js`:
 2. Add its legendaries to `LEGENDARY` and its rare mons to `RARE`. The rest takes its tier from its place in its family.
 3. A mon with no folder of its own, only its forms', goes in `WILD_FORMS`, its forms in `BASE_FORM`, and their names in `hooks/names.js`.
 4. Add its evolutions to `EVOLUTIONS`, and every mon they name that isn't bundled to `FETCHED`.
-5. Add its mons to the drop tables in `hooks/items.js`: `STONE_FAMILIES` for the stone each favors, and `HELD_FAMILIES` for an item it holds.
+5. Add its items to `ITEMS` in `hooks/items.js` with their `gen`, and its mons to the drop tables there: `STONE_FAMILIES` by type, and `HELD_FAMILIES` for an item a mon holds or evolves with. A new item's families take older mons too, by the same rules, and they drop it only while its generation is on.
 6. Add its genderless species and those not half female to the lists in `hooks/genders.js`. A female sprite goes in `BASE_FORM` as `<key>_female`, and a female shows it.
 7. Run `node scripts/check-data.mjs`. `/pokemon gen <N>` turns it on from then on.
 

@@ -117,8 +117,11 @@ export function stampPixel(s, cx, py) {
 // Dragon Scale a blue scale (d, h shine), the Up-Grade a box (p) with a screen (w) and
 // keys (k), the Deep Sea Tooth a white fang (t) with a grey edge (g), the Deep Sea
 // Scale a pink shell (p, h shine), the Razor Claw three grey claws (c), the Razor Fang a
-// white fang (f) with a red base (r), and the Oval Stone a pale egg (e, h shine). The Dawn
-// Stone is a stone with a green glint.
+// white fang (f) with a red base (r), and the Oval Stone a pale egg (e, h shine). The
+// Protector is a brown shield (b) with a red face (r), the Electirizer and Magmarizer a
+// dark box (k) with a yellow or fiery front, the Dubious Disc a pink disc (p) with a dark
+// hole (k), and the Reaper Cloth a purple cloth (c) with eye holes (k). The Shiny, Dusk,
+// Dawn, and Ice Stones are stones too.
 const STONE = ['.ooo.', 'obhbo', 'obmbo', 'obbbo', '.ooo.']
 const stoneOf = (o, b, m) => ({ rows: STONE, colors: { o, b, m, h: 0xffffff } })
 export const ITEM_ART = {
@@ -128,7 +131,10 @@ export const ITEM_ART = {
   leafstone: stoneOf(0x5a6a20, 0x98b040, 0x2a7a30),
   moonstone: stoneOf(0x30304a, 0x60607e, 0xd8d8f0),
   sunstone: stoneOf(0xa02818, 0xe85020, 0xffc830),
+  shinystone: stoneOf(0x8a8a9a, 0xe8e8f0, 0xfff2a0),
+  duskstone: stoneOf(0x1a1028, 0x4a2a6a, 0xa060e0),
   dawnstone: stoneOf(0x1a6a6a, 0x40b0a8, 0xa0ffb0),
+  icestone: stoneOf(0x3a7ab0, 0xa8e0f8, 0xffffff),
   rarecandy: { rows: ['w.ccc.w', 'wwchcww', 'w.ccc.w'], colors: { w: 0xf0f0f8, c: 0x6a50d8, h: 0xd0c8ff } },
   linkcable: { rows: ['kk.kk', 'k...k', 'c...c', 'c...c', '.ccc.'], colors: { k: 0x9898a8, c: 0x8a50c0 } },
   kingsrock: { rows: ['y.y.y', 'yyyyy', 'yryry', 'yyyyy'], colors: { y: 0xe0b020, r: 0xe03030 } },
@@ -140,6 +146,11 @@ export const ITEM_ART = {
   razorclaw: { rows: ['c.c.c', 'c.c.c', 'c.c.c', '.ccc.', '..c..'], colors: { c: 0xb8b8c8 } },
   razorfang: { rows: ['..f..', '.fff.', '.fff.', 'rrfrr', 'rrrrr'], colors: { f: 0xf4f0e0, r: 0xc83030 } },
   ovalstone: { rows: ['.eee.', 'eheee', 'eeeee', 'eeeee', '.eee.'], colors: { e: 0xe8e0c8, h: 0xffffff } },
+  protector: { rows: ['bbbbb', 'brrrb', 'brrrb', '.bbb.', '..b..'], colors: { b: 0x6a5a48, r: 0xc84030 } },
+  electirizer: { rows: ['.y.y.', 'kkkkk', 'kyyyk', 'kkkkk', '.k.k.'], colors: { k: 0x484858, y: 0xf8d030 } },
+  magmarizer: { rows: ['.r.r.', 'kkkkk', 'kroqk', 'kkkkk', '.k.k.'], colors: { k: 0x484858, r: 0xe04020, o: 0xf89030, q: 0xe04020 } },
+  dubiousdisc: { rows: ['.ppp.', 'pmwmp', 'pwkwp', 'pmwmp', '.ppp.'], colors: { p: 0xe060a0, m: 0x60c0e0, w: 0xf0f0f8, k: 0x202838 } },
+  reapercloth: { rows: ['.ccc.', 'ccccc', 'ckckc', 'ccccc', 'c.c.c'], colors: { c: 0x6a5a8a, k: 0x201830 } },
 }
 
 export const SPARKLE = { s: 0xfff2a0, w: 0xffffff }

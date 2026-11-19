@@ -115,8 +115,8 @@ test('/pokemon evolve uses a stone or a trade, lists Eevee\'s choices, and says 
   expect(toasts).toEqual(['What? Pikachu is evolving!', 'Congratulations! Your Pikachu evolved into Raichu!'])
 
   await run('eevee')
-  const choices = 'Eevee can become Vaporeon with a Water Stone, Jolteon with a Thunder Stone, Flareon with a Fire Stone, Espeon at a level-up with full hearts by day, Umbreon at a level-up with full hearts by night, or Leafeon with a Leaf Stone.'
-  expect(await run('evolve')).toMatch(new RegExp('^' + choices.replace(/\./g, '\\.') + ' Try /pokemon evolve (vaporeon|jolteon|flareon|espeon|umbreon|leafeon)\\.$'))
+  const choices = 'Eevee can become Vaporeon with a Water Stone, Jolteon with a Thunder Stone, Flareon with a Fire Stone, Espeon at a level-up with full hearts by day, Umbreon at a level-up with full hearts by night, Leafeon with a Leaf Stone, or Glaceon with an Ice Stone.'
+  expect(await run('evolve')).toMatch(new RegExp('^' + choices.replace(/\./g, '\\.') + ' Try /pokemon evolve (vaporeon|jolteon|flareon|espeon|umbreon|leafeon|glaceon)\\.$'))
   expect(await run('evolve jolteon')).toBe('You use a Thunder Stone on Eevee.')
   await clock.advance(7100)
   expect(saved.mon).toBe('jolteon')
