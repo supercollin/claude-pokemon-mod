@@ -344,7 +344,8 @@ done. Eevee needs a pick, like `/pokemon evolve jolteon`, which takes a Thunder 
 Gloom needs one too: a Leaf Stone makes it Vileplume, and a Sun Stone a fetched
 Bellossom, and Poliwhirl one between Poliwrath and Politoed. Sunkern, from gen 2, also
 takes a Sun Stone, and from gen 3 Lombre a Water Stone, Nuzleaf a Leaf Stone, and Skitty a
-Moon Stone.
+Moon Stone. Gen 3's Clamperl trades into Huntail holding a Deep Sea Tooth, or Gorebyss
+holding a Deep Sea Scale.
 Without the item, it says which one is missing.
 
 Items come from wild mons you knock out, and `/pokemon bag` lists them. The first time
@@ -431,14 +432,17 @@ Once another hit could knock the foe out, it's weak, and the mon holds off. Only
 `/pokemon attack` lands the last hit. A foe at 0 HP faints and blinks away, and can't be
 caught, but 1 time in 5 an item pops out of it and goes into your bag. It's usually the
 stone for the foe's type, like a Fire Stone from a Vulpix or a Thunder Stone from a
-Voltorb. Gen 2's foes drop theirs too, like a Fire Stone from a Cyndaquil, and the Sun
-Stone comes from Sunkern, Sunflora, Bellossom, and Ho-Oh. About 1 drop in 13 is a Link
+Voltorb. Gen 2's and gen 3's foes drop theirs too, like a Fire Stone from a Cyndaquil or a
+Torchic, and the Sun Stone comes from Sunkern, Sunflora, Bellossom, Ho-Oh, Solrock, and
+Castform. About 1 drop in 13 is a Link
 Cable instead, and 1 in 15 a Rare Candy.
 A foe that holds an item in Gold and Silver drops it about 1 drop in 12: a Metal Coat from
 Magnemite and Magneton, a Dragon Scale from Horsea and Seadra, and a King's Rock from the
 Poliwag and Slowpoke lines. Porygon drops the Up-Grade, which no wild mon holds there.
 With gen 2 on, the mons those trades make hold their item too, and Skarmory and
-Forretress a Metal Coat. A foe with neither a stone type nor a held item, like a Pidgey,
+Forretress a Metal Coat. No wild mon holds a Deep Sea Tooth or Scale in Ruby and Sapphire,
+so with gen 3 on Carvanha, Sharpedo, and Huntail drop the Tooth, and Relicanth and
+Gorebyss the Scale. A foe with neither a stone type nor a held item, like a Pidgey,
 only ever drops a Link Cable or Rare Candy.
 Main turns of two minutes or more turn up a Rare Candy 1 time in 10 too.
 Every 10 to 15 s the foe plays one of its own moves at the mon, which flinches and puts

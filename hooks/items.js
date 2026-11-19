@@ -17,6 +17,8 @@ export const ITEMS = [
   { key: 'metalcoat', name: 'Metal Coat' },
   { key: 'dragonscale', name: 'Dragon Scale' },
   { key: 'upgrade', name: 'Up-Grade' },
+  { key: 'deepseatooth', name: 'Deep Sea Tooth' },
+  { key: 'deepseascale', name: 'Deep Sea Scale' },
   { key: 'linkcable', name: 'Link Cable' },
   { key: 'rarecandy', name: 'Rare Candy' },
 ]
@@ -36,13 +38,14 @@ const HELD_ODDS = 1 / 10
 export const LONG_TURN_CANDY_ODDS = 1 / 10
 const DROP_SALT = 0x17e5
 
-// The wild mons, by Pokédex key, whose type favors each stone, gen 1's then gen 2's. Moon
+// The wild mons, by Pokédex key, whose type favors each stone, gen 1's, gen 2's, then gen 3's. Moon
 // Stone stands in for the fairy-like mons that use it, and Sun Stone for the sun-loving
 // ones. A generation brought into the wild adds its mons here.
 export const STONE_FAMILIES = {
   firestone: [
     'charmander', 'charmeleon', 'charizard', 'vulpix', 'ninetales', 'growlithe', 'arcanine', 'ponyta', 'rapidash', 'magmar', 'flareon', 'moltres',
     'cyndaquil', 'quilava', 'typhlosion', 'slugma', 'magcargo', 'houndour', 'houndoom', 'magby', 'entei',
+    'torchic', 'combusken', 'blaziken', 'numel', 'camerupt', 'torkoal',
   ],
   waterstone: [
     'squirtle', 'wartortle', 'blastoise', 'psyduck', 'golduck', 'poliwag', 'poliwhirl', 'poliwrath', 'tentacool', 'tentacruel', 'slowpoke', 'slowbro',
@@ -50,29 +53,43 @@ export const STONE_FAMILIES = {
     'gyarados', 'lapras', 'vaporeon', 'omanyte', 'omastar', 'kabuto', 'kabutops',
     'totodile', 'croconaw', 'feraligatr', 'chinchou', 'lanturn', 'marill', 'azumarill', 'wooper', 'quagsire', 'qwilfish', 'corsola', 'remoraid',
     'octillery', 'mantine', 'suicune', 'politoed', 'slowking', 'kingdra',
+    'mudkip', 'marshtomp', 'swampert', 'lotad', 'lombre', 'ludicolo', 'wingull', 'pelipper', 'surskit', 'carvanha', 'sharpedo', 'wailmer',
+    'wailord', 'barboach', 'whiscash', 'corphish', 'crawdaunt', 'feebas', 'milotic', 'spheal', 'sealeo', 'walrein', 'clamperl', 'huntail',
+    'gorebyss', 'relicanth', 'luvdisc', 'kyogre',
   ],
-  thunderstone: ['pikachu', 'raichu', 'magnemite', 'magneton', 'voltorb', 'electrode', 'electabuzz', 'jolteon', 'zapdos', 'pichu', 'mareep', 'flaaffy', 'ampharos', 'elekid', 'raikou'],
+  thunderstone: [
+    'pikachu', 'raichu', 'magnemite', 'magneton', 'voltorb', 'electrode', 'electabuzz', 'jolteon', 'zapdos',
+    'pichu', 'mareep', 'flaaffy', 'ampharos', 'elekid', 'raikou',
+    'electrike', 'manectric', 'plusle', 'minun',
+  ],
   leafstone: [
     'bulbasaur', 'ivysaur', 'venusaur', 'oddish', 'gloom', 'vileplume', 'paras', 'parasect', 'bellsprout', 'weepinbell', 'victreebel', 'exeggcute', 'exeggutor', 'tangela',
     'chikorita', 'bayleef', 'meganium', 'hoppip', 'skiploom', 'jumpluff',
+    'treecko', 'grovyle', 'sceptile', 'seedot', 'nuzleaf', 'shiftry', 'shroomish', 'breloom', 'roselia', 'cacnea', 'cacturne', 'lileep',
+    'cradily', 'tropius',
   ],
   moonstone: [
     'clefairy', 'clefable', 'jigglypuff', 'wigglytuff', 'nidoran_female', 'nidorina', 'nidoqueen', 'nidoran_male', 'nidorino', 'nidoking',
     'cleffa', 'igglybuff', 'togepi', 'togetic', 'snubbull', 'granbull', 'umbreon',
+    'azurill', 'skitty', 'delcatty', 'ralts', 'kirlia', 'gardevoir', 'mawile', 'lunatone',
   ],
-  sunstone: ['sunkern', 'sunflora', 'bellossom', 'hooh'],
+  sunstone: ['sunkern', 'sunflora', 'bellossom', 'hooh', 'solrock', 'castform'],
 }
 
 export const stoneOfType = (key) => STONES.find((stone) => STONE_FAMILIES[stone].includes(key)) ?? null
 
 // The wild mons, by Pokédex key, that hold each item a trade evolution needs, as wild
 // Magnemite hold a Metal Coat and Horsea a Dragon Scale in Gold and Silver, and the mons
-// those trades make. No wild mon holds an Up-Grade there, so Porygon stands in.
+// those trades make. No wild mon holds an Up-Grade there, so Porygon stands in, nor a Deep
+// Sea Tooth or Scale in Ruby and Sapphire, so sharp-toothed Carvanha and Sharpedo do for
+// the Tooth, and Relicanth, which holds the Scale in later games, for the Scale.
 export const HELD_FAMILIES = {
   kingsrock: ['poliwag', 'poliwhirl', 'slowpoke', 'slowbro', 'politoed', 'slowking'],
   metalcoat: ['magnemite', 'magneton', 'steelix', 'scizor', 'skarmory', 'forretress'],
   dragonscale: ['horsea', 'seadra', 'kingdra'],
   upgrade: ['porygon', 'porygon2'],
+  deepseatooth: ['carvanha', 'sharpedo', 'huntail'],
+  deepseascale: ['relicanth', 'gorebyss'],
 }
 
 export const heldItemOf = (key) => Object.keys(HELD_FAMILIES).find((item) => HELD_FAMILIES[item].includes(key)) ?? null

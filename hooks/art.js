@@ -114,8 +114,9 @@ export function stampPixel(s, cx, py) {
 // and m its mark, like the Thunder Stone's bolt. Rare Candy is a wrapped sweet (w wrapper,
 // c candy, h shine), and the Link Cable two plugs (k) on a cable (c). King's Rock is a
 // gold crown (y) set with red gems (r), the Metal Coat a steel shield (s, h shine), the
-// Dragon Scale a blue scale (d, h shine), and the Up-Grade a box (p) with a screen (w) and
-// keys (k).
+// Dragon Scale a blue scale (d, h shine), the Up-Grade a box (p) with a screen (w) and
+// keys (k), the Deep Sea Tooth a white fang (t) with a grey edge (g), and the Deep Sea
+// Scale a pink shell (p, h shine).
 const STONE = ['.ooo.', 'obhbo', 'obmbo', 'obbbo', '.ooo.']
 const stoneOf = (o, b, m) => ({ rows: STONE, colors: { o, b, m, h: 0xffffff } })
 export const ITEM_ART = {
@@ -131,6 +132,8 @@ export const ITEM_ART = {
   metalcoat: { rows: ['sssss', 'shsss', 'sssss', '.sss.', '..s..'], colors: { s: 0x9aa4b4, h: 0xffffff } },
   dragonscale: { rows: ['..d..', '.dhd.', 'ddhdd', '.ddd.', '..d..'], colors: { d: 0x3068d0, h: 0xa8d8ff } },
   upgrade: { rows: ['ppppp', 'pwwwp', 'ppppp', 'pkpkp', 'ppppp'], colors: { p: 0x5060c8, w: 0xd8f0ff, k: 0x202838 } },
+  deepseatooth: { rows: ['gtttg', '.ttt.', '.ttg.', '..t..', '..g..'], colors: { t: 0xf4f0e0, g: 0x9a9888 } },
+  deepseascale: { rows: ['.ppp.', 'phpph', 'ppppp', '.ppp.', '..p..'], colors: { p: 0xe878a8, h: 0xffd8e8 } },
 }
 
 export const SPARKLE = { s: 0xfff2a0, w: 0xffffff }

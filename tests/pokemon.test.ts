@@ -4409,9 +4409,13 @@ test('item names match loosely', () => {
   expect(['Thunder Stone', 'thunderstone', 'THUNDER', 'thunder-stone'].map(findItem)).toEqual(Array(4).fill('thunderstone'))
   expect(findItem('candy')).toBe('rarecandy')
   expect(findItem('link cable')).toBe('linkcable')
-  expect(['King\'s Rock', 'kings rock', 'metal coat', 'scale', 'Up-Grade', 'upgrade'].map(findItem)).toEqual(['kingsrock', 'kingsrock', 'metalcoat', 'dragonscale', 'upgrade', 'upgrade'])
+  expect(['King\'s Rock', 'kings rock', 'metal coat', 'dragon scale', 'Up-Grade', 'upgrade'].map(findItem)).toEqual(['kingsrock', 'kingsrock', 'metalcoat', 'dragonscale', 'upgrade', 'upgrade'])
+  // Scale names both the Dragon Scale and the Deep Sea Scale
+  expect(findItem('scale')).toBeNull()
   expect(findItem('stone')).toBeNull()
   expect(findItem('potion')).toBeNull()
+  expect(findItem('tooth')).toBe('deepseatooth')
+  expect(findItem('deep sea scale')).toBe('deepseascale')
 })
 
 test('the first bag grants the item every stone or trade mon in the box needs, and /pokemon bag lists it', async ($, on) => {
@@ -4452,7 +4456,7 @@ test('/pokemon use takes an item by a loose name, and a stone on a mon is the sa
   const saved: Record<string, any> = { trainer: false, mon: 'eevee', bag: { firestone: 1, waterstone: 1 } }
   const { clock } = await startedWith($, on, saved, 0)
   expect(await run($, 'use')).toBe('Name the item, like /pokemon use rare candy. /pokemon bag lists yours.')
-  expect(await run($, 'use potion')).toBe('Unknown item "potion". Items: Fire Stone, Water Stone, Thunder Stone, Leaf Stone, Moon Stone, Sun Stone, King\'s Rock, Metal Coat, Dragon Scale, Up-Grade, Link Cable, Rare Candy.')
+  expect(await run($, 'use potion')).toBe('Unknown item "potion". Items: Fire Stone, Water Stone, Thunder Stone, Leaf Stone, Moon Stone, Sun Stone, King\'s Rock, Metal Coat, Dragon Scale, Up-Grade, Deep Sea Tooth, Deep Sea Scale, Link Cable, Rare Candy.')
   expect(await run($, 'use leaf stone')).toBe('Eevee can\'t use a Leaf Stone.')
   expect(await run($, 'use fire stone growlithe')).toBe('Show Growlithe first with /pokemon growlithe, then use the Fire Stone.')
   expect(await run($, 'use FireStone eevee')).toBe('You use a Fire Stone on Eevee.')
@@ -4560,6 +4564,45 @@ test('gen 2 foes drop their own type\'s stone, Sun Stone included, and the items
   // A gen 2 foe with no stone type drops no stone, as gen 1's don't
   expect(kinds('aipom')).toEqual(['linkcable', 'rarecandy'])
   expect(kinds('porygon')).toEqual(['linkcable', 'rarecandy', 'upgrade'])
+})
+
+test('Clamperl trades into Huntail holding a Deep Sea Tooth or Gorebyss holding a Deep Sea Scale', { timeoutMs: 30000 }, async ($, on) => {
+  const asked = serveMons(on, { 3: ['gorebyss'] }, { types: ['water'] })
+  const saved: Record<string, any> = {
+    trainer: false,
+    mon: 'clamperl',
+    bag: { deepseascale: 1 },
+    'custom:clamperl': { gen: 3, sprite: SPRITES.diglett, moves: ['Tackle'], by: 'new' },
+  }
+  const { clock } = await startedWith($, on, saved, 0)
+  expect(await run($, 'evolve')).toMatch(
+    /^Clamperl can become Huntail by trade holding a Deep Sea Tooth or Gorebyss by trade holding a Deep Sea Scale\. Try \/pokemon evolve (huntail|gorebyss)\.$/,
+  )
+  expect(await run($, 'evolve huntail')).toBe('Clamperl needs a Deep Sea Tooth to evolve into Huntail. Wild mons you knock out drop items now and then, and /pokemon bag lists yours.')
+  expect(await run($, 'use deep sea scale')).toBe('You trade Clamperl holding a Deep Sea Scale to a friend, and they trade it right back.')
+  await clock.advance(7100)
+  expect(saved.mon).toBe('gorebyss')
+  expect(saved.bag).toEqual({})
+  expect(asked.some((url) => url.includes('/gen3/gorebyss/'))).toBe(true)
+})
+
+test('gen 3 foes drop their own type\'s stone, and Carvanha and Relicanth the Deep Sea items', () => {
+  const kinds = (key: string) => {
+    const drops = new Set<string>()
+    for (let seed = 0; seed < 6000; seed++) {
+      const item = dropOf(key, seed)
+      if (item) drops.add(item)
+    }
+    return [...drops].sort()
+  }
+  expect(kinds('torchic')).toEqual(['firestone', 'linkcable', 'rarecandy'])
+  expect(kinds('lotad')).toEqual(['linkcable', 'rarecandy', 'waterstone'])
+  expect(kinds('seedot')).toEqual(['leafstone', 'linkcable', 'rarecandy'])
+  expect(kinds('skitty')).toEqual(['linkcable', 'moonstone', 'rarecandy'])
+  expect(kinds('solrock')).toEqual(['linkcable', 'rarecandy', 'sunstone'])
+  expect(kinds('carvanha')).toEqual(['deepseatooth', 'linkcable', 'rarecandy', 'waterstone'])
+  expect(kinds('relicanth')).toEqual(['deepseascale', 'linkcable', 'rarecandy', 'waterstone'])
+  expect(kinds('zigzagoon')).toEqual(['linkcable', 'rarecandy'])
 })
 
 test('Onix trades into a fetched Steelix holding a Metal Coat, which it spends, and a Link Cable alone won\'t do', { timeoutMs: 30000 }, async ($, on) => {
