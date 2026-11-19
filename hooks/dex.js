@@ -38,7 +38,24 @@ const GEN2 = [
   'blissey', 'raikou', 'entei', 'suicune', 'larvitar', 'pupitar', 'tyranitar', 'lugia', 'hooh', 'celebi',
 ]
 
-export const GEN_DEX = { 1: GEN1, 2: GEN2 }
+const GEN3 = [
+  'treecko', 'grovyle', 'sceptile', 'torchic', 'combusken', 'blaziken', 'mudkip', 'marshtomp', 'swampert', 'poochyena',
+  'mightyena', 'zigzagoon', 'linoone', 'wurmple', 'silcoon', 'beautifly', 'cascoon', 'dustox', 'lotad', 'lombre',
+  'ludicolo', 'seedot', 'nuzleaf', 'shiftry', 'taillow', 'swellow', 'wingull', 'pelipper', 'ralts', 'kirlia',
+  'gardevoir', 'surskit', 'masquerain', 'shroomish', 'breloom', 'slakoth', 'vigoroth', 'slaking', 'nincada', 'ninjask',
+  'shedinja', 'whismur', 'loudred', 'exploud', 'makuhita', 'hariyama', 'azurill', 'nosepass', 'skitty', 'delcatty',
+  'sableye', 'mawile', 'aron', 'lairon', 'aggron', 'meditite', 'medicham', 'electrike', 'manectric', 'plusle',
+  'minun', 'volbeat', 'illumise', 'roselia', 'gulpin', 'swalot', 'carvanha', 'sharpedo', 'wailmer', 'wailord',
+  'numel', 'camerupt', 'torkoal', 'spoink', 'grumpig', 'spinda', 'trapinch', 'vibrava', 'flygon', 'cacnea',
+  'cacturne', 'swablu', 'altaria', 'zangoose', 'seviper', 'lunatone', 'solrock', 'barboach', 'whiscash', 'corphish',
+  'crawdaunt', 'baltoy', 'claydol', 'lileep', 'cradily', 'anorith', 'armaldo', 'feebas', 'milotic', 'castform',
+  'kecleon', 'shuppet', 'banette', 'duskull', 'dusclops', 'tropius', 'chimecho', 'absol', 'wynaut', 'snorunt',
+  'glalie', 'spheal', 'sealeo', 'walrein', 'clamperl', 'huntail', 'gorebyss', 'relicanth', 'luvdisc', 'bagon',
+  'shelgon', 'salamence', 'beldum', 'metang', 'metagross', 'regirock', 'regice', 'registeel', 'latias', 'latios',
+  'kyogre', 'groudon', 'rayquaza', 'jirachi', 'deoxys',
+]
+
+export const GEN_DEX = { 1: GEN1, 2: GEN2, 3: GEN3 }
 export const GENS = Object.keys(GEN_DEX).map(Number)
 // The generations whose sprites come with the mod, always in the wild
 export const BUNDLED_GENS = [1]
@@ -49,11 +66,12 @@ export const NATIONAL_DEX = GENS.flatMap((gen) => GEN_DEX[gen])
 export const dexOf = (gens) => GENS.filter((gen) => gens.includes(gen)).flatMap((gen) => GEN_DEX[gen])
 
 // The folders a Pokédex key with none of its own is fetched from, one picked per encounter:
-// gen 2's Unown, Wobbuffet, and Heracross
+// gen 2's Unown, Wobbuffet, and Heracross, and gen 3's Deoxys in its four formes
 export const WILD_FORMS = {
   unown: UNOWN_FORMS.map((form) => 'unown_' + form),
   wobbuffet: ['wobbuffet_male', 'wobbuffet_female'],
   heracross: ['heracross_male', 'heracross_female'],
+  deoxys: ['deoxys', 'deoxys_attack', 'deoxys_defense', 'deoxys_speed'],
 }
 
 export const dexKey = (mon) => BASE_FORM[mon] ?? mon
@@ -68,15 +86,20 @@ export const wildGensOf = (saved) => GENS.filter((gen) => BUNDLED_GENS.includes(
 
 export const dexNumber = (mon) => NATIONAL_DEX.indexOf(dexKey(mon)) + 1
 
-export const LEGENDARY = ['articuno', 'zapdos', 'moltres', 'mewtwo', 'mew', 'raikou', 'entei', 'suicune', 'lugia', 'hooh', 'celebi']
+export const LEGENDARY = [
+  'articuno', 'zapdos', 'moltres', 'mewtwo', 'mew', 'raikou', 'entei', 'suicune', 'lugia', 'hooh', 'celebi',
+  'regirock', 'regice', 'registeel', 'latias', 'latios', 'kyogre', 'groudon', 'rayquaza', 'jirachi', 'deoxys',
+]
 
-// Rare mons and everything they evolve into. Gen 2's babies hatch from eggs in the games,
-// so they're rare in the wild here, as the only way to catch one.
+// Rare mons and everything they evolve into. Gen 2's and gen 3's babies hatch from eggs in
+// the games, so they're rare in the wild here, as the only way to catch one.
 export const RARE = [
   'lapras', 'snorlax', 'eevee', 'dratini', 'omanyte', 'kabuto', 'aerodactyl', 'chansey', 'tauros', 'kangaskhan',
   'scyther', 'pinsir', 'porygon', 'ditto', 'hitmonlee', 'hitmonchan',
   'larvitar', 'heracross', 'skarmory', 'miltank', 'smeargle', 'shuckle', 'unown', 'sneasel',
   'pichu', 'cleffa', 'igglybuff', 'togepi', 'tyrogue', 'smoochum', 'elekid', 'magby',
+  'bagon', 'beldum', 'feebas', 'absol', 'relicanth', 'tropius', 'castform', 'kecleon', 'spinda', 'lileep', 'anorith',
+  'azurill', 'wynaut',
 ]
 
 // weight is how often a tier turns up, hits how many attacks wear one out, and catch
@@ -95,13 +118,15 @@ const FEMALE_FORM = Object.fromEntries(Object.entries(BASE_FORM).filter(([, base
 
 // Outside the short lists, a family's base form is common and each evolution a tier
 // rarer. A mon with no family is uncommon, and a bundled mon that only evolves into a
-// fetched one, like Onix into Steelix, has none, so it keeps its gen 1 tier.
+// fetched one, like Onix into Steelix, has none, so it keeps its gen 1 tier. A baby from a
+// later generation, numbered after the mon it grows into, like Azurill before Marill,
+// leaves that mon its own generation's tier.
 export function tierOf(mon) {
   const key = dexKey(mon)
   if (LEGENDARY.includes(key)) return 'legendary'
   let base = key
   let stage = 0
-  for (let parent = preEvolutionOf(base); parent; parent = preEvolutionOf(base)) {
+  for (let parent = preEvolutionOf(base); parent && dexNumber(parent) < dexNumber(base); parent = preEvolutionOf(base)) {
     base = parent
     stage++
   }

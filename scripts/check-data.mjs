@@ -50,10 +50,15 @@ for (const [mon, entries] of Object.entries(EVOLUTIONS)) {
   if (!known(mon)) fail(`evolutions for ${mon}, which has no sprites and isn't in FETCHED`)
   for (const entry of entries) {
     if (!known(entry.into)) fail(`${mon} evolves into ${entry.into}, which has no sprites and isn't in FETCHED`)
-    const ways = ['level', 'item', 'trade', 'happy', 'time', 'more'].filter((key) => entry[key] !== undefined).join('+')
-    if (!['level', 'item', 'trade', 'item+trade', 'happy', 'happy+time', 'level+more'].includes(ways)) {
-      fail(`${mon} into ${entry.into} needs a level, an item, a trade, a trade and an item, full hearts with or without a time of day, or a level and a meter`)
+    const ways = ['level', 'item', 'trade', 'happy', 'time', 'more', 'pick', 'fed', 'also'].filter((key) => entry[key] !== undefined).join('+')
+    const shapes = ['level', 'item', 'trade', 'item+trade', 'happy', 'happy+time', 'level+more', 'level+pick', 'fed', 'level+also']
+    if (!shapes.includes(ways)) {
+      fail(`${mon} into ${entry.into} needs a level, an item, a trade, a trade and an item, full hearts with or without a time of day, a level and a meter, a level left to chance, full food, or a level and a mon it adds`)
     }
+    if (entry.pick !== undefined && entry.pick !== 'random') fail(`${mon} into ${entry.into} has pick ${entry.pick}`)
+    if (entry.pick && entries.filter((other) => other.pick && other.level === entry.level).length < 2) fail(`${mon} into ${entry.into} is left to chance alone`)
+    if (entry.fed !== undefined && entry.fed !== true) fail(`${mon} into ${entry.into} has fed ${entry.fed}`)
+    if (entry.also !== undefined && !known(entry.also)) fail(`${mon} into ${entry.into} adds ${entry.also}, which has no sprites and isn't in FETCHED`)
     if (entry.happy !== undefined && entry.happy !== true) fail(`${mon} into ${entry.into} has happy ${entry.happy}`)
     if (entry.time !== undefined && !['day', 'night'].includes(entry.time)) fail(`${mon} into ${entry.into} has time ${entry.time}`)
     if (entry.more !== undefined && !['food', 'happiness', 'neither'].includes(entry.more)) fail(`${mon} into ${entry.into} has more ${entry.more}`)
