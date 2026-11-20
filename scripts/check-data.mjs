@@ -19,6 +19,10 @@ import { SPRITES } from '../hooks/frames.js'
 import { MAX_LEVEL, levelAt, xpAt } from '../hooks/levels.js'
 import { MOVE_FX, MOVES } from '../hooks/moves.js'
 import { displayName } from '../hooks/names.js'
+import { LOCALES } from '../hooks/i18n.js'
+import { BERRIES as BERRIES_FR, ITEMS as ITEMS_FR, MOVES as MOVES_FR, SPECIES, TYPES as TYPES_FR } from '../hooks/locales/names-fr.js'
+import { BERRIES } from '../hooks/art.js'
+import { TYPE_MONS } from '../hooks/types.js'
 
 const problems = []
 const fail = (text) => problems.push(text)
@@ -171,6 +175,21 @@ for (const families of [STONE_FAMILIES, HELD_FAMILIES]) {
 }
 for (const item of ITEMS) if (!GENS.includes(item.gen)) fail(`${item.key} has no generation`)
 for (const mon of NATIONAL_DEX) if (!TIERS[tierOf(mon)]) fail(`${mon} has unknown tier ${tierOf(mon)}`)
+// Every language says every message, a message taking as many names in each, and every
+// mon, move, item, berry, and type has its French name
+const [base, ...others] = Object.entries(LOCALES)
+for (const [lang, messages] of others) {
+  for (const key of Object.keys(base[1])) {
+    if (!(key in messages)) fail(`${lang} has no message ${key}`)
+    else if (typeof base[1][key] === 'function' && messages[key].length !== base[1][key].length) fail(`${lang} message ${key} takes ${messages[key].length} names, not ${base[1][key].length}`)
+  }
+  for (const key of Object.keys(messages)) if (!(key in base[1])) fail(`${lang} has message ${key}, which ${base[0]} hasn't`)
+}
+for (const mon of NATIONAL_DEX) if (!SPECIES[mon]) fail(`${mon} has no French name`)
+for (const name of Object.keys(MOVE_FX)) if (!MOVES_FR[name]) fail(`move ${name} has no French name`)
+for (const item of ITEMS) if (!ITEMS_FR[item.key]) fail(`${item.key} has no French name`)
+for (const berry of BERRIES) if (!BERRIES_FR[berry.name]) fail(`${berry.name} has no French name`)
+for (const type of Object.keys(TYPE_MONS)) if (!TYPES_FR[type]) fail(`type ${type} has no French name`)
 
 if (problems.length > 0) {
   for (const problem of problems) console.error(problem)
