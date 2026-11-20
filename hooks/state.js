@@ -4,6 +4,8 @@ import { FLINCH_TICKS, HOP_TICKS, IMAGE_WAIT_TICKS, STRIP_COLUMNS } from './cons
 // This session's band state, one object every part of the band reads and writes, since a
 // module can't reassign a variable it imports
 export const S = {
+  // The language the band speaks, en or fr, as i18n.js picks it
+  lang: 'en',
   mon: 'abra',
   variant: 'default',
   wander: true,

@@ -2,6 +2,9 @@ import { ITEM_ART, stamp } from './art.js'
 import { rnd } from './effects/draw.js'
 import { GENS, NATIONAL_DEX } from './dex.js'
 import { evolutionsOf } from './evolutions.js'
+import { plain, t } from './i18n.js'
+import { ITEMS as ITEMS_FR } from './locales/names-fr.js'
+import { S } from './state.js'
 import { TYPE_MONS } from './types.js'
 
 // The item bag, kept as plain data: { [item key]: count }. Knocked out wild mons drop
@@ -199,16 +202,21 @@ export function dropOf(key, seed, gens = GENS, owned = []) {
 
 const keyOf = (text) => String(text).toLowerCase().replace(/[\s\-_'.]/g, '')
 
-export const itemName = (key) => ITEMS.find((item) => item.key === key)?.name ?? key
+// An item's name in the band's language, like "Thunder Stone" or "Pierre Foudre"
+export const itemName = (key) => (S.lang === 'fr' && ITEMS_FR[key]) || (ITEMS.find((item) => item.key === key)?.name ?? key)
 
-// The item a name means, matched loosely: "Thunder Stone", "thunderstone", "thunder", or
-// "candy". Null when it means none, or more than one.
+// The item a name means, matched loosely, in English or French: "Thunder Stone",
+// "thunderstone", "thunder", "candy", "Pierre Foudre", or "foudre". Null when it means none,
+// or more than one.
 export function findItem(text) {
   const k = keyOf(text)
   if (!k) return null
   const exact = ITEMS.find((item) => item.key === k || item.key === k + 'stone')
   if (exact) return exact.key
-  const partial = ITEMS.filter((item) => k.length >= 3 && item.key.includes(k))
+  const french = plain(text)
+  const named = ITEMS.filter((item) => [french, 'pierre' + french].includes(plain(ITEMS_FR[item.key])))
+  if (named.length === 1) return named[0].key
+  const partial = ITEMS.filter((item) => k.length >= 3 && (item.key.includes(k) || plain(ITEMS_FR[item.key]).includes(french)))
   return partial.length === 1 ? partial[0].key : null
 }
 
@@ -249,8 +257,8 @@ export function migratedBag(names) {
 // Like "Your bag:\nThunder Stone, 2\nRare Candy, 1", in the items' order
 export function bagText(bag) {
   const held = ITEMS.filter((item) => bag[item.key] > 0)
-  if (held.length === 0) return 'Your bag is empty. Knock out a wild mon with /pokemon attack, and it may drop an item.'
-  return 'Your bag:\n' + held.map((item) => item.name + ', ' + bag[item.key]).join('\n')
+  if (held.length === 0) return t.bagEmpty
+  return t.bag(held.map((item) => itemName(item.key) + ', ' + bag[item.key]))
 }
 
 // A drop pops up out of the foe in an arc over POP_TICKS, from its middle, from, to the

@@ -5,7 +5,8 @@ import { withSexMark } from './genders.js'
 import { bandRows, foeMiddle } from './layout.js'
 import { startAttack } from './motion.js'
 import { MOVE_FX, movesOf } from './moves.js'
-import { displayName } from './names.js'
+import { t } from './i18n.js'
+import { displayName, moveName } from './names.js'
 import { BALL } from './party.js'
 import { levelOf, nameOf, sexOf } from './records.js'
 import { VARIANTS } from './sprites.js'
@@ -15,25 +16,25 @@ import { thrownWild } from './wild.js'
 // The wild mon on show, kept as data in wild.js, as the home mon faces it: its name, the
 // moves that reach it, the ball thrown at it, and a mon that ran away coming back as one
 
-export const wildName = () => (S.wild.variant === 'shiny' ? 'shiny wild ' : 'wild ') + withSexMark(displayName(S.wild.mon), S.wild.sex)
+export const wildName = () => t.wildName(withSexMark(displayName(S.wild.mon), S.wild.sex), S.wild.variant === 'shiny')
 
 // Throw a ball at the foe in battle. It falls from the foe's middle to the ground.
 export function catchCommand() {
-  if (S.wild?.phase !== 'battle' && S.wild?.phase !== 'throw') return { text: 'There\'s no wild Pokémon here.' }
-  if (S.attack || S.wild.phase === 'throw') return { text: 'Wait for the move to end.' }
+  if (S.wild?.phase !== 'battle' && S.wild?.phase !== 'throw') return { text: t.noWild }
+  if (S.attack || S.wild.phase === 'throw') return { text: t.waitMove }
   const rows = bandRows()
   const drop = Math.max(0, rows * 2 - BALL.length - (foeMiddle(rows).y - Math.floor(BALL.length / 2)))
   S.wild = thrownWild(S.wild, S.tick, drop)
-  return { text: 'You threw a Poké Ball!' }
+  return { text: t.threwBall }
 }
 
 // Roar at the foe, which turns tail when the roar lands. Every mon can, whatever its moves.
 export function roarCommand() {
-  if (!S.wild || S.wild.phase === 'fleeing' || S.wild.phase === 'fainted') return { text: 'There\'s no wild Pokémon here.' }
-  if (S.wild.phase === 'throw') return { text: 'Wait for the ball to settle.' }
-  if (S.attack) return { text: 'Wait for the move to end.' }
+  if (!S.wild || S.wild.phase === 'fleeing' || S.wild.phase === 'fainted') return { text: t.noWild }
+  if (S.wild.phase === 'throw') return { text: t.waitBall }
+  if (S.attack) return { text: t.waitMove }
   startAttack({ name: 'Roar', ...MOVE_FX.Roar }, { foe: true })
-  return { text: nameOf(S.mon) + ' used Roar!' }
+  return { text: t.used(nameOf(S.mon), moveName('Roar')) }
 }
 
 // The moves that can reach a foe in front of the mon. One that scares it off waits to

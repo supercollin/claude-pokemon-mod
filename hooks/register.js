@@ -1,3 +1,4 @@
+import { englishCommand } from './aliases.js'
 import { INKS } from './art.js'
 import { prepareAttack } from './attacks.js'
 import { drawScene, inkFor } from './band.js'
@@ -14,6 +15,7 @@ import { catchCommand, foeMoves, roarCommand, runawayFoe, wildMoves, wildName } 
 import { evolutionsOf, isLevelUpOnly, levelEvolutionOf, levelUpEvolutionOf, startLevel, timeOfDay } from './evolutions.js'
 import { SPRITES } from './frames.js'
 import { femaleEighthsOf, SEXES, sexedSprite, sexFor } from './genders.js'
+import { chosenLanguage, languageOf, LOCALES, t } from './i18n.js'
 import {
   addedTo, bagOf, bagText, dropOf, findItem, itemFor, itemName, ITEMS, LONG_TURN_CANDY_ODDS, migratedBag, PLATE_KEYS, plateType, RARE_CANDY,
   takenFrom,
@@ -22,7 +24,7 @@ import { bandRows, bandZoom, battleFits, clampX, homeX, isHome, stripTarget, wil
 import { careOf, LONG_TURN_MS, MAX_LEVEL, turnXp, xpAt } from './levels.js'
 import { bittenHappiness, bumpStat, filledIcons, iconsFor, isFull, isHappiest, park, STAT_ICONS, statNow, STATS, unpark } from './meters.js'
 import { feed, flinch, pet, startAttack, step } from './motion.js'
-import { displayName } from './names.js'
+import { displayName, moveName } from './names.js'
 import {
   applyImageMode, cellsNow, drawsHearts, drawsImage, drawsImages, heartsImage, IMAGE_MODES, imageNow, svgNow,
 } from './paint.js'
@@ -37,7 +39,7 @@ import {
   hasRunAway, isAsleep, isDead, isDown, isFainted, isFlinching, isFree, isGone, isHealing, isPetted, isTuckedIn, markActive,
 } from './status.js'
 import { assignedTo, canWork, crewVariant, endAgent, partyMons, stepCrewMons, typesOf } from './team.js'
-import { andList, boxText, dexText, evolutionsText, evolutionText, HELP, helpText, orList, statsText, withArticle } from './texts.js'
+import { boxText, dexText, evolutionsText, evolutionText, HELP, helpText, statsText } from './texts.js'
 import {
   chargedWild, damageOf, engagedWild, faintedWild, fleeingWild, foeX, isHere, isOnStage, isWeak, newWild, partingBite,
   STRIKE_GAP_MS, STRIKE_JITTER_MS, stepWild, strikeBite, strikingWild, struckWild, WEAK_MS, WILD_STAY_MS, WILD_TURNS,
@@ -128,7 +130,7 @@ async function dueEvolution($, entryInto) {
   try {
     await ensureMon($, into)
   } catch (err) {
-    $.ui.toast(nameOf(mon) + ' can\'t evolve into ' + displayName(into) + ' yet: ' + (err?.message ?? String(err)))
+    $.ui.toast(t.evolveFailed(nameOf(mon), displayName(into), err?.message ?? String(err)))
     return null
   }
   return S.mon === mon ? into : null
@@ -141,7 +143,7 @@ const evolvedSprite = (into) => sexedSprite(into, sexOf(S.mon))
 // Play the evolve effect with the evolved mon swapped in, in a band grown to fit both.
 // The item it needs, if any, leaves the bag once the evolution is done.
 function startEvolution($, into, item = null) {
-  $.ui.toast('What? ' + nameOf(S.mon) + ' is evolving!')
+  $.ui.toast(t.evolving(nameOf(S.mon)))
   startAttack({ effect: 'evolve', color: S.ink.silhouette })
   S.attack.swap = into
   S.evolving = { from: S.mon, into, item }
@@ -192,7 +194,7 @@ function finishEvolution($) {
   saveMon($).catch((err) => logOnce($, err))
   moveRecord($, from, into).catch((err) => logOnce($, err))
   if (item) changeBag($, (bag) => takenFrom(bag, item)).catch((err) => logOnce($, err))
-  $.ui.toast('Congratulations! Your ' + name + ' evolved into ' + displayName(into) + '!')
+  $.ui.toast(t.evolved(name, displayName(into)))
   $.ui.invalidate('ui.render')
   const also = evolutionsOf(from).find((entry) => entry.into === into)?.also
   if (also) joinedBox($, also, levelOf(into)).catch((err) => logOnce($, err))
@@ -205,7 +207,7 @@ async function joinedBox($, mon, level) {
   try {
     await ensureMon($, mon)
   } catch (err) {
-    $.ui.toast(displayName(mon) + ' couldn\'t join your box: ' + (err?.message ?? String(err)))
+    $.ui.toast(t.joinFailed(displayName(mon), err?.message ?? String(err)))
     return
   }
   await freshen($, [mon])
@@ -214,18 +216,18 @@ async function joinedBox($, mon, level) {
   S.stats[mon] = { xp: xpAt(level), caught: true, parked: true }
   await markDex($, dexKey(mon), { seen: S.nowMs, caught: S.nowMs })
   await saveRecords($, [mon])
-  $.ui.toast(displayName(mon) + ' joined your box too!')
+  $.ui.toast(t.joinedToo(displayName(mon)))
 }
 
 // Call off an evolution under way or due. The mon stays as it is.
 function stopEvolution($) {
   const name = nameOf(S.mon)
-  if (!S.evolving && !S.evolveDue) return { text: name + ' isn\'t evolving.' }
+  if (!S.evolving && !S.evolveDue) return { text: t.notEvolving(name) }
   if (S.evolving) S.attack = null
   S.evolving = null
   S.evolveDue = null
   $.ui.invalidate('ui.render')
-  return { text: 'Huh? ' + name + ' stopped evolving!' }
+  return { text: t.stoppedEvolving(name) }
 }
 
 // A stone, a trade, a level the mon has reached, or a level-up by the meters or the clock
@@ -239,53 +241,49 @@ async function evolveCommand($, wanted) {
     const other = otherSexReply((entry) => moveKey(entry.into) === moveKey(wanted))
     if (other) return other
   }
-  if (entries.length === 0) return { text: name + ' doesn\'t evolve.' }
-  if (S.attack || S.food) return { text: name + ' is busy right now.' }
+  if (entries.length === 0) return { text: t.doesntEvolve(name) }
+  if (S.attack || S.food) return { text: t.busy(name) }
   const reached = S.stats[S.mon]?.readyFor
   let picked = entries
   if (wanted) picked = entries.filter((entry) => moveKey(entry.into) === moveKey(wanted))
   else if (entries.some((entry) => isLevelUpOnly(entry) && entry.into === reached)) picked = entries.filter((entry) => entry.into === reached)
   // Chance picks for it at the level-up that reaches its level, so there's nothing to choose
-  if (picked.length !== 1 && entries.every((entry) => entry.pick)) return { text: name + ' can become ' + evolutionsText(entries) + '.' }
+  if (picked.length !== 1 && entries.every((entry) => entry.pick)) return { text: t.canBecome(name, evolutionsText(entries)) }
   if (picked.length !== 1) {
     const example = entries[Math.floor(Math.random() * entries.length)].into
-    return { text: name + ' can become ' + evolutionsText(entries) + '. Try /pokemon evolve ' + example + '.' }
+    return { text: t.canBecomeTry(name, evolutionsText(entries), example) }
   }
   const [entry] = picked
-  if (isLevelUpOnly(entry) && entry.into !== reached) return { text: name + ' can become ' + (entry.pick ? evolutionsText(entries) : evolutionText(entry)) + '.' }
+  if (isLevelUpOnly(entry) && entry.into !== reached) return { text: t.canBecome(name, entry.pick ? evolutionsText(entries) : evolutionText(entry)) }
   const level = levelOf(S.mon)
-  if (entry.level && level < entry.level) {
-    return { text: name + ' evolves into ' + displayName(entry.into) + ' at Lv. ' + entry.level + '. It\'s Lv. ' + level + '.' }
-  }
+  if (entry.level && level < entry.level) return { text: t.evolvesAtLevel(name, displayName(entry.into), entry.level, level) }
+  const item = itemFor(entry)
   if (entry.item && entry.time) {
     const now = timeOfDay(await $.clock.now())
-    if (now !== entry.time) return { text: name + ' evolves into ' + displayName(entry.into) + ' with ' + withArticle(entry.item) + ' by ' + entry.time + '. It\'s ' + now + ' now.' }
+    if (now !== entry.time) return { text: t.evolvesByTime(name, displayName(entry.into), itemName(item), entry.time, now) }
   }
-  const item = itemFor(entry)
-  if (item && !(await loadBag($))[item]) {
-    return { text: name + ' needs ' + withArticle(itemName(item)) + ' to evolve into ' + displayName(entry.into) + '. Wild mons you knock out drop items now and then, and /pokemon bag lists yours.' }
-  }
+  if (item && !(await loadBag($))[item]) return { text: t.needsItem(name, itemName(item), displayName(entry.into)) }
   const mon = S.mon
   const into = evolvedSprite(entry.into)
   try {
     await ensureMon($, into)
   } catch (err) {
-    return { text: name + ' can\'t evolve into ' + displayName(into) + ' yet: ' + (err?.message ?? String(err)) }
+    return { text: t.evolveFailed(name, displayName(into), err?.message ?? String(err)) }
   }
-  if (S.mon !== mon) return { text: name + ' isn\'t on show anymore, so it didn\'t evolve.' }
-  if (S.attack || S.food) return { text: name + ' is busy right now.' }
+  if (S.mon !== mon) return { text: t.notOnShowEvolve(name) }
+  if (S.attack || S.food) return { text: t.busy(name) }
   startEvolution($, into, item)
-  if (entry.trade && entry.item) return { text: 'You trade ' + name + ' holding ' + withArticle(entry.item) + ' to a friend, and they trade it right back.' }
-  if (entry.item) return { text: 'You use ' + withArticle(entry.item) + ' on ' + name + '.' }
-  if (entry.trade) return { text: 'You trade ' + name + ' to a friend, and they trade it right back.' }
-  return { text: 'You let ' + name + ' evolve.' }
+  if (entry.trade && entry.item) return { text: t.tradeHolding(name, itemName(item)) }
+  if (entry.item) return { text: t.useOn(itemName(item), name) }
+  if (entry.trade) return { text: t.trade(name) }
+  return { text: t.letEvolve(name) }
 }
 
 // What the shown mon says when asked for an evolution only the other sex has, like "Only a
 // male Kirlia can become Gallade.", or null when no such evolution matches
 function otherSexReply(matches) {
   const entry = evolutionsOf(S.mon).find((e) => e.sex && e.sex !== sexOf(S.mon) && matches(e))
-  return entry ? { text: 'Only a ' + entry.sex + ' ' + displayName(S.mon) + ' can become ' + displayName(entry.into) + '.' } : null
+  return entry ? { text: t.onlySex(entry.sex, displayName(S.mon), displayName(entry.into)) } : null
 }
 
 // Send the foe off, with a toast unless quiet. One still calling just doesn't come, and
@@ -293,7 +291,7 @@ function otherSexReply(matches) {
 function fleeWild($, quiet = false) {
   if (S.wild?.phase === 'fainted') return
   const shown = isOnStage(S.wild) && S.wild.phase !== 'fleeing'
-  if (shown && !quiet) $.ui.toast('Wild ' + displayName(S.wild.mon) + ' fled!')
+  if (shown && !quiet) $.ui.toast(t.fled(displayName(S.wild.mon)))
   S.wild = fleeingWild(S.wild, wildAt())
 }
 
@@ -343,8 +341,8 @@ function stepWildPhase($) {
   } else S.wild = result.wild
   if (result.event === 'arrived') {
     S.wild = { ...S.wild, nextStrikeAt: S.tick + strikeGap() }
-    const yours = S.wild.runaway ? ' It looks a lot like ' + (S.stats[S.wild.mon]?.nickname ?? 'your ' + displayName(S.wild.mon)) + '.' : ''
-    $.ui.toast('A ' + wildName() + ' (Lv. ' + S.wild.level + ') appeared!' + yours)
+    const yours = S.wild.runaway ? t.looksLike(S.stats[S.wild.mon]?.nickname ?? t.yourMon(displayName(S.wild.mon))) : ''
+    $.ui.toast(t.appeared(wildName(), S.wild.level, yours))
     markOwned($, S.wild.seed).catch((err) => logOnce($, err))
     markDex($, S.wild.key, { seen: S.nowMs }).catch((err) => logOnce($, err))
     refreshPlates($).catch((err) => logOnce($, err))
@@ -352,13 +350,10 @@ function stepWildPhase($) {
   } else if (result.event === 'caught') {
     caughtFoe($, S.wild).catch((err) => logOnce($, err))
   } else if (result.event === 'brokefree') {
-    $.ui.toast(BROKE_FREE[S.wild.throw.shakes])
+    $.ui.toast(t.brokeFree[S.wild.throw.shakes])
   }
   if (S.wild?.phase === 'battle') stepBattle($)
 }
-
-// What breaks free says, by how many times the ball rocked first
-const BROKE_FREE = ['Oh no! It broke free!', 'Aww! It appeared to be caught!', 'Aww! It appeared to be caught!', 'Argh! So close!']
 
 // Mark the catch in the Pokédex, and put the species in the box at its first level with
 // fresh meters, parked unless it's the mon on show. A species already there stays as it is,
@@ -373,19 +368,19 @@ async function caughtFoe($, caught) {
     const { ranAway, fainted, healing, starving, ...record } = S.stats[species]
     S.stats[species] = { ...record, ...revivedMeters(), ...(species === S.mon ? {} : { parked: true }) }
     await saveRecords($, [species])
-    $.ui.toast('Gotcha! ' + nameOf(species) + ' came back to you.')
+    $.ui.toast(t.cameBack(nameOf(species)))
     $.ui.invalidate('ui.render')
     return
   }
   if (isDead(species)) delete S.stats[species]
   if (S.stats[species]) {
-    $.ui.toast('Gotcha! ' + name + ' was caught! ' + name + ' is already in your box, so it\'s marked in your Pokédex.')
+    $.ui.toast(t.caughtMarked(name))
     return
   }
   const sex = caught.sex ?? sexFor(species)
   S.stats[species] = { xp: xpAt(startLevel(species)), caught: true, ...(sex ? { sex } : {}), ...(species === S.mon ? {} : { parked: true }) }
   await saveRecords($, [species])
-  $.ui.toast('Gotcha! ' + name + ' was caught! It joined your box.')
+  $.ui.toast(t.caught(name))
 }
 
 // The desktop app stops the running turn when you send it a message, and a foe only
@@ -407,8 +402,8 @@ function battleButtons($, { Box, Button }) {
       flexDirection: 'row',
       gap: 1,
       children: [
-        Button({ key: 'catch', label: 'Catch', variant: 'primary', dimColor, onPress: () => press(catchCommand) }),
-        Button({ key: 'attack', label: 'Attack', dimColor, onPress: () => press(() => attackCommand('')) }),
+        Button({ key: 'catch', label: t.catchButton, variant: 'primary', dimColor, onPress: () => press(catchCommand) }),
+        Button({ key: 'attack', label: t.attackButton, dimColor, onPress: () => press(() => attackCommand('')) }),
       ],
     }),
   ]
@@ -436,7 +431,7 @@ function stepBattle($) {
   const move = moves[Math.floor(Math.random() * moves.length)]
   S.wild = { ...S.wild, charge: S.wild.charge - 1 }
   startAttack(move, { foe: true })
-  $.ui.toast(nameOf(S.mon) + ' used ' + move.name + '!')
+  $.ui.toast(t.used(nameOf(S.mon), moveName(move.name)))
 }
 
 // Now and then the foe plays one of its own moves at the free mon. It lands 60% of the
@@ -458,7 +453,7 @@ function strikeBack($) {
   const seed = Math.floor(Math.random() * 0x7fffffff)
   const attack = prepareAttack(move, { side: 'right', seed, x: foeX(S.wild, wildAt()), home: homeX() })
   S.wild = strikingWild(S.wild, move, attack, S.tick, S.tick + strikeGap())
-  $.ui.toast('Wild ' + displayName(S.wild.mon) + ' used ' + move.name + '!')
+  $.ui.toast(t.wildUsed(displayName(S.wild.mon), moveName(move.name)))
 }
 
 // A hit resets the foe's wait for a fight. Weak, it waits WEAK_MS for a ball, and at 0 HP
@@ -470,16 +465,16 @@ function hitFoe($) {
     const item = dropOf(S.wild.key, S.wild.seed, S.wildGens, ownedPlates())
     S.wild = { ...faintedWild(S.wild, S.tick), drop: item ? { item, at: S.tick } : null }
     if (!item) {
-      $.ui.toast('Wild ' + name + ' fainted! It can\'t be caught now.')
+      $.ui.toast(t.wildFainted(name))
       return
     }
-    $.ui.toast('Wild ' + name + ' fainted! It can\'t be caught now. It dropped ' + withArticle(itemName(item)) + ', and it\'s in your bag.')
+    $.ui.toast(t.wildDropped(name, itemName(item)))
     changeBag($, (bag) => addedTo(bag, item)).catch((err) => logOnce($, err))
     return
   }
   const weak = isWeak({ ...S.wild, hp })
   const stay = (weak ? WEAK_MS : WILD_STAY_MS) / TICK_MS
-  if (weak && !isWeak(S.wild)) $.ui.toast('Wild ' + name + ' is weak! Throw a ball with /pokemon catch. Another hit could knock it out.')
+  if (weak && !isWeak(S.wild)) $.ui.toast(t.wildWeak(name))
   S.wild = { ...S.wild, hp, hitAt: S.tick, leaveAt: S.tick + stay }
 }
 
@@ -565,19 +560,19 @@ async function wildCommand($, rest) {
   if ((await $.store.get('debug')) !== true) return null
   const words = rest.split(/\s+/).filter(Boolean)
   const name = words.find((word) => word !== 'shiny' && !SEXES.includes(word))
-  if (name && !MONS.includes(name) && genOf(name) === null) return { text: 'Unknown mon "' + name + '". See /pokemon list for every mon.' }
-  if (S.wild) return { text: 'A wild ' + displayName(S.wild.mon) + ' is already here.' }
-  if (isTuckedIn()) return { text: nameOf(S.mon) + ' is asleep.' }
+  if (name && !MONS.includes(name) && genOf(name) === null) return { text: t.unknownMonList(name) }
+  if (S.wild) return { text: t.alreadyWild(displayName(S.wild.mon)) }
+  if (isTuckedIn()) return { text: t.asleep(nameOf(S.mon)) }
   if (isDown()) return downReply()
   if (name) await freshen($, [name])
   const own = name && hasRunAway(name) ? runawayFoe(name) : null
   const asked = name ? askedWild(name, words.find((word) => SEXES.includes(word))) : pickWild(Math.random, S.wildGens)
   const pick = own ?? (await arrivingPick($, asked))
   if (words.includes('shiny')) pick.variant = 'shiny'
-  if (!battleFits(pick.mon, pick.variant)) return { text: 'The band is too narrow for a wild ' + displayName(pick.mon) + '. Widen the pane and try again.' }
+  if (!battleFits(pick.mon, pick.variant)) return { text: t.tooNarrow(displayName(pick.mon)) }
   S.wild = newWild(pick, Math.floor(Math.random() * 0x7fffffff))
   S.wanderTarget = null
-  return { text: 'A wild ' + displayName(pick.mon) + ' is on its way.' }
+  return { text: t.onItsWay(displayName(pick.mon)) }
 }
 
 // The debug spawn's mon, in the sex asked for when its species has it, shown as its
@@ -599,7 +594,7 @@ async function killCommand($) {
   if (isDown()) return downReply()
   const name = nameOf(S.mon)
   await (S.nuzlockeOn ? loseMon($, S.mon) : faintMon($))
-  return { text: name + (S.nuzlockeOn ? ' fainted for good.' : ' fainted.') }
+  return { text: t.killed(name, S.nuzlockeOn) }
 }
 
 const PET_HAPPINESS = 25
@@ -775,8 +770,8 @@ function followEvolution($, into, record) {
   clampX()
   S.sentCells = null
   // Arceus taking another plate's forme is the same mon, not an evolution
-  if (dexKey(into) === dexKey(from)) $.ui.toast(name + ' changed its forme to ' + displayName(into) + '!')
-  else $.ui.toast('Congratulations! Your ' + name + ' evolved into ' + displayName(into) + '!')
+  if (dexKey(into) === dexKey(from)) $.ui.toast(t.changedForme(name, displayName(into)))
+  else $.ui.toast(t.evolved(name, displayName(into)))
   $.ui.invalidate('ui.render')
 }
 
@@ -850,7 +845,7 @@ async function syncSessions($) {
   } else {
     const wasFainted = isFainted(S.mon)
     S.stats[S.mon] = theirs
-    if (!wasFainted && isFainted(S.mon)) $.ui.toast(nameOf(S.mon) + ' fainted! /pokemon revive takes it to a Pokémon Center.')
+    if (!wasFainted && isFainted(S.mon)) $.ui.toast(t.fainted(nameOf(S.mon)))
   }
   $.ui.invalidate('ui.render')
 }
@@ -875,12 +870,12 @@ async function gainXp($, durationMs) {
   if (level === was) return
   S.stats[S.mon] = markedLevelUp(S.mon)
   await saveStats($, [S.mon])
-  $.ui.toast(nameOf(S.mon) + ' grew to Lv. ' + level + '!')
+  $.ui.toast(t.grew(nameOf(S.mon), level))
   $.ui.invalidate('ui.render')
   const into = readyToEvolve()
   if (!into) return
   if (S.autoEvolve) S.evolveDue = await dueEvolution($, into)
-  else $.ui.toast(nameOf(S.mon) + ' is ready to evolve into ' + displayName(into) + '! /pokemon evolve lets it.')
+  else $.ui.toast(t.readyToEvolve(nameOf(S.mon), displayName(into)))
 }
 
 // A party mon earns this share of what its own subagent's answered turn would earn the lead
@@ -926,7 +921,7 @@ async function partyXp($, name, durationMs) {
   S.stats[name] = { ...S.stats[name], xp: xpOf(name) + xp }
   S.stats[name] = markedReady(name, was)
   await saveRecords($, [name])
-  if (levelOf(name) > was) $.ui.toast(nameOf(name) + ' grew to Lv. ' + levelOf(name) + ' working beside ' + nameOf(S.mon) + '!')
+  if (levelOf(name) > was) $.ui.toast(t.grewBeside(nameOf(name), levelOf(name), nameOf(S.mon)))
 }
 
 // A mon marked ready off show evolves now it's shown, or waits for /pokemon evolve with
@@ -939,7 +934,7 @@ async function evolveIfReady($) {
   const into = readyToEvolve()
   if (!into) return
   if (S.autoEvolve) S.evolveDue = await dueEvolution($, into)
-  else $.ui.toast(nameOf(S.mon) + ' is ready to evolve into ' + displayName(into) + '! /pokemon evolve lets it.')
+  else $.ui.toast(t.readyToEvolve(nameOf(S.mon), displayName(into)))
 }
 
 // The bag as last saved. The first time it's made, every stone or trade mon already in
@@ -986,13 +981,13 @@ async function holdPlate($, plate) {
   const from = S.mon
   const held = S.stats[from]?.plate ?? null
   const into = formeOf(plate)
-  if (into !== from && S.stats[into] && !isDead(into)) return { text: 'Your box already has ' + fullNameOf(into) + '. Release it first to change ' + name + '\'s forme.' }
+  if (into !== from && S.stats[into] && !isDead(into)) return { text: t.boxHasForme(fullNameOf(into), name) }
   try {
     await ensureMon($, into)
   } catch (err) {
-    return { text: name + ' can\'t change its forme yet: ' + (err?.message ?? String(err)) }
+    return { text: t.formeFailed(name, err?.message ?? String(err)) }
   }
-  if (S.mon !== from) return { text: name + ' isn\'t on show anymore, so it kept its plate.' }
+  if (S.mon !== from) return { text: t.keptPlate(name) }
   await freshen($, [from])
   const { plate: _, ...record } = S.stats[from] ?? {}
   S.stats[into] = plate ? { ...record, plate } : record
@@ -1012,28 +1007,28 @@ async function holdPlate($, plate) {
     return held ? addedTo(taken, held) : taken
   })
   $.ui.invalidate('ui.render')
-  const back = held ? ' The ' + itemName(held) + ' went back in your bag.' : ''
-  if (!plate) return { text: 'You take the ' + itemName(held) + ' from ' + name + '. It\'s Normal again.' }
-  return { text: name + ' holds the ' + itemName(plate) + ' and becomes ' + plateType(plate) + ' type!' + back }
+  const back = held ? t.plateBack(itemName(held)) : ''
+  if (!plate) return { text: t.tookPlate(itemName(held), name) }
+  return { text: t.holdsPlate(name, itemName(plate), t.typeName(plateType(plate)), back) }
 }
 
 // /pokemon use <plate>: only Arceus holds one, and only one it has in the bag
 async function plateCommand($, plate) {
   const name = nameOf(S.mon)
-  if (dexKey(S.mon) !== 'arceus') return { text: name + ' can\'t use ' + withArticle(itemName(plate)) + '. Only Arceus holds a plate.' }
+  if (dexKey(S.mon) !== 'arceus') return { text: t.onlyArceus(name, itemName(plate)) }
   if (isDown()) return downReply()
-  if (S.evolving || S.attack || S.food) return { text: name + ' is busy right now.' }
-  if (S.stats[S.mon]?.plate === plate) return { text: name + ' already holds the ' + itemName(plate) + '.' }
-  if (!(await loadBag($))[plate]) return { text: 'You have no ' + itemName(plate) + '. Wild mons of its type drop one now and then while gen 4 is on.' }
+  if (S.evolving || S.attack || S.food) return { text: t.busy(name) }
+  if (S.stats[S.mon]?.plate === plate) return { text: t.alreadyHolds(name, itemName(plate)) }
+  if (!(await loadBag($))[plate]) return { text: t.noPlate(itemName(plate)) }
   return holdPlate($, plate)
 }
 
 // /pokemon take: Arceus gives its plate back to the bag
 async function takeCommand($) {
   const name = nameOf(S.mon)
-  if (!S.stats[S.mon]?.plate) return { text: name + ' holds nothing.' }
+  if (!S.stats[S.mon]?.plate) return { text: t.holdsNothing(name) }
   if (isDown()) return downReply()
-  if (S.evolving || S.attack || S.food) return { text: name + ' is busy right now.' }
+  if (S.evolving || S.attack || S.food) return { text: t.busy(name) }
   return holdPlate($, null)
 }
 
@@ -1041,57 +1036,58 @@ async function takeCommand($) {
 async function maybeFindCandy($, durationMs) {
   if (durationMs < LONG_TURN_MS || isDown() || Math.random() >= LONG_TURN_CANDY_ODDS) return
   await changeBag($, (bag) => addedTo(bag, RARE_CANDY))
-  $.ui.toast(nameOf(S.mon) + ' found a Rare Candy! It\'s in your bag.')
+  $.ui.toast(t.foundCandy(nameOf(S.mon)))
 }
 
 // Rare Candy raises the shown mon, or a box mon named, one level, to the start of the
 // next. It never revives a fainted mon or brings back one that's gone.
 async function candyCommand($, wanted) {
   const name = wanted || S.mon
-  if (!MONS.includes(name)) return { text: 'Unknown mon "' + wanted + '". /pokemon box lists yours.' }
+  if (!MONS.includes(name)) return { text: t.unknownMonBox(wanted) }
   await freshen($, [name])
   const shown = nameOf(name)
-  if (isDead(name)) return { text: displayName(name) + ' is gone. A Rare Candy can\'t bring it back.' }
+  if (isDead(name)) return { text: t.candyGone(displayName(name)) }
   if (hasRunAway(name)) return { text: goneLine(name) }
-  if (name !== S.mon && !S.stats[name]) return { text: displayName(name) + ' isn\'t in your box. /pokemon box lists yours.' }
-  if (isFainted(name)) return { text: shown + ' has fainted, and a Rare Candy won\'t revive it. /pokemon revive takes it to a Pokémon Center.' }
+  if (name !== S.mon && !S.stats[name]) return { text: t.notInBoxList(displayName(name)) }
+  if (isFainted(name)) return { text: t.candyFainted(shown) }
   const was = levelOf(name)
-  if (was >= MAX_LEVEL) return { text: shown + ' is already Lv. ' + MAX_LEVEL + '.' }
-  if (!(await loadBag($))[RARE_CANDY]) return { text: 'You have no Rare Candy. Wild mons you knock out drop one now and then.' }
+  if (was >= MAX_LEVEL) return { text: t.maxLevel(shown, MAX_LEVEL) }
+  if (!(await loadBag($))[RARE_CANDY]) return { text: t.noCandy }
   await changeBag($, (bag) => takenFrom(bag, RARE_CANDY))
   await freshen($, [name])
   S.stats[name] = { ...S.stats[name], xp: xpAt(was + 1) }
   S.stats[name] = name === S.mon ? markedLevelUp(name) : markedReady(name, was)
   await saveRecords($, [name])
   $.ui.invalidate('ui.render')
-  const grew = 'You give ' + shown + ' a Rare Candy. It grew to Lv. ' + (was + 1) + '!'
+  const grew = t.gaveCandy(shown, was + 1)
   const into = name === S.mon ? readyToEvolve() : null
   if (!into) return { text: grew }
   if (S.autoEvolve) {
     S.evolveDue = await dueEvolution($, into)
     return { text: grew }
   }
-  return { text: grew + ' It\'s ready to evolve into ' + displayName(into) + '. /pokemon evolve lets it.' }
+  return { text: grew + t.candyReady(displayName(into)) }
 }
 
 // /pokemon use <item> [mon]. The item's name may take several words, so the longest
 // start of the words that names an item is the item, and the rest the mon.
 async function useCommand($, rest) {
   const words = rest.split(/\s+/).filter(Boolean)
-  const names = ITEMS.map((item) => item.name).join(', ')
-  if (words.length === 0) return { text: 'Name the item, like /pokemon use rare candy. /pokemon bag lists yours.' }
+  const names = ITEMS.map((item) => itemName(item.key)).join(', ')
+  if (words.length === 0) return { text: t.nameItem }
   let n = words.length
   while (n > 0 && !findItem(words.slice(0, n).join(' '))) n--
-  if (n === 0) return { text: 'Unknown item "' + rest.trim() + '". Items: ' + names + '.' }
+  if (n === 0) return { text: t.unknownItem(rest.trim(), names) }
   const item = findItem(words.slice(0, n).join(' '))
   const wanted = words.slice(n).join('_')
   if (item === RARE_CANDY) return candyCommand($, wanted)
-  if (wanted && !MONS.includes(wanted)) return { text: 'Unknown mon "' + wanted + '". /pokemon box lists yours.' }
-  if (wanted && wanted !== S.mon) return { text: 'Show ' + nameOf(wanted) + ' first with /pokemon ' + wanted + ', then use the ' + itemName(item) + '.' }
+  if (wanted && !MONS.includes(wanted)) return { text: t.unknownMonBox(wanted) }
+  if (wanted && wanted !== S.mon) return { text: t.showFirst(nameOf(wanted), wanted, itemName(item)) }
   if (PLATE_KEYS.includes(item)) return plateCommand($, item)
   if (isDown()) return downReply()
   const entry = ownEvolutionsOf(S.mon).find((e) => itemFor(e) === item)
-  if (!entry) return otherSexReply((e) => itemFor(e) === item) ?? { text: nameOf(S.mon) + ' can\'t use ' + withArticle(itemName(item)) + '.' }
+  if (!entry) return otherSexReply((e) => itemFor(e) === item) ?? { text: t.cantUse(nameOf(S.mon), itemName(item)) }
+
   return evolveCommand($, entry.into)
 }
 
@@ -1104,21 +1100,20 @@ async function partyText($) {
   await loadPartyPicks($)
   const assigned = [...new Set(Object.values(S.partyAgents))].filter(canWork)
   const mons = [...assigned, ...partyMons()]
-  if (mons.length === 0 && S.partyPicks) return 'Your party is empty. Add a mon from your box with /pokemon party add <mon>.'
-  if (mons.length === 0) return 'Your party is empty. Raise or catch another mon, and it comes out of a subagent\'s Poké Ball to work beside ' + nameOf(S.mon) + '.'
+  if (mons.length === 0 && S.partyPicks) return t.partyEmptyPicked
+  if (mons.length === 0) return t.partyEmpty(nameOf(S.mon))
   const agents = await $.agent.list().catch(() => [])
   const described = new Map((Array.isArray(agents) ? agents : []).map((agent) => [agent.id, agent.description || agent.id]))
   const lines = mons.map((name) => {
     const member = S.crew.find((m) => m.mon === name && m.endAt === null)
     const types = typesOf(name)
-    const ready = S.stats[name]?.evolveReady ? ', ready to evolve' : ''
-    const shown = fullNameOf(name) + ', Lv. ' + levelOf(name) + ready + (types.length > 0 ? ', for ' + types.join(' and ') : '')
-    if (!member) return shown + ', free'
-    const waiting = isOut(member, S.tick) ? '' : ', waiting in its ball for room'
-    return shown + ', working for ' + (described.get(member.id) ?? member.id) + waiting
+    const ready = S.stats[name]?.evolveReady ? t.partyReady : ''
+    const shown = fullNameOf(name) + ', ' + t.lv(levelOf(name)) + ready + (types.length > 0 ? t.partyFor(types) : '')
+    if (!member) return shown + t.partyFree
+    const waiting = isOut(member, S.tick) ? '' : t.partyWaiting
+    return shown + t.partyWorking(described.get(member.id) ?? member.id, waiting)
   })
-  const count = mons.length + (mons.length === 1 ? ' mon' : ' mons')
-  return count + ' in your party, beside ' + nameOf(S.mon) + ':\n' + lines.join('\n')
+  return t.partyList(t.mons(mons.length), nameOf(S.mon), lines)
 }
 
 // Add a box mon to the party or take one out. The first change starts from the party as
@@ -1128,26 +1123,25 @@ async function partyCommand($, verb, wanted) {
   if (saved && typeof saved === 'object') await freshen($, Object.keys(saved))
   await loadPartyPicks($)
   const example = verb === 'add' ? 'dratini' : (partyMons()[0] ?? 'pikachu')
-  if (!wanted) return { text: 'Name the mon, like /pokemon party ' + verb + ' ' + example + '. /pokemon box lists yours.' }
-  if (!MONS.includes(wanted)) return { text: 'Unknown mon "' + wanted + '". /pokemon box lists yours.' }
+  if (!wanted) return { text: t.nameMonLike(verb, example) }
+  if (!MONS.includes(wanted)) return { text: t.unknownMonBox(wanted) }
   const picks = S.partyPicks ?? partyMons()
   const name = nameOf(wanted)
   if (verb === 'remove') {
-    if (!picks.includes(wanted)) return { text: name + ' isn\'t in your party.' }
+    if (!picks.includes(wanted)) return { text: t.notInParty(name) }
     S.partyPicks = picks.filter((pick) => pick !== wanted)
     await $.store.set('partyPicks', S.partyPicks)
     const working = S.crew.some((m) => m.mon === wanted && m.endAt === null)
-    return { text: name + ' leaves your party.' + (working ? ' It finishes its subagent\'s work first.' : '') }
+    return { text: t.leavesParty(name, working) }
   }
-  if (wanted === S.mon) return { text: name + ' is the mon on show. Pick another with /pokemon <mon> first.' }
-  if (!S.stats[wanted] || isDead(wanted)) return { text: displayName(wanted) + ' isn\'t in your box. Catch one, or pick it with /pokemon ' + wanted + '.' }
-  if (isGone(wanted)) return { text: name + ' ran away. Catch it in the wild to bring it back.' }
-  if (picks.includes(wanted)) return { text: name + ' is already in your party.' }
-  if (picks.length >= CREW_SIZE) return { text: 'Your party is full at ' + CREW_SIZE + '. Take one out with /pokemon party remove <mon> first.' }
+  if (wanted === S.mon) return { text: t.onShow(name) }
+  if (!S.stats[wanted] || isDead(wanted)) return { text: t.notInBoxCatch(displayName(wanted), wanted) }
+  if (isGone(wanted)) return { text: t.ranAwayCatch(name) }
+  if (picks.includes(wanted)) return { text: t.alreadyInParty(name) }
+  if (picks.length >= CREW_SIZE) return { text: t.partyFull(CREW_SIZE) }
   S.partyPicks = [...picks, wanted]
   await $.store.set('partyPicks', S.partyPicks)
-  const resting = isFainted(wanted) ? ' It rests until it\'s revived.' : ''
-  return { text: name + ' joins your party.' + resting }
+  return { text: t.joinsParty(name, isFainted(wanted) ? t.restsUntilRevived : '') }
 }
 
 // Assign a box mon to an agent type, so every subagent of that type comes out as it, or
@@ -1158,33 +1152,31 @@ async function assignCommand($, verb, words) {
   await loadPartyPicks($)
   if (verb === 'unassign') {
     const type = words.join(' ')
-    if (!type) return { text: 'Name the agent type, like /pokemon party unassign explore.' }
-    if (!S.partyAgents[type]) return { text: 'No mon is assigned to ' + type + '.' }
+    if (!type) return { text: t.nameAgent }
+    if (!S.partyAgents[type]) return { text: t.noneAssigned(type) }
     const name = nameOf(S.partyAgents[type])
     delete S.partyAgents[type]
     await $.store.set('partyAgents', S.partyAgents)
-    return { text: name + ' no longer comes out for ' + type + '.' }
+    return { text: t.noLongerFor(name, type) }
   }
-  if (words.length < 2) return { text: 'Name the agent type and the mon, like /pokemon party assign explore abra.' }
+  if (words.length < 2) return { text: t.nameAgentAndMon }
   const wanted = words.at(-1)
   const type = words.slice(0, -1).join(' ')
-  if (!MONS.includes(wanted)) return { text: 'Unknown mon "' + wanted + '". /pokemon box lists yours.' }
+  if (!MONS.includes(wanted)) return { text: t.unknownMonBox(wanted) }
   const name = nameOf(wanted)
-  if (wanted === S.mon) return { text: name + ' is the mon on show. Pick another with /pokemon <mon> first.' }
-  if (!S.stats[wanted] || isDead(wanted)) return { text: displayName(wanted) + ' isn\'t in your box. Catch one, or pick it with /pokemon ' + wanted + '.' }
-  if (isGone(wanted)) return { text: name + ' ran away. Catch it in the wild to bring it back.' }
+  if (wanted === S.mon) return { text: t.onShow(name) }
+  if (!S.stats[wanted] || isDead(wanted)) return { text: t.notInBoxCatch(displayName(wanted), wanted) }
+  if (isGone(wanted)) return { text: t.ranAwayCatch(name) }
   const before = typesOf(wanted).filter((other) => other !== type)
   for (const other of before) delete S.partyAgents[other]
   S.partyAgents[type] = wanted
   await $.store.set('partyAgents', S.partyAgents)
-  const moved = before.length > 0 ? ' It no longer comes out for ' + before.join(' or ') + '.' : ''
-  const resting = isFainted(wanted) ? ' It rests until it\'s revived.' : ''
-  return { text: name + ' comes out for every ' + type + ' subagent.' + moved + resting }
+  const moved = before.length > 0 ? t.movedFrom(before) : ''
+  return { text: t.comesOutFor(name, type, moved, isFainted(wanted) ? t.restsUntilRevived : '') }
 }
 
-const OPTIONS = [...HELP.flatMap(([, rows]) => rows.map(([usage]) => usage.split(' ')[0])), 'help']
-
-const PET_LINES = ['loves it', 'wiggles happily', 'leans into your hand', 'does a little hop', 'looks very pleased']
+// The options as typed in the band's language, like attack or attaque
+const options = () => [...HELP.flatMap(([, rows]) => rows.map(([command]) => t.help[command][0].split(' ')[0])), t.command('help')]
 
 // Send the frame only when it differs from the last one sent or drawn. A resize can
 // remount the band, and the host then refuses frames for the old one, so a refused
@@ -1360,7 +1352,7 @@ async function faintMon($) {
   const { starving, asleep, ...record } = S.stats[S.mon]
   S.stats[S.mon] = { ...record, food: { value: 0, at: S.nowMs }, happiness: { value: 0, at: S.nowMs }, fainted: { ms: 0, at: S.nowMs } }
   await saveRecords($, [S.mon])
-  $.ui.toast(nameOf(S.mon) + ' fainted! /pokemon revive takes it to a Pokémon Center.')
+  $.ui.toast(t.fainted(nameOf(S.mon)))
   $.ui.invalidate('ui.render')
 }
 
@@ -1372,7 +1364,7 @@ async function runAway($) {
   S.stats[S.mon] = { ...record, ranAway: { at: S.nowMs, variant: S.variant } }
   await saveRecords($, [S.mon])
   const next = await leaveBand($)
-  $.ui.toast(name + ' ran away! It may turn up in the wild.' + (next ? ' ' + nameOf(next) + ' takes its place.' : ''))
+  $.ui.toast(t.ranAway(name, next ? nameOf(next) : null))
 }
 
 // Under nuzlocke a fainted mon is lost. Its record goes for a dead mark that locks the
@@ -1385,7 +1377,7 @@ async function loseMon($, name) {
   S.stats[name] = { dead: { at: S.nowMs } }
   await saveRecords($, [name])
   const next = name === S.mon ? await leaveBand($) : null
-  $.ui.toast(shownName + ' fainted for good. Rest well.' + (next ? ' ' + nameOf(next) + ' takes its place.' : ''))
+  $.ui.toast(t.lost(shownName, next ? nameOf(next) : null))
 }
 
 // With nuzlocke on, every fainted mon in the box is lost, except one already being healed
@@ -1443,7 +1435,7 @@ async function finishHeal($) {
       markActive()
       S.hopStart = S.tick
       S.releasedAt = S.tick
-      $.ui.toast(nameOf(S.mon) + ' is healed and back on its feet!')
+      $.ui.toast(t.healed(nameOf(S.mon)))
       $.ui.invalidate('ui.render')
     }
   } finally {
@@ -1464,25 +1456,25 @@ function stepDown($) {
 // /pokemon revive [<mon>] takes a fainted mon to a Pokémon Center for HEAL_MS
 async function reviveCommand($, wanted) {
   const name = wanted || S.mon
-  if (!MONS.includes(name)) return { text: 'Unknown mon "' + wanted + '". /pokemon box lists yours.' }
+  if (!MONS.includes(name)) return { text: t.unknownMonBox(wanted) }
   await freshen($, [name])
   if (name === S.mon && isDown()) {
     if (isGone(S.mon) || isHealing(S.mon)) return downReply()
   } else if (isDead(name)) {
-    return { text: displayName(name) + ' is gone.' }
+    return { text: t.gone(displayName(name)) }
   } else if (hasRunAway(name)) {
     return { text: goneLine(name) }
   }
   const shown = nameOf(name)
-  if (!isFainted(name)) return { text: shown + ' hasn\'t fainted.' }
-  if (isHealing(name)) return { text: shown + ' is already at the Pokémon Center.' }
-  if (S.nuzlockeOn) return { text: 'Nuzlocke is on, so ' + shown + ' can\'t be revived.' }
+  if (!isFainted(name)) return { text: t.notFainted(shown) }
+  if (isHealing(name)) return { text: t.atCenter(shown) }
+  if (S.nuzlockeOn) return { text: t.noRevive(shown) }
   S.stats[name] = { ...S.stats[name], healing: { from: S.nowMs, until: S.nowMs + HEAL_MS } }
   await saveRecords($, [name])
   // It comes back out of its ball at home
   if (name === S.mon) S.x = homeX()
   $.ui.invalidate('ui.render')
-  return { text: 'You take ' + shown + ' to a Pokémon Center. It\'ll be back on its feet in ' + HEAL_MS / 60000 + ' minutes.' }
+  return { text: t.takenToCenter(shown, HEAL_MS / 60000) }
 }
 
 // The shown mon is at the Pokémon Center, so it can't be swapped out until it's back
@@ -1494,38 +1486,35 @@ async function stillHealing($) {
 async function nuzlockeCommand($) {
   S.nuzlockeOn = !S.nuzlockeOn
   await $.store.set('nuzlocke', S.nuzlockeOn)
-  if (!S.nuzlockeOn) return { text: 'Nuzlocke is off. A mon that faints can be revived again. The ones you lost stay gone.' }
+  if (!S.nuzlockeOn) return { text: t.nuzlockeOff }
   const saved = await $.store.get('stats')
   if (saved && typeof saved === 'object') await freshen($, Object.keys(saved))
   const doomed = Object.keys(S.stats).filter((name) => MONS.includes(name) && isFainted(name) && !isHealing(name))
-  const fate = doomed.length === 1 ? ' has fainted already, so it\'s gone for good in a moment.' : ' have fainted already, so they\'re gone for good in a moment.'
-  const warning = doomed.length > 0 ? ' ' + andList(doomed.map(nameOf)) + fate : ''
-  return { text: 'Nuzlocke is on. A mon that faints is gone for good, with no revive and no coming back. Keep them fed and happy.' + warning }
+  return { text: t.nuzlockeOn(doomed.map(nameOf)) }
 }
 
 // /pokemon gen <N> turns a generation's mons in the wild on or off, and /pokemon gen lists
 // the ones on. The bundled generations are always on.
 async function genCommand($, wanted) {
   const toggled = GENS.filter((gen) => !BUNDLED_GENS.includes(gen))
-  const how = '/pokemon gen <N> turns ' + orList(toggled.map((gen) => 'gen ' + gen)) + ' on or off.'
-  if (!wanted) return { text: 'In the wild: gen ' + andList(S.wildGens.map(String)) + '. ' + how }
-  if (!/^\d+$/.test(wanted)) return { text: 'Unknown generation "' + wanted + '". ' + how }
+  const how = t.genHow(toggled)
+  if (!wanted) return { text: t.inTheWild(S.wildGens, how) }
+  if (!/^\d+$/.test(wanted)) return { text: t.unknownGen(wanted, how) }
   const gen = Number(wanted)
-  if (BUNDLED_GENS.includes(gen)) return { text: 'Gen ' + gen + ' is always in the wild. ' + how }
-  if (!GENS.includes(gen)) return { text: 'Gen ' + gen + ' isn\'t in the wild yet. ' + how }
+  if (BUNDLED_GENS.includes(gen)) return { text: t.genAlways(gen, how) }
+  if (!GENS.includes(gen)) return { text: t.genNotYet(gen, how) }
   const on = !S.wildGens.includes(gen)
   S.wildGens = wildGensOf(on ? [...S.wildGens, gen] : S.wildGens.filter((g) => g !== gen))
   await $.store.set('gens', S.wildGens.filter((g) => !BUNDLED_GENS.includes(g)))
-  if (!on) return { text: 'Gen ' + gen + ' is off. Its mons no longer turn up in the wild. The ones in your box stay.' }
-  return { text: 'Gen ' + gen + ' is on. Its mons turn up in the wild too, each fetched from GitHub the first time you meet one.' }
+  if (!on) return { text: t.genOff(gen) }
+  return { text: t.genOn(gen) }
 }
 
 async function trainerCommand($) {
   S.trainerOn = !S.trainerOn
   await $.store.set('trainer', S.trainerOn)
-  if (!S.trainerOn) return { text: 'Trainer mode is off. /pokemon <mon> shows any mon.' }
-  const pick = (await boxIsEmpty($)) ? 'Pick your starter, ' + orList(STARTERS.map(displayName)) + ', then catch the rest in the wild.' : 'You can only switch to mons in your box, so catch the rest in the wild.'
-  return { text: 'Trainer mode is on. ' + pick + ' Mons fetched with /pokemon new stay free to show.' }
+  if (!S.trainerOn) return { text: t.trainerOff }
+  return { text: t.trainerOn((await boxIsEmpty($)) ? STARTERS.map(displayName) : null) }
 }
 
 // With trainer mode on, only mons in your box can be shown. A box with no mon in it, new
@@ -1543,9 +1532,8 @@ async function boxIsEmpty($) {
 // freshened asked's record. A starter picked joins the box at its first level.
 async function trainerWait($, asked) {
   if (!S.trainerOn || asked === S.mon || S.stats[asked] || freeToShow(await $.store.get(CUSTOM_PREFIX + asked))) return null
-  const off = ', or turn trainer mode off with /pokemon trainer.'
-  if (!(await boxIsEmpty($))) return { text: 'Trainer mode is on, so you can only switch to mons in your box. Catch a wild ' + displayName(asked) + ' to raise one' + off }
-  if (!STARTERS.includes(asked)) return { text: 'Trainer mode is on, so pick your starter first: ' + orList(STARTERS.map(displayName)) + '. Catch the rest in the wild' + off }
+  if (!(await boxIsEmpty($))) return { text: t.trainerBox(displayName(asked)) }
+  if (!STARTERS.includes(asked)) return { text: t.trainerStarter(STARTERS.map(displayName)) }
   S.stats[asked] = { xp: xpAt(startLevel(asked)) }
   await saveRecords($, [asked])
   return null
@@ -1608,9 +1596,7 @@ async function loadCustom($) {
 // In trainer mode, a generation in the wild has its mons caught there, not fetched for free
 const caughtInWild = (gen) => S.trainerOn && !BUNDLED_GENS.includes(gen) && S.wildGens.includes(gen)
 
-const catchInWildReply = (gen, name) => ({
-  text: 'Gen ' + gen + ' is on, so catch ' + (name ? displayName(name) : 'gen ' + gen + ' mons') + ' in the wild, or turn gen ' + gen + ' off with /pokemon gen ' + gen + '.',
-})
+const catchInWildReply = (gen, name) => ({ text: t.catchInWild(gen, name ? displayName(name) : null) })
 
 // The generations /pokemon new picks a random mon from
 const NEW_GENS = [2, 3, 4, 5]
@@ -1624,32 +1610,32 @@ async function newCommand($, wanted) {
   let name = random ? '' : wanted.replace(/\s+/g, '_')
   let gen
   const get = (url, init) => $.http.fetch(url, init)
-  if (!wanted) return { text: 'Name a mon to fetch, like /pokemon new mudkip, or try /pokemon new random or /pokemon new gen3.' }
+  if (!wanted) return { text: t.nameMonToFetch }
   try {
     if (genAsked && caughtInWild(Number(genAsked[1]))) return catchInWildReply(Number(genAsked[1]), null)
     if (!random && caughtInWild(genOf(name))) return catchInWildReply(genOf(name), name)
     if (random) {
       const open = NEW_GENS.filter((g) => !caughtInWild(g))
-      if (!genAsked && open.length === 0) return { text: 'Every generation is in the wild, so catch your mons there.' }
+      if (!genAsked && open.length === 0) return { text: t.everyGenWild }
       gen = genAsked ? Number(genAsked[1]) : open[Math.floor(Math.random() * open.length)]
       const fresh = (await monsOfGen(get, gen)).filter((n) => !SPRITES[n])
-      if (fresh.length === 0) return { text: 'You already have every gen ' + gen + ' mon.' }
+      if (fresh.length === 0) return { text: t.haveEveryGen(gen) }
       name = fresh[Math.floor(Math.random() * fresh.length)]
     } else if (SPRITES[name]) {
       const saved = await $.store.get(CUSTOM_PREFIX + name)
       if (saved?.sprite && !freeToShow(saved)) await $.store.set(CUSTOM_PREFIX + name, { ...saved, by: 'new' })
-      return { text: nameOf(name) + ' is already here. /pokemon ' + name + ' shows it.' }
+      return { text: t.alreadyHere(nameOf(name), name) }
     } else if (!/^[a-z0-9_.-]+$/.test(name)) {
-      return { text: 'Unknown mon "' + wanted + '". Names are like mudkip or mr._mime.' }
+      return { text: t.unknownMonFetch(wanted) }
     }
     const entry = { ...(await fetchMon(get, name, gen)), by: 'new' }
     await $.store.set(CUSTOM_PREFIX + name, entry)
     addCustom(name, entry)
     await switchTo($, name)
     $.ui.invalidate('ui.render')
-    return { text: 'Fetched gen ' + entry.gen + ' ' + nameOf(name) + '. It knows ' + entry.moves.join(', ') + '. Now showing ' + S.variant + ' ' + nameOf(name) + '.' }
+    return { text: t.fetched(entry.gen, nameOf(name), entry.moves.map(moveName), S.variant) }
   } catch (err) {
-    return { text: "Couldn't fetch " + (name || 'a mon') + ': ' + (err?.message ?? String(err)) }
+    return { text: t.fetchFailed(name, err?.message ?? String(err)) }
   }
 }
 
@@ -1674,16 +1660,16 @@ async function paneCommand($, presentation) {
     await $.store.set('pane', false)
     await $.ui.close({ id: PANE_ID })
     leavePane($)
-    return { text: nameOf(S.mon) + ' is back above the prompt.' }
+    return { text: t.backAbovePrompt(nameOf(S.mon)) }
   }
   S.paneOn = true
   const columns = Math.floor((presentation?.columns ?? 0) / 2)
   await $.store.set('pane', true)
   await $.store.set('paneColumns', columns)
   const opened = await openPane($, columns)
-  if (!opened.isPlaced) return { text: nameOf(S.mon) + "'s pane is open but waits for a wider terminal. /pokemon pane brings it back to the band." }
-  if (presentation?.isFullscreen === false) return { text: nameOf(S.mon) + ' moved to a pane above the prompt. It docks beside the transcript in the fullscreen layout. /pokemon pane brings it back to the band.' }
-  return { text: nameOf(S.mon) + ' moved to a pane beside the transcript. /pokemon pane brings it back to the band.' }
+  if (!opened.isPlaced) return { text: t.paneWaits(nameOf(S.mon)) }
+  if (presentation?.isFullscreen === false) return { text: t.paneAbove(nameOf(S.mon)) }
+  return { text: t.paneBeside(nameOf(S.mon)) }
 }
 
 // The commands that count as facing a wild foe, so its strikes stay small
@@ -1692,7 +1678,7 @@ const FIGHT_VERBS = ['catch', 'attack', 'roar', 'run']
 // Served from the one command.run hook below. Claude Code keeps a command out of the
 // up-arrow history when more than one command.run hook could answer it.
 async function runPokemon($, e) {
-  const asked = e.args.trim().toLowerCase()
+  const asked = englishCommand(e.args.trim().toLowerCase())
   let reply
   // Another session may have fetched a mon since this one started
   await loadCustom($).catch(() => {})
@@ -1712,7 +1698,7 @@ async function runPokemon($, e) {
   }
   if (MONS.includes(asked)) {
     await freshen($, [asked])
-    if (isDead(asked)) return { text: displayName(asked) + ' is gone. Catch a new one in the wild to raise it again.' }
+    if (isDead(asked)) return { text: t.goneCatchNew(displayName(asked)) }
     if (hasRunAway(asked)) return { text: goneLine(asked) }
     if (asked !== S.mon && (await stillHealing($))) return healingReply()
     if ((reply = await trainerWait($, asked))) return reply
@@ -1727,28 +1713,27 @@ async function runPokemon($, e) {
     S.wander = !S.wander
     S.wanderTarget = null
     await $.store.set('wander', S.wander)
-    return { text: nameOf(S.mon) + (S.wander ? ' is free to wander.' : ' is heading home.') }
+    return { text: t.wander(nameOf(S.mon), S.wander) }
   } else if (asked === 'pet') {
     // A mon as happy as can be, every heart filled, still enjoys it, but it fills no
     // meter and doesn't count as a pet
     const happiest = isHappiest()
     const sleeping = isAsleep()
     pet()
-    const line = nameOf(S.mon) + ' ' + (sleeping ? 'smiles in its sleep' : PET_LINES[Math.floor(Math.random() * PET_LINES.length)]) + ' ♥'
-    if (happiest) return { text: line + ' ' + nameOf(S.mon) + ' is already as happy as can be.' }
+    const line = t.petted(nameOf(S.mon), sleeping ? t.petSleeping : t.petLines[Math.floor(Math.random() * t.petLines.length)])
+    if (happiest) return { text: line + t.happiest(nameOf(S.mon)) }
     S.pettingFills = S.mon
     const pets = Number((await $.store.get('pets')) ?? 0) + 1
     await $.store.set('pets', pets)
     return { text: line }
   } else if (asked === 'feed') {
-    if (isHere(S.wild)) return { text: 'Not now, a ' + wildName() + ' is right there!' }
+    if (isHere(S.wild)) return { text: t.notNow(wildName()) }
     // A full mon, every food icon filled, still eats the berry, but it fills no meter
     // and doesn't count as a feed
     const full = isFull()
     const berry = feed()
-    const article = /^[aeiou]/.test(berry.name) ? 'an ' : 'a '
-    const tossed = 'You toss ' + nameOf(S.mon) + ' ' + article + berry.name + ' ' + berry.emoji
-    if (full) return { text: tossed + '. ' + nameOf(S.mon) + ' is already full, so it just nibbles it.' }
+    const tossed = t.tossed(nameOf(S.mon), t.berryName(berry.name), berry.emoji)
+    if (full) return { text: tossed + t.full(nameOf(S.mon)) }
     // The meters fill once it has eaten the berry
     S.food.fills = S.mon
     const feeds = Number((await $.store.get('feeds')) ?? 0) + 1
@@ -1758,11 +1743,11 @@ async function runPokemon($, e) {
     const name = nameOf(S.mon)
     if (isTuckedIn()) {
       await setAsleep($, false)
-      return { text: name + ' wakes up.' }
+      return { text: t.wakes(name) }
     }
-    if (S.turnRunning) return { text: name + " can't sleep while Claude is working." }
+    if (S.turnRunning) return { text: t.cantSleep(name) }
     await setAsleep($, true)
-    return { text: name + ' curls up and falls asleep. Its meters drain slower until Claude starts working.' }
+    return { text: t.fallsAsleep(name) }
   } else if (asked === 'attack' || asked.startsWith('attack ')) {
     return attackCommand(asked.slice('attack'.length).trim())
   } else if (asked === 'catch') {
@@ -1775,63 +1760,61 @@ async function runPokemon($, e) {
     return reply
   } else if (asked === 'moves' || asked.startsWith('moves ')) {
     const whose = asked.slice('moves'.length).trim() || S.mon
-    if (!MONS.includes(whose)) return { text: 'Unknown mon "' + whose + '". See /pokemon list for every mon.' }
+    if (!MONS.includes(whose)) return { text: t.unknownMonList(whose) }
     return movesText(whose)
   } else if (asked === 'needs') {
     S.needsOn = !S.needsOn
     await $.store.set('needs', S.needsOn)
     $.ui.invalidate('ui.render')
     const name = nameOf(S.mon)
-    const still = isFainted(S.mon) ? ' It\'s still fainted, so /pokemon revive takes it to a Pokémon Center.' : ''
-    return { text: (S.needsOn ? 'Needs are on. Keep ' + name + ' fed and happy.' : 'Needs are off. ' + name + ' won\'t get hungry or lonely.') + still }
+    return { text: t.needs(name, S.needsOn, isFainted(S.mon) ? t.stillFainted : '') }
   } else if (asked === 'emoji') {
     S.emojiOn = !S.emojiOn
     await $.store.set('emoji', S.emojiOn)
     $.ui.invalidate('ui.render')
     const icons = iconsFor('food').trimEnd() + ' ' + iconsFor('happiness').trimEnd()
-    return { text: (S.emojiOn ? 'The meters show emoji: ' : 'The meters show text icons: ') + icons }
+    return { text: t.emoji(S.emojiOn, icons) }
   } else if (asked === 'size' || asked.startsWith('size ')) {
     const wanted = asked.slice('size'.length).trim()
-    const sizes = Object.keys(SIZES).join(', ')
-    if (!wanted) return { text: 'The band is ' + S.size + '. Sizes: ' + sizes + '.' }
-    if (!Object.hasOwn(SIZES, wanted)) return { text: 'Unknown size "' + wanted + '". Try one of: ' + sizes + '.' }
+    const sizes = Object.keys(SIZES).map(t.sizeName).join(', ')
+    if (!wanted) return { text: t.bandSizes(S.size, sizes) }
+    if (!Object.hasOwn(SIZES, wanted)) return { text: t.unknownSize(wanted, sizes) }
     S.size = wanted
     await $.store.set('size', S.size)
     $.ui.invalidate('ui.render')
-    return { text: 'The band is ' + S.size + '.' }
+    return { text: t.bandIs(S.size) }
   } else if (asked === 'images' || asked.startsWith('images ')) {
     const wanted = asked.slice('images'.length).trim()
     const modes = Object.keys(IMAGE_MODES).join(', ')
-    const drawn = () => (S.noImages ? 'half blocks' : 'images')
-    if (!wanted) return { text: 'Images are ' + S.imageMode + ', so the band draws ' + drawn() + '. Modes: ' + modes + '.' }
-    if (!Object.hasOwn(IMAGE_MODES, wanted)) return { text: 'Unknown mode "' + wanted + '". Try one of: ' + modes + '.' }
+    if (!wanted) return { text: t.imageModes(S.imageMode, t.drawn(S.noImages), modes) }
+    if (!Object.hasOwn(IMAGE_MODES, wanted)) return { text: t.unknownMode(wanted, modes) }
     S.imageMode = wanted
     await $.store.set('images', S.imageMode)
     applyImageMode()
     $.ui.invalidate('ui.render')
-    return { text: 'Images are ' + S.imageMode + ', so the band draws ' + drawn() + '.' }
+    return { text: t.images(S.imageMode, t.drawn(S.noImages)) }
   } else if (asked === 'pane') {
     return paneCommand($, e.presentation)
   } else if (asked === 'sync') {
     S.syncOn = !S.syncOn
     await $.store.set('sync', S.syncOn)
     const name = nameOf(S.mon)
-    if (!S.syncOn) return { text: 'Sync is off. Each session keeps the mon picked in it.' }
+    if (!S.syncOn) return { text: t.syncOff }
     // This session's mon becomes the pick the others follow
     await saveMon($)
-    return { text: 'Sync is on. Every open session shows ' + name + ', and follows the next mon you pick.' }
+    return { text: t.syncOn(name) }
   } else if (asked === 'autoevolve') {
     S.autoEvolve = !S.autoEvolve
     await $.store.set('autoEvolve', S.autoEvolve)
     const name = nameOf(S.mon)
     if (!S.autoEvolve) {
       S.evolveDue = null
-      return { text: name + ' waits for /pokemon evolve when it reaches its evolution level.' }
+      return { text: t.evolveWaits(name) }
     }
     // Already at its level, it evolves once idle
     const into = readyToEvolve()
     S.evolveDue = into && (await dueEvolution($, into))
-    return { text: name + ' evolves on its own once idle at its evolution level.' }
+    return { text: t.evolvesAlone(name) }
   } else if (asked === 'revive' || asked.startsWith('revive ')) {
     return reviveCommand($, asked.slice('revive'.length).trim())
   } else if (asked === 'nuzlocke') {
@@ -1891,30 +1874,32 @@ async function runPokemon($, e) {
     $.ui.invalidate('ui.render')
     return result
   } else if (asked === 'list') {
-    return { text: MONS.length + ' mons: ' + MONS.join(', ') }
+    return { text: t.monList(MONS.length, MONS) }
   } else if (asked === 'help') {
     return { text: helpText((await $.store.get('debug')) === true) }
   } else if (asked) {
-    return { text: 'Unknown option "' + asked + '". Try one of: ' + OPTIONS.join(', ') + '. See /pokemon list for every mon.' }
+    return { text: t.unknownOption(asked, options()) }
   } else {
-    if (isGone(S.mon)) return { text: goneLine(S.mon) + ' /pokemon <mon> picks another. Options: ' + OPTIONS.join(', ') + '.' }
+    if (isGone(S.mon)) return { text: t.goneOptions(goneLine(S.mon), options()) }
     const condition = conditionOf(S.mon)
-    const mode = (condition ? ', ' + condition : '') + (isTuckedIn() ? ', asleep' : '') + (S.wander ? ', wandering' : '') + (isHere(S.wild) ? ', a ' + wildName() + ' is here' : '')
-    const levels = 'food ' + Math.round(statNow(S.mon, 'food')) + '%, happiness ' + Math.round(statNow(S.mon, 'happiness')) + '%'
-    const shown = nameOf(S.mon) + ' Lv. ' + levelOf(S.mon)
-    return { text: 'Showing ' + S.variant + ' ' + shown + mode + ' (' + (S.needsOn ? levels : 'needs off') + '). Options: ' + OPTIONS.join(', ') + '. /pokemon help says what each does.' }
+    const mode = (condition ? ', ' + t.condition(condition) : '') + (isTuckedIn() ? t.modeAsleep : '') + (S.wander ? t.modeWandering : '') + (isHere(S.wild) ? t.modeWild(wildName()) : '')
+    const levels = t.levels(Math.round(statNow(S.mon, 'food')), Math.round(statNow(S.mon, 'happiness')))
+    return { text: t.showing(S.variant, nameOf(S.mon), levelOf(S.mon), mode, S.needsOn ? levels : t.needsOffShort, options()) }
   }
   $.ui.invalidate('ui.render')
-  return { text: 'Now showing ' + S.variant + ' ' + nameOf(S.mon) + '.' }
+  return { text: t.nowShowing(S.variant, nameOf(S.mon)) }
+
 }
 
-export function register(on) {
+// The plugin's options, from its userConfig: language is auto, en, or fr
+export function register(on, settings = {}) {
   on('session.start', async ($, e, next) => {
     S.sessionToken = Math.random().toString(36).slice(2)
+    S.lang = await chosenLanguage($, settings.language)
     await $.command.register({
       name: 'pokemon',
-      description: 'Pick the Pokémon above the prompt, pet it, feed it, put it to sleep, make it attack, list its moves, evolve it, or check your Pokédex',
-      argumentHint: '[' + OPTIONS.join('|') + ']',
+      description: t.commandDescription,
+      argumentHint: '[' + options().join('|') + ']',
       immediate: true,
     })
     await loadCustom($).catch((err) => logOnce($, err))
@@ -1997,6 +1982,16 @@ export function register(on) {
       }
     })
     return next(e)
+  })
+
+  // Speak the language Claude Code's language setting changes to, unless the option picks one
+  on('config.set', { key: 'language' }, async ($, e, next) => {
+    const result = await next(e)
+    if (!Object.hasOwn(LOCALES, settings.language) && typeof result?.value === 'string') {
+      S.lang = languageOf(result.value)
+      $.ui.invalidate('ui.render')
+    }
+    return result
   })
 
   // Follow the theme, so the bubble and the Zs stay visible on its background

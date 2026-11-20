@@ -1,5 +1,14 @@
 {
   "name": "pokemon",
   "description": "A pixel Pokémon that lives at the right edge of the band above the prompt",
-  "author": { "name": "deniz gökçin" }
+  "author": { "name": "deniz gökçin" },
+  "userConfig": {
+    "language": {
+      "type": "string",
+      "title": "Language",
+      "description": "The language the Pokémon speaks: auto follows Claude Code's language setting, en is English, fr is French",
+      "default": "auto",
+      "options": ["auto", "en", "fr"]
+    }
+  }
 }
