@@ -152,7 +152,7 @@ Then pick your starter, like `/pokemon charmander`. Bulbasaur, Charmander, Squir
 
 ## Language
 
-The mon speaks English or French. Its `language` option, under `/config`, is `auto` by default, which follows Claude Code's own language setting: French when that setting says French (`français`, `french`, `fr`), English for anything else. `en` or `fr` picks one whatever Claude Code speaks.
+The mon speaks English or French. Its `language` option, under `/config`, is `auto` by default, which follows Claude Code's own language setting: French when that setting says French (`français`, `french`, `fr`), English for anything else. Left at its default, that setting gives way to the system's language, read from `LC_ALL`, `LC_MESSAGES` or `LANG` in that order: a French locale like `fr_FR.UTF-8` makes the mon speak French. Windows doesn't usually name its language in these variables, so there the mon speaks English unless Claude Code's setting or the option says otherwise. `en` or `fr` picks one whatever Claude Code speaks.
 
 In French every message, the help, and the battle buttons are in French, and the mons, moves, items, and types take their official French names: Salamèche, Fouet Lianes, Pierre Foudre, Plaque Flamme. Levels read `N. 12`, as in the French games.
 
