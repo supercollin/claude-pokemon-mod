@@ -6,7 +6,7 @@
     "language": {
       "type": "string",
       "title": "Language",
-      "description": "The language the Pokémon speaks: auto follows Claude Code's language setting, en is English, fr is French",
+      "description": "The language the Pokémon speaks: auto follows Claude Code's language setting, or the system's language when it's left at its default, en is English, fr is French",
       "default": "auto",
       "options": ["auto", "en", "fr"]
     }

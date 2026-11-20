@@ -15,7 +15,7 @@ import { catchCommand, foeMoves, roarCommand, runawayFoe, wildMoves, wildName } 
 import { evolutionsOf, isLevelUpOnly, levelEvolutionOf, levelUpEvolutionOf, startLevel, timeOfDay } from './evolutions.js'
 import { SPRITES } from './frames.js'
 import { femaleEighthsOf, SEXES, sexedSprite, sexFor } from './genders.js'
-import { chosenLanguage, languageOf, LOCALES, t } from './i18n.js'
+import { chosenLanguage, LOCALES, t } from './i18n.js'
 import {
   addedTo, bagOf, bagText, dropOf, findItem, itemFor, itemName, ITEMS, LONG_TURN_CANDY_ODDS, migratedBag, PLATE_KEYS, plateType, RARE_CANDY,
   takenFrom,
@@ -1984,11 +1984,12 @@ export function register(on, settings = {}) {
     return next(e)
   })
 
-  // Speak the language Claude Code's language setting changes to, unless the option picks one
+  // Speak the language Claude Code's language setting changes to, or the system's when it's
+  // set back to its default, unless the option picks one
   on('config.set', { key: 'language' }, async ($, e, next) => {
     const result = await next(e)
-    if (!Object.hasOwn(LOCALES, settings.language) && typeof result?.value === 'string') {
-      S.lang = languageOf(result.value)
+    if (!Object.hasOwn(LOCALES, settings.language)) {
+      S.lang = await chosenLanguage($, settings.language)
       $.ui.invalidate('ui.render')
     }
     return result
