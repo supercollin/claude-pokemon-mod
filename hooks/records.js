@@ -2,6 +2,7 @@ import { TICK_MS } from './constants.js'
 import { evolutionsOf, isLevelUpOnly, levelEvolutionOf, startLevel } from './evolutions.js'
 import { femaleEighthsOf, fixedSexOf, sexFor, withSexMark } from './genders.js'
 import { levelAt, MAX_LEVEL, xpAt } from './levels.js'
+import { t } from './i18n.js'
 import { displayName } from './names.js'
 import { S } from './state.js'
 import { hasRunAway, isDead, isDown, isFainted, isGone, isHealing } from './status.js'
@@ -38,7 +39,7 @@ export const xpOf = (name) => S.stats[name]?.xp ?? xpAt(startLevel(name))
 export const levelOf = (name) => levelAt(xpOf(name))
 
 // The level line above the meters, at most five columns wide
-export const levelLine = () => (levelOf(S.mon) < MAX_LEVEL ? 'Lv ' : 'Lv') + levelOf(S.mon)
+export const levelLine = () => t.bandLevel(levelOf(S.mon), levelOf(S.mon) >= MAX_LEVEL)
 
 // The mon its level lets it become, or a level-up by the meters or the clock did, while it
 // isn't evolving already
@@ -59,17 +60,17 @@ export const revivedMeters = () => ({ food: { value: REVIVED.food, at: S.nowMs }
 
 export const conditionOf = (name) => (hasRunAway(name) ? 'ran away' : isHealing(name) ? 'healing' : isFainted(name) ? 'fainted' : null)
 
-export const goneLine = (name) => (isDead(name) ? displayName(name) + ' fainted for good. Rest well.' : nameOf(name) + ' ran away. It may turn up in the wild.')
+export const goneLine = (name) => (isDead(name) ? t.goneForGood(displayName(name)) : t.ranAwayLine(nameOf(name)))
 
 // What a command the shown mon can't do while it's down says instead
 export function downReply() {
   const name = nameOf(S.mon)
-  if (isGone(S.mon)) return { text: goneLine(S.mon) + ' /pokemon <mon> picks another.' }
+  if (isGone(S.mon)) return { text: goneLine(S.mon) + t.picksAnother }
   if (isHealing(S.mon)) {
     const minutes = Math.max(1, Math.ceil((S.stats[S.mon].healing.until - S.nowMs) / 60000))
-    return { text: name + ' is resting at the Pokémon Center. It\'s back in ' + minutes + ' min.' }
+    return { text: t.resting(name, minutes) }
   }
-  return { text: name + ' has fainted. /pokemon revive takes it to a Pokémon Center.' }
+  return { text: t.hasFainted(name) }
 }
 
 // The heal in this session's ticks, from its saved times, so a session started midway
@@ -88,4 +89,4 @@ export function settleHeal(name) {
   return true
 }
 
-export const healingReply = () => ({ text: downReply().text + ' Wait for it before switching.' })
+export const healingReply = () => ({ text: downReply().text + t.waitSwitch })

@@ -150,6 +150,14 @@ Then pick your starter, like `/pokemon charmander`. Bulbasaur, Charmander, Squir
 
 </details>
 
+## Language
+
+The mon speaks English or French. Its `language` option, under `/config`, is `auto` by default, which follows Claude Code's own language setting: French when that setting says French (`français`, `french`, `fr`), English for anything else. `en` or `fr` picks one whatever Claude Code speaks.
+
+In French every message, the help, and the battle buttons are in French, and the mons, moves, items, and types take their official French names: Salamèche, Fouet Lianes, Pierre Foudre, Plaque Flamme. Levels read `N. 12`, as in the French games.
+
+Commands work in both languages, whatever the mon speaks. Each verb has a French one, like `/pokemon attaque`, `capture`, `utilise`, `évolue`, `soigne`, `sac`, `boîte` or `équipe ajoute`, and a mon, a move, or an item can be named in either language, accents or not: `/pokemon salamèche`, `/pokemon attaque fouet lianes`, `/pokemon utilise pierre foudre`. A nickname stays as you type it. `/pokemon aide` lists the French verbs.
+
 ## Requirements
 
 - Claude Code v2.1.287 or later, in the terminal or the Desktop app's Code tab.
@@ -640,7 +648,7 @@ To try a mon without changing the repo, `/pokemon new <mon>` fetches it at runti
 1. Copy the four GIFs from `media/gen<N>/<mon>/` in [vscode-pokemon](https://github.com/jakobhoeg/vscode-pokemon/tree/main/media) into `sprites/<mon>/`: `default_idle_8fps.gif`, `default_walk_8fps.gif`, `shiny_idle_8fps.gif`, and `shiny_walk_8fps.gif`.
 2. Run `node scripts/build-frames.mjs`.
 3. Give it a moveset in `MOVES` in `hooks/moves.js`. Every mon needs at least one move.
-4. If it evolves, add it to `hooks/evolutions.js`. A mon it evolves into that isn't bundled goes in `FETCHED` there, under its vscode-pokemon folder name. If its name isn't just the key capitalized, add it to `hooks/names.js`.
+4. If it evolves, add it to `hooks/evolutions.js`. A mon it evolves into that isn't bundled goes in `FETCHED` there, under its vscode-pokemon folder name. If its name isn't just the key capitalized, add it to `hooks/names.js`. Its French name goes in `hooks/locales/names-fr.js`.
 5. Mark its eyes on every frame in `EYES` in `hooks/eyes.js`, and check them asleep with `node scripts/preview-sleep.mjs <mon>`.
 6. Run `node scripts/check-data.mjs`, then `/reload-plugins`.
 
@@ -706,7 +714,11 @@ claude --plugin-dir .                            # live-reloading session
 | `hooks/attacks.js` | Attack registry: each move's pose, aim, and frame |
 | `hooks/effects/*.js` | Attack animations, one file per family |
 | `hooks/moves.js` | Each move's effect, and each mon's moveset |
-| `hooks/names.js` | Display names, like `Nidoran♀` and `Mr. Mime` |
+| `hooks/names.js` | Display names, like `Nidoran♀` and `Mr. Mime`, and the mons' and moves' French names |
+| `hooks/i18n.js` | The language the band speaks, from its option or Claude Code's setting, and `t`, the current language's messages |
+| `hooks/locales/en.js`, `hooks/locales/fr.js` | Every message in English and in French, under the same names, and the French verbs |
+| `hooks/locales/names-fr.js` | The French names of the mons, moves, items, berries, and types, from PokéAPI's data |
+| `hooks/aliases.js` | French commands and mon names read as their English ones |
 | `hooks/genders.js` | Each species' share of females, a mon's sex, its mark, and the sprite it shows for it |
 | `hooks/levels.js` | The XP curve, and the XP a turn earns |
 | `hooks/evolutions.js` | Gen 1 evolutions, and each mon's start level |

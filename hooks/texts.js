@@ -1,6 +1,7 @@
 import { BUNDLED_GENS, dexKey, dexNumber, dexOf, GENS, genOf, isCaught, NATIONAL_DEX, tierOf } from './dex.js'
 import { MAX_LEVEL, xpAt } from './levels.js'
-import { itemName } from './items.js'
+import { t } from './i18n.js'
+import { itemFor, itemName } from './items.js'
 import { iconsFor, statNow } from './meters.js'
 import { displayName } from './names.js'
 import { conditionOf, downReply, fullNameOf, goneLine, levelOf, nameOf, ownEvolutionsOf, readyToEvolve, xpOf } from './records.js'
@@ -10,29 +11,18 @@ import { hasRunAway, isDead, isFainted, isGone } from './status.js'
 
 // The replies that tell you things: stats, the box, the Pokédex, and help
 
-// Joins items as "A", "A or B", or "A, B, or C"
-export const orList = (items) => (items.length < 3 ? items.join(' or ') : items.slice(0, -1).join(', ') + ', or ' + items.at(-1))
-
-// A name after "a" or "an", like "a Fire Stone" or "an Up-Grade"
-export const withArticle = (name) => (/^[aeiou]/i.test(name) ? 'an ' : 'a ') + name
-
-const MORE_TEXTS = {
-  food: ' with more food than hearts',
-  happiness: ' with more hearts than food',
-  neither: ' with as much food as hearts',
-}
-
 // How one entry evolves the mon, like "Jolteon with a Thunder Stone" or "Steelix by trade
 // holding a Metal Coat"
 export function evolutionText(entry) {
   const into = displayName(entry.into)
-  if (entry.happy) return into + ' at a level-up with full hearts' + (entry.time ? ' by ' + entry.time : '')
-  if (entry.fed) return into + ' at a level-up with full food'
-  if (entry.with) return into + ' at a level-up with ' + displayName(entry.with) + ' in your party'
-  if (entry.more) return into + ' at Lv. ' + entry.level + MORE_TEXTS[entry.more]
-  if (entry.trade && entry.item) return into + ' by trade holding ' + withArticle(entry.item)
-  if (entry.item) return into + ' with ' + withArticle(entry.item) + (entry.time ? ' by ' + entry.time : '')
-  return entry.trade ? into + ' by trade' : into + ' at Lv. ' + entry.level
+  const item = entry.item ? itemName(itemFor(entry)) : null
+  if (entry.happy) return t.evolveHappy(into, entry.time)
+  if (entry.fed) return t.evolveFed(into)
+  if (entry.with) return t.evolveWith(into, displayName(entry.with))
+  if (entry.more) return t.evolveMore(into, entry.level, entry.more)
+  if (entry.trade && item) return t.evolveTradeHolding(into, item)
+  if (item) return t.evolveItem(into, item, entry.time)
+  return entry.trade ? t.evolveTrade(into) : t.evolveLevel(into, entry.level)
 }
 
 // Every way a mon evolves, like "Vileplume with a Leaf Stone or Bellossom with a Sun Stone".
@@ -44,30 +34,28 @@ export function evolutionsText(entries) {
     if (!entry.pick) texts.push(evolutionText(entry))
     else if (entries.find((other) => other.pick && other.level === entry.level) === entry) {
       const names = [...new Set(entries.filter((other) => other.pick && other.level === entry.level).map((other) => displayName(other.into)))]
-      texts.push(orList(names) + ' at Lv. ' + entry.level + (names.length > 1 ? ', by chance' : ''))
+      texts.push(t.evolvePick(names, entry.level, names.length > 1))
     }
   }
-  return orList(texts)
+  return t.or(texts)
 }
 
 // Like "Pikachu, Lv. 12, 1820 XP (377 to Lv. 13). Can become Raichu with a Thunder Stone.
 // Food 50%, happiness 67%. 12 pets, 5 feeds."
 export function statsText(pets, feeds) {
-  if (isGone(S.mon)) return goneLine(S.mon) + ' /pokemon <mon> picks another.'
+  if (isGone(S.mon)) return goneLine(S.mon) + t.picksAnother
   const level = levelOf(S.mon)
-  const next = level < MAX_LEVEL ? ' (' + (xpAt(level + 1) - xpOf(S.mon)) + ' to Lv. ' + (level + 1) + ')' : ''
+  const next = level < MAX_LEVEL ? t.toNext(xpAt(level + 1) - xpOf(S.mon), level + 1) : ''
   const evolutions = ownEvolutionsOf(S.mon)
   const ready = readyToEvolve()
-  const becomes = ready
-    ? ' Ready to evolve into ' + displayName(ready) + '. /pokemon evolve lets it.'
-    : evolutions.length > 0 ? ' Can become ' + evolutionsText(evolutions) + '.' : ''
+  let becomes = ''
+  if (ready) becomes = t.readyLine(displayName(ready))
+  else if (evolutions.length > 0) becomes = t.canBecomeLine(evolutionsText(evolutions))
   const plate = S.stats[S.mon]?.plate
-  const holds = plate ? ' Holds the ' + itemName(plate) + '.' : ''
-  const meters = S.needsOn
-    ? ' Food ' + Math.round(statNow(S.mon, 'food')) + '%, happiness ' + Math.round(statNow(S.mon, 'happiness')) + '%.'
-    : ' Needs are off.'
+  const holds = plate ? t.holds(itemName(plate)) : ''
+  const meters = S.needsOn ? t.meters(Math.round(statNow(S.mon, 'food')), Math.round(statNow(S.mon, 'happiness'))) : t.needsOff
   const state = isFainted(S.mon) ? ' ' + downReply().text : ''
-  return fullNameOf(S.mon) + ', Lv. ' + level + ', ' + xpOf(S.mon) + ' XP' + next + '.' + becomes + holds + meters + state + ' ' + pets + ' pets, ' + feeds + ' feeds.'
+  return t.statsHead(fullNameOf(S.mon), level, xpOf(S.mon), next) + becomes + holds + meters + state + t.careCounts(pets, feeds)
 }
 
 // Every mon with a saved record, one a line, like "Charizard ◓, Lv. 36 ●●●○○ ♥♥♥♡♡ (active)",
@@ -75,17 +63,17 @@ export function statsText(pets, feeds) {
 // caught, and one saved before that counts as caught when its species is in the dex.
 export function boxText(dex = {}) {
   const raised = Object.keys(S.stats).filter((name) => MONS.includes(name) && S.stats[name] && typeof S.stats[name] === 'object' && !isDead(name))
-  if (raised.length === 0) return 'Your box is empty. Pet or feed ' + displayName(S.mon) + ', or finish a turn, to start raising it.'
+  if (raised.length === 0) return t.boxEmpty(displayName(S.mon))
   const caught = (name) => Boolean(S.stats[name].caught || isCaught(dex[dexKey(name)]))
   raised.sort((a, b) => levelOf(b) - levelOf(a) || displayName(a).localeCompare(displayName(b)) || a.localeCompare(b))
   const lines = raised.map((name) => {
     const meters = S.needsOn && !hasRunAway(name) ? ' ' + iconsFor('food', name).trimEnd() + ' ' + iconsFor('happiness', name).trimEnd() : ''
-    const tags = [name === S.mon && !hasRunAway(name) ? 'active' : null, conditionOf(name)].filter(Boolean)
-    return fullNameOf(name) + (caught(name) ? ' ◓' : '') + ', Lv. ' + levelOf(name) + meters + (tags.length > 0 ? ' (' + tags.join(', ') + ')' : '')
+    const condition = conditionOf(name)
+    const tags = [name === S.mon && !hasRunAway(name) ? t.active : null, condition ? t.condition(condition) : null].filter(Boolean)
+    return t.boxLine(fullNameOf(name), caught(name), levelOf(name), meters, tags)
   })
-  const count = raised.length + (raised.length === 1 ? ' mon' : ' mons')
-  const alone = raised.length === 1 && raised[0] === S.mon ? '\nOnly ' + nameOf(S.mon) + ' so far. /pokemon <mon> picks another.' : ''
-  return count + ' in your box:\n' + lines.join('\n') + alone
+  const alone = raised.length === 1 && raised[0] === S.mon ? t.onlySoFar(nameOf(S.mon)) : ''
+  return t.boxList(t.mons(raised.length), lines, alone)
 }
 
 const dexLabel = (key) => '#' + String(dexNumber(key)).padStart(3, '0') + ' ' + displayName(key)
@@ -95,15 +83,15 @@ const LOST_MARK = ' †'
 function dexMark(key) {
   const own = Object.keys(S.stats).filter((name) => dexKey(name) === key)
   if (own.some(isDead)) return LOST_MARK
-  return own.some(hasRunAway) ? ' (ran away)' : ''
+  return own.some(hasRunAway) ? t.ranAwayMark : ''
 }
 
 // The graveyard as saved, a list of { mon, level, nickname?, at }, like
 // "Rest well: Spoon (Abra), Lv. 35, on 2026-10-10."
 function graveyardText(graveyard) {
   if (!Array.isArray(graveyard) || graveyard.length === 0) return ''
-  const lines = graveyard.map((g) => (g.nickname ? g.nickname + ' (' + displayName(g.mon) + ')' : displayName(g.mon)) + ', Lv. ' + g.level + ', on ' + new Date(g.at).toISOString().slice(0, 10))
-  return '\nRest well: ' + lines.join('; ') + '.'
+  const lines = graveyard.map((g) => t.graveLine(g.nickname ? g.nickname + ' (' + displayName(g.mon) + ')' : displayName(g.mon), g.level, new Date(g.at).toISOString().slice(0, 10)))
+  return t.graveyard(lines)
 }
 
 // The Pokédex as saved, { [dexKey]: { seen, caught?, shiny? } }, where shiny marks a shiny
@@ -113,94 +101,63 @@ function graveyardText(graveyard) {
 export function dexText(dex, wanted, graveyard, gens = BUNDLED_GENS) {
   const entries = NATIONAL_DEX.filter((key) => dex[key] && typeof dex[key] === 'object')
   if (wanted) {
-    if (!MONS.includes(wanted) && !NATIONAL_DEX.includes(wanted)) return 'Unknown mon "' + wanted + '". See /pokemon list for every mon.'
+    if (!MONS.includes(wanted) && !NATIONAL_DEX.includes(wanted)) return t.unknownMonList(wanted)
     const key = dexKey(wanted)
-    if (!NATIONAL_DEX.includes(key)) return displayName(wanted) + " isn't in the Pokédex. Only gen " + andList(GENS.map(String)) + ' mons appear in the wild.'
+    if (!NATIONAL_DEX.includes(key)) return t.notInDex(displayName(wanted), GENS)
     const entry = entries.includes(key) ? dex[key] : null
     const gen = genOf(key)
-    if (!entry && !gens.includes(gen)) return dexLabel(key) + ', ' + tierOf(key) + '. It turns up in the wild once gen ' + gen + ' is on: /pokemon gen ' + gen + ' turns it on.'
-    const status = isCaught(entry) ? 'Caught ◓' + (entry.shiny ? ' ✦' : '') + '.' : entry ? 'Seen, not caught yet.' : 'Not seen yet.'
+    const tier = t.tier(tierOf(key))
+    if (!entry && !gens.includes(gen)) return t.dexOff(dexLabel(key), tier, gen)
+    let status = t.dexUnseen
+    if (isCaught(entry)) status = t.dexCaught(entry.shiny)
+    else if (entry) status = t.dexSeen
     const mark = dexMark(key)
-    const lost = mark === LOST_MARK ? ' Gone for good †. Catch a new one to raise it again.' : mark ? ' Ran away. It may turn up in the wild.' : ''
-    return dexLabel(key) + ', ' + tierOf(key) + '. ' + status + lost
+    let lost = ''
+    if (mark === LOST_MARK) lost = t.dexLost
+    else if (mark) lost = t.dexRanAway
+    return t.dexEntry(dexLabel(key), tier, status, lost)
   }
   const caught = entries.filter((key) => isCaught(dex[key]))
   const seen = entries.filter((key) => !isCaught(dex[key]))
   const shiny = caught.filter((key) => dex[key].shiny).length
-  const head = 'Pokédex: seen ' + entries.length + ', caught ' + caught.length + ' of ' + dexOf(gens).length + (shiny ? ' (' + shiny + ' shiny)' : '') + '.'
+  const head = t.dexHead(entries.length, caught.length, dexOf(gens).length, shiny)
   const rest = graveyardText(graveyard)
-  if (entries.length === 0) return head + ' No wild mons met yet.' + rest
+  if (entries.length === 0) return head + t.dexNone + rest
   const lines = caught.map((key) => dexLabel(key) + ' ◓' + (dex[key].shiny ? ' ✦' : '') + dexMark(key))
-  if (seen.length > 0) lines.push('Seen: ' + seen.map((key) => displayName(key) + dexMark(key)).join(', '))
+  if (seen.length > 0) lines.push(t.dexSeenList(seen.map((key) => displayName(key) + dexMark(key))))
   return head + '\n' + lines.join('\n') + rest
 }
 
-// Every option with what it does, in groups for /pokemon help. A setting's third field
-// reads its current value.
-const onOff = (on) => (on ? 'on' : 'off')
+// Every option by the command it stands for, in groups for /pokemon help, each line's usage
+// and what it does in the band's language. A setting's second field reads its current value.
 export const HELP = [
-  ['Pick', [
-    ['<mon>', 'Show a mon, like /pokemon charmander'],
-    ['default', 'Show its default colors'],
-    ['shiny', 'Show its shiny colors'],
-    ['new <mon>', 'Fetch a mon from gen 2 to 5, or new random, new gen3'],
-    ['list', 'List every mon name'],
-  ]],
-  ['Care', [
-    ['pet', 'Pet it'],
-    ['feed', 'Toss it a berry'],
-    ['sleep', 'Tuck it in, or wake it'],
-    ['revive [mon]', 'Take a fainted mon to a Pokémon Center'],
-    ['nickname <name>', 'Nickname it, up to 12 characters'],
-  ]],
-  ['Battle', [
-    ['attack [move]', 'Use a random move, or the one named'],
-    ['moves [mon]', 'List its moves, or another mon\'s'],
-    ['catch', 'Throw a Poké Ball at the wild mon'],
-    ['roar', 'Roar to send the wild mon away'],
-  ]],
-  ['Evolve', [
-    ['evolve [mon]', 'Evolve with a stone, a Link Cable, or a held item from your bag, or pick what Eevee becomes'],
-    ['stop', 'Cancel an evolution'],
-  ]],
-  ['Items', [
-    ['bag', 'The items you hold, dropped by wild mons you knock out'],
-    ['use <item> [mon]', 'Use an item, like use rare candy or use thunder stone. Arceus holds a plate, like use flame plate'],
-    ['take', 'Take back the plate Arceus holds'],
-  ]],
-  ['Records', [
-    ['stats', 'Its level, XP, evolution, and meters'],
-    ['box', "Every mon you've raised"],
-    ['party', 'The mons that come out for subagents. party add or remove <mon> picks them, party assign <agent> <mon> ties one to an agent type'],
-    ['dex [mon]', "The wild mons you've seen and caught"],
-    ['release <mon>', 'Release a mon, so it starts over'],
-  ]],
-  ['Settings', [
-    ['wander', 'Wander while idle', () => onOff(S.wander)],
-    ['needs', 'Food and happiness', () => onOff(S.needsOn)],
-    ['emoji', 'Emoji meters', () => onOff(S.emojiOn)],
-    ['size small|large', 'Band size', () => S.size],
-    ['images auto|on|off', 'Pixel images or half blocks', () => S.imageMode],
-    ['pane', 'Show the mon in a docked pane, not the band', () => onOff(S.paneOn)],
-    ['sync', 'Same mon in every open session', () => onOff(S.syncOn)],
-    ['autoevolve', 'Evolve on its own at its level', () => onOff(S.autoEvolve)],
-    ['nuzlocke', 'A fainted mon is lost for good', () => onOff(S.nuzlockeOn)],
-    ['trainer', 'Switch only to mons in your box', () => onOff(S.trainerOn)],
-    ['gen <N>', 'Turn a generation\'s mons in the wild on or off, each fetched the first time you meet one', () => 'gen ' + andList(S.wildGens.map(String))],
+  ['pick', [['<mon>'], ['default'], ['shiny'], ['new'], ['list']]],
+  ['care', [['pet'], ['feed'], ['sleep'], ['revive'], ['nickname']]],
+  ['battle', [['attack'], ['moves'], ['catch'], ['roar']]],
+  ['evolve', [['evolve'], ['stop']]],
+  ['items', [['bag'], ['use'], ['take']]],
+  ['records', [['stats'], ['box'], ['party'], ['dex'], ['release']]],
+  ['settings', [
+    ['wander', () => t.onOff(S.wander)],
+    ['needs', () => t.onOff(S.needsOn)],
+    ['emoji', () => t.onOff(S.emojiOn)],
+    ['size', () => t.sizeName(S.size)],
+    ['images', () => t.imageMode(S.imageMode)],
+    ['pane', () => t.onOff(S.paneOn)],
+    ['sync', () => t.onOff(S.syncOn)],
+    ['autoevolve', () => t.onOff(S.autoEvolve)],
+    ['nuzlocke', () => t.onOff(S.nuzlockeOn)],
+    ['trainer', () => t.onOff(S.trainerOn)],
+    ['gen', () => t.gensValue(S.wildGens)],
   ]],
 ]
 // The hidden debug options, at the top of /pokemon help only while debug is on
-const DEBUG_HELP = ['Debug', [
-  ['wild [mon]', 'Call a wild mon now, or the one named; add shiny for its shiny colors'],
-  ['kill', 'Faint the mon now, or lose it under nuzlocke'],
-]]
+const DEBUG_HELP = ['debug', [['wild'], ['kill']]]
 
-const USAGE_WIDTH = Math.max(...[DEBUG_HELP, ...HELP].flatMap(([, rows]) => rows.map(([usage]) => usage.length))) + 2
 // A setting shows its value ahead of what it does, so the values line up in a column
 export function helpText(debug) {
-  const groups = (debug ? [DEBUG_HELP, ...HELP] : HELP).map(([title, rows]) => title + '\n' + rows.map(([usage, does, value]) => '  ' + usage.padEnd(USAGE_WIDTH) + (value ? value().padEnd(7) : '') + does).join('\n'))
-  return 'Usage: /pokemon <option>\n\n' + groups.join('\n\n')
+  const groups = debug ? [DEBUG_HELP, ...HELP] : HELP
+  const width = Math.max(...[DEBUG_HELP, ...HELP].flatMap(([, rows]) => rows.map(([command]) => t.help[command][0].length))) + 2
+  const lines = groups.map(([group, rows]) => t.helpGroups[group] + '\n' + rows.map(([command, value]) => '  ' + t.help[command][0].padEnd(width) + (value ? value().padEnd(7) : '') + t.help[command][1]).join('\n'))
+  return t.usage + '\n\n' + lines.join('\n\n') + t.helpNames
 }
-
-// Joins items as "A", "A and B", or "A, B, and C"
-export const andList = (items) => (items.length < 3 ? items.join(' and ') : items.slice(0, -1).join(', ') + ', and ' + items.at(-1))

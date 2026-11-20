@@ -2,6 +2,7 @@ import { BUBBLE_SPAN, INKS } from './art.js'
 import { PIXEL_PX } from './constants.js'
 import { SPRITES } from './frames.js'
 import { SEX_COLORS, sexMark, withSexMark } from './genders.js'
+import { t } from './i18n.js'
 import {
   bandRows, bandZoom, baseStrip, clampX, gapRightOf, homeX, isHome, isSmall, leadFloor, sceneRoom, smallZoom, stripTarget,
 } from './layout.js'
@@ -87,7 +88,7 @@ export function drawScene(elements, e, site) {
       const svg = svgNow()
       if (svg !== S.sentSvg) S.svgFrame += 1
       S.sentSvg = svg
-      const alt = isOnStage(S.wild) ? nameOf(S.mon) + ' vs. wild ' + displayName(S.wild.mon) : nameOf(S.mon) + (conditionOf(S.mon) ? ', ' + conditionOf(S.mon) : '')
+      const alt = isOnStage(S.wild) ? t.versusWild(nameOf(S.mon), displayName(S.wild.mon)) : nameOf(S.mon) + (conditionOf(S.mon) ? ', ' + t.condition(conditionOf(S.mon)) : '')
       const image = elements.Svg({ source: svg, alt, width: zoom.columns * PIXEL_PX, height: zoom.rows * 2 * PIXEL_PX })
       sprite = Box({ key: 'pokemon-' + S.svgFrame, children: [image] })
     } else if (drawsImage()) {
@@ -114,7 +115,7 @@ export function drawScene(elements, e, site) {
   } else {
     // Too short even for a shrunk mon: its name, level, and meters on one line, and no blits
     S.bandId = null
-    const name = Text({ children: [withSexMark(nameOf(S.mon), sexOf(S.mon)) + ' ' + levelLine() + (conditionOf(S.mon) ? ' ' + conditionOf(S.mon) : '')] })
+    const name = Text({ children: [withSexMark(nameOf(S.mon), sexOf(S.mon)) + ' ' + levelLine() + (conditionOf(S.mon) ? ' ' + t.condition(conditionOf(S.mon)) : '')] })
     const meters = S.needsOn ? [meter('food', ' '), meter('happiness', ' ')] : []
     corner = [Box({ flexDirection: 'row', children: [name, ...meters] })]
   }
